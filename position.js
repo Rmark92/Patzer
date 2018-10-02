@@ -1,4 +1,6 @@
-const BitBoard = require('./bitboard.js');
+const BitBoardIndex = require('./bitboards');
+const BitBoard = BitBoardIndex.BitBoard;
+const BBMasks = BitBoardIndex.masks;
 const {
   WhitePawns, BlackPawns,
   WhiteKnights, BlackKnights,
@@ -6,7 +8,7 @@ const {
   WhiteRooks, BlackRooks,
   WhiteQueen, BlackQueen,
   WhiteKing, BlackKing
-} = require('./piece_types.js');
+} = require('./pieces');
 
 const WHITE = 'white';
 const BLACK = 'black';
