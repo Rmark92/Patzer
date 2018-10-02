@@ -1,6 +1,39 @@
 const BitBoardIndex = require('../bitboards');
 const BitBoard = BitBoardIndex.BitBoard;
 const BBMasks = BitBoardIndex.masks;
+const BBMovements = BitBoardIndex.movements;
+
+const notAFile = BBMasks.COLS[0].not();
+const notABFile = notAFile.xor(BBMasks.COLS[1]);
+const notHFile = BBMasks.COLS[7].not();
+const notGHFile = notHFile.xor(BBMasks.COLS[6]);
+
+function generateKnightMovements() {
+  const knightDirs = [[1, 2], [1, -2],
+                      [2, 1], [2, -1],
+                      [-1, 2], [-1, -2],
+                      [-2, 1], [-2, -1]];
+  const res = [];
+  let pos = 0;
+  let initial;
+  let posRes;
+
+  const addMove = (currRes, dir) => {
+    return currRes.or(BBMovements.move(initial, dir[0], dir[1]));
+  };
+
+  while (pos < 64) {
+    initial = new BitBoard().setBit(pos);
+    posRes = knightDirs.reduce((currRes, dir) => addMove(currRes, dir), new BitBoard());
+    res.push(posRes);
+    pos++;
+  }
+
+  return res;
+}
+
+const knightMovements = generateKnightMovements();
+knightMovements.forEach((bBoard) => bBoard.render() );
 
 const WhiteKnights = {
   initialPositions: BitBoard.fromPositions([2, 5]),

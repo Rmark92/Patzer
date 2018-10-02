@@ -1,6 +1,7 @@
 const BitBoardIndex = require('../bitboards');
 const BitBoard = BitBoardIndex.BitBoard;
 const BBMasks = BitBoardIndex.masks;
+const BBMovements = BitBoardIndex.movements;
 
 const notAFile = BBMasks.COLS[0].not();
 const notHFile = BBMasks.COLS[7].not();
@@ -8,10 +9,10 @@ const notHFile = BBMasks.COLS[7].not();
 const WhitePawns = {
   initialPositions: BitBoard.fromRow(1),
   attacks: (positions) => {
-    return (positions.shiftLeft(7).and(notHFile)).or(positions.shiftLeft(9).and(notAFile));
+    return (BBMovements.move(positions, 1, -1)).or(BBMovements.move(positions, 1, 1));
   },
   pushes: (positions) => {
-    return (positions.shiftLeft(8).or(positions.shiftLeft(16)));
+    return BBMovements.move(positions, 1, 0).or(BBMovements.move(positions, 2, 0));
   },
   value: 1
 };
@@ -19,10 +20,10 @@ const WhitePawns = {
 const BlackPawns = {
   initialPositions: BitBoard.fromRow(6),
   attacks: (positions) => {
-    return (positions.shiftRight(7).and(notAFile)).or(positions.shiftRight(9).and(notHFile));
+    return (BBMovements.move(positions, -1, -1)).or(BBMovements.move(positions, -1, 1));
   },
   pushes: (positions) => {
-    return (positions.shiftRight(8).or(positions.shiftRight(16)));
+    return (BBMovements.move(positions, -1, 0)).or(BBMovements.move(positions, -2, 0));
   },
   value: 1
 };

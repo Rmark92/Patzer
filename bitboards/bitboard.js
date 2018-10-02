@@ -38,10 +38,11 @@ class BitBoard {
   shiftRight(numBits) {
     let newLowBits, newHighBits;
 
-    if (numBits === 32) {
-      newLowBits = this.high;
-      newHighBits = 0;
-    } else if (numBits > 32) {
+    if (numBits <= 0) {
+      return new BitBoard(this.low, this.high);
+    } else if (numBits > 63) {
+      return new BitBoard();
+    } else if (numBits >= 32) {
       newLowBits = this.high >>> (numBits - 32);
       newHighBits = 0;
     } else {
@@ -55,7 +56,11 @@ class BitBoard {
   shiftLeft(numBits) {
     let newLowBits, newHighBits;
 
-    if (numBits >= 32) {
+    if (numBits <= 0) {
+      return new BitBoard(this.low, this.high);
+    } else if (numBits > 63) {
+      return new BitBoard();
+    } else if (numBits >= 32) {
       newLowBits = 0;
       newHighBits = (this.low << (numBits - 32)) >>> 0;
     } else {
@@ -146,6 +151,7 @@ class BitBoard {
     let row = '';
     let pow = 63;
     let posVal;
+    console.log('------');
     while (pow >= 32) {
       posVal = (Math.pow(2, pow - 32) & this.high) === 0 ? '0' : '1';
       row = posVal + row;
@@ -165,6 +171,7 @@ class BitBoard {
       }
       pow--;
     }
+    console.log('------');
   }
 }
 
