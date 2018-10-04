@@ -114,7 +114,7 @@ class Position {
 }
 
 let pos = new Position();
-console.log(pos.kingInCheck());
-// pos.generateMoves();
+// console.log(pos.kingInCheck());
+pos.generateMoves();
 
 module.exports = Position;
