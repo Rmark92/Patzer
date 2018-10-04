@@ -1,9 +1,5 @@
-const BBMasks = require('./masks.js');
-
-const notAFile = BBMasks.COLS[0].not();
-const notABFile = notAFile.xor(BBMasks.COLS[1]);
-const notHFile = BBMasks.COLS[7].not();
-const notGHFile = notHFile.xor(BBMasks.COLS[6]);
+const BitBoard = require('../../bitboards/bitboard');
+const GlobMasks = require('../../bitboards/masks/global.js');
 
 function north(positions) {
   return positions.shiftLeft(8);
@@ -14,18 +10,18 @@ function south(positions) {
 }
 
 function east(positions) {
-  return positions.shiftLeft(1).and(notAFile);
+  return positions.shiftLeft(1).and(GlobMasks.EAST_OF_COL[0]);
 }
 
 function west(positions) {
-  return positions.shiftRight(1).and(notHFile);
+  return positions.shiftRight(1).and(GlobMasks.EAST_OF_COL[6]);
 }
 
 function excludeLeft(numCols) {
-  let res = BBMasks.FULL_BOARD;
+  let res = GlobMasks.FULL_BOARD;
   let idx = 0;
   while (idx < numCols) {
-    res = res.xor(BBMasks.COLS[idx]);
+    res = res.xor(GlobMasks.COLS[idx]);
     idx++;
   }
 
@@ -33,18 +29,19 @@ function excludeLeft(numCols) {
 }
 
 function excludeRight(numCols) {
-  let res = BBMasks.FULL_BOARD;
+  let res = GlobMasks.FULL_BOARD;
   let idx = 7;
   while ((7 - idx) < numCols) {
-    res = res.xor(BBMasks.COLS[idx]);
+    res = res.xor(GlobMasks.COLS[idx]);
     idx--;
   }
 
   return res;
 }
 
-function move(initial, noSo, eaWe) {
+function stepMove(initial, noSo, eaWe, occupied) {
   let positions = initial;
+  occupied = occupied || new BitBoard();
 
   if (noSo > 0) {
     positions = positions.shiftLeft(noSo * 8);
@@ -59,10 +56,7 @@ function move(initial, noSo, eaWe) {
     positions = positions.and(excludeRight(-eaWe));
   }
 
-  return positions;
+  return positions.xor(occupied);
 }
 
-module.exports = {
-  north, south, east, west,
-  move
-};
+module.exports = stepMove;

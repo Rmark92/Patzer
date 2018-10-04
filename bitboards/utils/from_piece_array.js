@@ -1,4 +1,4 @@
-const BitBoard = require('./bitboard.js');
+const BitBoard = require('./bitboard');
 
 const defaultPieces = [
 "r", "n", "b", "q", "k", "b", "n", "r",
@@ -22,7 +22,7 @@ function newPieceSet() {
   };
 }
 
-function piecesBBsFromArray(piecesArr) {
+function fromPieceArray(piecesArr) {
   let pos;
   piecesArr = piecesArr || defaultPieces;
 
@@ -79,11 +79,4 @@ function piecesBBsFromArray(piecesArr) {
   return pieces;
 }
 
-let pieces = piecesBBsFromArray();
-Object.keys(pieces).forEach((color) => {
-  console.log(color);
-  Object.keys(pieces[color]).forEach(type => {
-    console.log(type);
-    pieces[color][type].render();
-  });
-});
+module.exports = fromPieceArray;

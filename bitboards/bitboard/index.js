@@ -163,28 +163,6 @@ class BitBoard {
     return res;
   }
 
-  static allCols() {
-    let colIdx = 0;
-    let cols = [];
-    while (colIdx < 8) {
-      cols.push(BitBoard.fromCol(colIdx));
-      colIdx++;
-    }
-
-    return cols;
-  }
-
-  static allRows() {
-    let rowIdx = 0;
-    let rows = [];
-    while (rowIdx < 8) {
-      rows.push(BitBoard.fromRow(rowIdx));
-      rowIdx++;
-    }
-
-    return rows;
-  }
-
   static upperRightDiag(startPos) {
     let bb = new BitBoard().setBit(startPos);
     let pos = startPos + 9;
@@ -192,30 +170,6 @@ class BitBoard {
     while (pos < 64 && pos % 8 !== 0) {
       bb = bb.or(new BitBoard().setBit(pos));
       pos += 9;
-    }
-
-    return bb;
-  }
-
-  static lowerLeftDiag(startPos) {
-    let bb = new BitBoard().setBit(startPos);
-    let pos = startPos - 9;
-
-    while (pos >= 0 && pos % 8 !== 0) {
-      bb = bb.or(new BitBoard().setBit(pos));
-      pos -= 9;
-    }
-
-    return bb;
-  }
-
-  static lowerRightDiag(startPos) {
-    let bb = new BitBoard().setBit(startPos);
-    let pos = startPos - 7;
-
-    while (pos >= 0 && pos % 8 !== 0) {
-      bb = bb.or(new BitBoard().setBit(pos));
-      pos -= 7;
     }
 
     return bb;
@@ -235,43 +189,6 @@ class BitBoard {
     }
 
     return bb;
-  }
-
-  static allDiags() {
-    const diags = [];
-    let pos = 56;
-
-    while (pos >= 0) {
-      diags.push(BitBoard.upperRightDiag(pos));
-      pos -= 8;
-    }
-
-    pos = 1;
-
-    while (pos < 8) {
-      diags.push(BitBoard.upperRightDiag(pos));
-      pos++;
-    }
-
-    return diags;
-  }
-
-  static allAntiDiags() {
-    const antiDiags = [];
-    let pos = 0;
-
-    while (pos < 8) {
-      antiDiags.push(BitBoard.upperLeftDiag(pos));
-      pos++;
-    }
-
-    pos = 15;
-    while (pos < 64) {
-      antiDiags.push(BitBoard.upperLeftDiag(pos));
-      pos += 8;
-    }
-
-    return antiDiags;
   }
 
   render() {
