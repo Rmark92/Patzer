@@ -27,49 +27,46 @@ function fromPieceArray(piecesArr) {
   piecesArr = piecesArr || defaultPieces;
 
   const pieces = {
-    white: newPieceSet(),
-    black: newPieceSet()
+    pawns: new BitBoard(),
+    knights: new BitBoard(),
+    bishops: new BitBoard(),
+    rooks: new BitBoard(),
+    queens: new BitBoard(),
+    kings: new BitBoard(),
+    whitePieces: new BitBoard(),
+    blackPieces: new BitBoard()
   };
 
   function assignPiece(i) {
-    switch (piecesArr[i]) {
+    switch (piecesArr[i].toLowerCase()) {
       case 'p':
-        pieces.white.pawns = pieces.white.pawns.setBit(i);
-        return;
+        pieces.pawns = pieces.pawns.setBit(i);
+        break;
       case 'n':
-        pieces.white.knights = pieces.white.knights.setBit(i);
-        return;
+        pieces.knights = pieces.knights.setBit(i);
+        break;
       case 'b':
-        pieces.white.bishops = pieces.white.bishops.setBit(i);
-        return;
+        pieces.bishops = pieces.bishops.setBit(i);
+        break;
       case 'r':
-        pieces.white.rooks = pieces.white.rooks.setBit(i);
-        return;
+        pieces.rooks = pieces.rooks.setBit(i);
+        break;
       case 'q':
-        pieces.white.queen = pieces.white.queen.setBit(i);
-        return;
+        pieces.queens = pieces.queens.setBit(i);
+        break;
       case 'k':
-        pieces.white.king = pieces.white.king.setBit(i);
+        pieces.kings = pieces.kings.setBit(i);
+        break;
+      default:
         return;
-      case 'P':
-        pieces.black.pawns = pieces.black.pawns.setBit(i);
-        return;
-      case 'N':
-        pieces.black.knights = pieces.black.knights.setBit(i);
-        return;
-      case 'B':
-        pieces.black.bishops = pieces.black.bishops.setBit(i);
-        return;
-      case 'R':
-        pieces.black.rooks = pieces.black.rooks.setBit(i);
-        return;
-      case 'Q':
-        pieces.black.queen = pieces.black.queen.setBit(i);
-        return;
-      case 'K':
-        pieces.black.king = pieces.black.king.setBit(i);
-        return;
-      }
+    }
+
+    if (piecesArr[i].toLowerCase() === piecesArr[i]) {
+      pieces.whitePieces = pieces.whitePieces.setBit(i);
+    } else {
+      pieces.blackPieces = pieces.blackPieces.setBit(i);
+    }
+
   }
 
   for (pos = 0; pos < 64; pos++) {
