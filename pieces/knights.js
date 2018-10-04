@@ -3,11 +3,6 @@ const BitBoard = BitBoardIndex.BitBoard;
 const BBMasks = BitBoardIndex.masks;
 const BBMovements = BitBoardIndex.movements;
 
-const notAFile = BBMasks.COLS[0].not();
-const notABFile = notAFile.xor(BBMasks.COLS[1]);
-const notHFile = BBMasks.COLS[7].not();
-const notGHFile = notHFile.xor(BBMasks.COLS[6]);
-
 function generateKnightMovements() {
   const knightDirs = [[1, 2], [1, -2],
                       [2, 1], [2, -1],

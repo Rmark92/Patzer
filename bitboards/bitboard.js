@@ -71,23 +71,49 @@ class BitBoard {
     return new BitBoard(newLowBits, newHighBits);
   }
 
+  popCount32(int) {
+    let count = 0;
+
+    while (int) {
+      count++;
+      int &= (int - 1);
+    }
+    return count;
+  }
+
   popCount() {
       return [this.low, this.high].reduce((count, int32) => {
-        while (int32) {
-          count++;
-          int32 &= (int32 - 1);
-        }
-        return count;
+        return count + this.popCount32(int32);
       }, 0);
   }
 
   setBit(pos) {
     if (pos >= 32 && pos < 64) {
       return new BitBoard(this.low, this.high | Math.pow(2, pos - 32));
-    } else if (pos >= 0 && pos < 64){
+    } else if (pos >= 0 && pos < 64) {
       return new BitBoard(this.low | Math.pow(2, pos), this.high);
     } else {
       return new BitBoard(this.low, this.high);
+    }
+  }
+
+  clearBit(pos) {
+    if (pos >= 32 && pos < 64) {
+      return new BitBoard(this.low, this.high ^ Math.pow(2, pos - 32));
+    } else if (pos >= 0 && pos < 64) {
+      return new BitBoard(this.low ^ Math.pow(2, pos), this.high);
+    } else {
+      return new BitBoard(this.low, this.high);
+    }
+  }
+
+  bitScanForward() {
+    if (this.low) {
+      return this.popCount32((this.low & -this.low) - 1);
+    } else if (this.high) {
+      return this.popCount32((this.high & -this.high) - 1);
+    } else {
+      return null;
     }
   }
 
@@ -145,6 +171,95 @@ class BitBoard {
     }
 
     return rows;
+  }
+
+  static upperRightDiag(startPos) {
+    let bb = new BitBoard().setBit(startPos);
+    let pos = startPos + 9;
+
+    while (pos < 64 && pos % 8 !== 0) {
+      bb = bb.or(new BitBoard().setBit(pos));
+      pos += 9;
+    }
+
+    return bb;
+  }
+
+  static lowerLeftDiag(startPos) {
+    let bb = new BitBoard().setBit(startPos);
+    let pos = startPos - 9;
+
+    while (pos >= 0 && pos % 8 !== 0) {
+      bb = bb.or(new BitBoard().setBit(pos));
+      pos -= 9;
+    }
+
+    return bb;
+  }
+
+  static lowerRightDiag(startPos) {
+    let bb = new BitBoard().setBit(startPos);
+    let pos = startPos - 7;
+
+    while (pos >= 0 && pos % 8 !== 0) {
+      bb = bb.or(new BitBoard().setBit(pos));
+      pos -= 7;
+    }
+
+    return bb;
+  }
+
+  static upperLeftDiag(startPos) {
+    let pos = startPos;
+    let bb = new BitBoard();
+
+    while (pos < 64 && pos % 8 !== 0) {
+      bb = bb.or(new BitBoard().setBit(pos));
+      pos += 7;
+    }
+
+    if (pos < 64) {
+      bb = bb.or(new BitBoard().setBit(pos));
+    }
+
+    return bb;
+  }
+
+  static allDiags() {
+    const diags = [];
+    let pos = 56;
+
+    while (pos >= 0) {
+      diags.push(BitBoard.upperRightDiag(pos));
+      pos -= 8;
+    }
+
+    pos = 1;
+
+    while (pos < 8) {
+      diags.push(BitBoard.upperRightDiag(pos));
+      pos++;
+    }
+
+    return diags;
+  }
+
+  static allAntiDiags() {
+    const antiDiags = [];
+    let pos = 0;
+
+    while (pos < 8) {
+      antiDiags.push(BitBoard.upperLeftDiag(pos));
+      pos++;
+    }
+
+    pos = 15;
+    while (pos < 64) {
+      antiDiags.push(BitBoard.upperLeftDiag(pos));
+      pos += 8;
+    }
+
+    return antiDiags;
   }
 
   render() {

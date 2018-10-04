@@ -3,9 +3,6 @@ const BitBoard = BitBoardIndex.BitBoard;
 const BBMasks = BitBoardIndex.masks;
 const BBMovements = BitBoardIndex.movements;
 
-const notAFile = BBMasks.COLS[0].not();
-const notHFile = BBMasks.COLS[7].not();
-
 const WhitePawns = {
   initialPositions: BitBoard.fromRow(1),
   attacks: (positions) => {
