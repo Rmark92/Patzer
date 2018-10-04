@@ -39,9 +39,8 @@ function excludeRight(numCols) {
   return res;
 }
 
-function stepMove(initial, noSo, eaWe, occupied) {
+function stepMove(initial, noSo, eaWe) {
   let positions = initial;
-  occupied = occupied || new BitBoard();
 
   if (noSo > 0) {
     positions = positions.shiftLeft(noSo * 8);
@@ -56,7 +55,7 @@ function stepMove(initial, noSo, eaWe, occupied) {
     positions = positions.and(excludeRight(-eaWe));
   }
 
-  return positions.xor(occupied);
+  return positions;
 }
 
 module.exports = stepMove;

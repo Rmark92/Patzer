@@ -1,4 +1,4 @@
-const BitBoard = require('../bitboard');
+const BitBoard = require('../../bitboards/bitboard');
 const { SLIDE_MOVES } = require('../../bitboards/masks/positional.js');
 
 function findUnblocked(pos, occupied, dir) {
@@ -27,7 +27,7 @@ function diag(pos, occupied) {
   }, new BitBoard());
 }
 
-diag(46, new BitBoard()).render();
+// diag(46, new BitBoard()).render();
 
 module.exports = {
   horizVert,

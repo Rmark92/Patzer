@@ -1,9 +1,9 @@
-const BitBoard = require('./bitboard.js');
+const BitBoard = require('./bitboard');
 const masks = require('./masks');
-const utils = require('./from_piece_array.js');
+const fromPieceArray = require('./utils/from_piece_array.js');
 
 module.exports = {
   BitBoard,
   masks,
-  utils
+  fromPieceArray
 };

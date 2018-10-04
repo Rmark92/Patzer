@@ -64,7 +64,7 @@ const ANTI_DIAGS = function() {
   return antiDiags;
 }();
 
-const NORTH_OF_COL = function() {
+const NORTH_OF_ROW = function() {
   const res = [];
   let bb = FULL_BOARD;
   let idx = 0;
@@ -78,7 +78,7 @@ const NORTH_OF_COL = function() {
   return res;
 }();
 
-const SOUTH_OF_COL = function() {
+const SOUTH_OF_ROW = function() {
   const res = [];
   let bb = new BitBoard();
   let idx = 0;
@@ -126,8 +126,8 @@ module.exports = {
   ROWS,
   DIAGS,
   ANTI_DIAGS,
-  NORTH_OF_COL,
-  SOUTH_OF_COL,
+  NORTH_OF_ROW,
+  SOUTH_OF_ROW,
   EAST_OF_COL,
   WEST_OF_COL
 };

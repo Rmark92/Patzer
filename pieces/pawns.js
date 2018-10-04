@@ -1,28 +1,25 @@
-const BitBoardIndex = require('../bitboards');
-const BitBoard = BitBoardIndex.BitBoard;
-const BBMasks = BitBoardIndex.masks;
-const BBMovements = BitBoardIndex.movements;
+const stepMove = require('../position/movements/step_move.js');
 
 const WhitePawns = {
-  initialPositions: BitBoard.fromRow(1),
-  attacks: (positions) => {
-    return (BBMovements.move(positions, 1, -1)).or(BBMovements.move(positions, 1, 1));
+  value: 1,
+  attacks: (positions, occupied) => {
+    return (stepMove(positions, 1, -1).and(occupied)).or(stepMove(positions, 1, 1).and(occupied));
   },
-  pushes: (positions) => {
-    return BBMovements.move(positions, 1, 0).or(BBMovements.move(positions, 2, 0));
+  pushes: (positions, occupied) => {
+    const notOccupied = occupied.not();
+    return stepMove(positions, 1, 0).and(notOccupied).or(stepMove(positions, 2, 0).and(notOccupied));
   },
-  value: 1
 };
 
 const BlackPawns = {
-  initialPositions: BitBoard.fromRow(6),
-  attacks: (positions) => {
-    return (BBMovements.move(positions, -1, -1)).or(BBMovements.move(positions, -1, 1));
+  value: 1,
+  attacks: (positions, occupied) => {
+    return (stepMove(positions, -1, -1).and(occupied)).or(stepMove(positions, -1, 1).and(occupied));
   },
-  pushes: (positions) => {
-    return (BBMovements.move(positions, -1, 0)).or(BBMovements.move(positions, -2, 0));
-  },
-  value: 1
+  pushes: (positions, occupied) => {
+    const notOccupied = occupied.not();
+    return stepMove(positions, -1, 0).and(notOccupied).or(stepMove(positions, -2, 0).and(notOccupied));
+  }
 };
 
-module.exports = { WhitePawns, BlackPawns};
+module.exports = { WhitePawns, BlackPawns };
