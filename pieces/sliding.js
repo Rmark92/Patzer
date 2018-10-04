@@ -11,8 +11,6 @@ function generateSlidingMovements() {
   let rowIdx;
   let diagIdx;
   let antiDiagIdx;
-  let diag;
-  let antiDiag;
 
   while (pos < 64) {
     movements = {};
@@ -24,10 +22,10 @@ function generateSlidingMovements() {
     } else {
       antiDiagIdx = (pos < (rowIdx + 1) * 7) ? (pos % 7) : (pos % 7) + 7;
     }
-    movements.no = BBMasks.COLS[colIdx].and(BBMasks.NORTH_OF[rowIdx]);
-    movements.so = BBMasks.COLS[colIdx].and(BBMasks.SOUTH_OF[rowIdx]);
-    movements.ea = BBMasks.ROWS[rowIdx].and(BBMasks.EAST_OF[colIdx]);
-    movements.we = BBMasks.ROWS[rowIdx].and(BBMasks.WEST_OF[colIdx]);
+    movements.north = BBMasks.COLS[colIdx].and(BBMasks.NORTH_OF[rowIdx]);
+    movements.south = BBMasks.COLS[colIdx].and(BBMasks.SOUTH_OF[rowIdx]);
+    movements.east = BBMasks.ROWS[rowIdx].and(BBMasks.EAST_OF[colIdx]);
+    movements.west = BBMasks.ROWS[rowIdx].and(BBMasks.WEST_OF[colIdx]);
     movements.noea = BBMasks.DIAGS[diagIdx].and(BBMasks.NORTH_OF[rowIdx]);
     movements.sowe = BBMasks.DIAGS[diagIdx].and(BBMasks.SOUTH_OF[rowIdx]);
     movements.nowe = BBMasks.ANTI_DIAGS[antiDiagIdx].and(BBMasks.NORTH_OF[rowIdx]);
@@ -41,3 +39,34 @@ function generateSlidingMovements() {
 
 const slidingMovements = generateSlidingMovements();
 Object.values(slidingMovements[63]).forEach((dirbb) => dirbb.render());
+
+function findUnblocked(pos, occupied, dir) {
+  const posBB = new BitBoard();
+  const dirBB = slidingMovements[pos][dir];
+  const blocking = dirBB.and(occupied);
+  let blockingPos;
+
+  if (blocking.isZero()) {
+    return dirBB;
+  } else {
+    blockingPos = posBB.lessThan(blocking) ? blocking.bitScanReverse() : blocking.bitScanForward();
+    return dirBB.xor(slidingMovements[blockingPos][dir]);
+  }
+}
+
+function horizVert(pos, occupied) {
+  return ['north', 'east', 'south', 'west'].reduce((res, dir) => {
+    return res.or(findUnblocked(pos, occupied, dir));
+  }, new BitBoard());
+}
+
+function diag(pos, occupied) {
+  return ['noea', 'sowe', 'nowe', 'soea'].reduce((res, dir) => {
+    return res.or(findUnblocked(pos, occupied, dir));
+  }, new BitBoard());
+}
+
+module.exports = {
+  horizVert,
+  diag
+};

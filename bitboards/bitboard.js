@@ -1,4 +1,4 @@
-const Long = require('long');
+const Int32Utils = require('./int32_utils.js');
 
 //56 57 58 59 60 61 62 63
 //48 49 50 51 52 53 54 55  ^
@@ -33,6 +33,18 @@ class BitBoard {
 
   equals(other) {
     return (this.low === other.low && this.high === other.high);
+  }
+
+  greaterThan(other) {
+    return (this.high > other.high || this.low > other.low);
+  }
+
+  lessThan(other) {
+    return (this.high < other.high || this.low < other.low);
+  }
+
+  isZero() {
+    return (this.high === 0 && this.low === 0);
   }
 
   shiftRight(numBits) {
@@ -71,19 +83,9 @@ class BitBoard {
     return new BitBoard(newLowBits, newHighBits);
   }
 
-  popCount32(int) {
-    let count = 0;
-
-    while (int) {
-      count++;
-      int &= (int - 1);
-    }
-    return count;
-  }
-
   popCount() {
       return [this.low, this.high].reduce((count, int32) => {
-        return count + this.popCount32(int32);
+        return count + Int32Utils.popCount(int32);
       }, 0);
   }
 
@@ -109,9 +111,19 @@ class BitBoard {
 
   bitScanForward() {
     if (this.low) {
-      return this.popCount32((this.low & -this.low) - 1);
+      return Int32Utils.bitScanForward(this.low);
     } else if (this.high) {
-      return this.popCount32((this.high & -this.high) - 1);
+      return Int32Utils.bitScanForward(this.high) + 32;
+    } else {
+      return null;
+    }
+  }
+
+  bitScanReverse() {
+    if (this.high) {
+      return Int32Utils.bitScanReverse(this.high) + 32;
+    } else if (this.low) {
+      return Int32Utils.bitScanReverse(this.low);
     } else {
       return null;
     }

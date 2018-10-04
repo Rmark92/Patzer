@@ -4,7 +4,7 @@ function fromPiecesArray(piecesArr) {
   let pos;
 
   const pieces = {
-
+    
   };
 
   for (i = piecesArr.length - 1; i >= 0; i--) {
