@@ -8,66 +8,95 @@ const WHITE = 'white';
 const BLACK = 'black';
 
 class Position {
-  constructor(pieces, turn) {
-    this.pieces = pieces || BBfromPieceArray();
-    this.turn = turn || BLACK;
-    this.turnPieces = this.turnColorPieces();
-    this.oppPieces = this.otherColorPieces();
-    this.notOwnPieces = this.turnPieces.not();
-    this.occupied = this.turnPieces.or(this.oppPieces);
+  constructor(pieces = BBfromPieceArray(), turn = WHITE, prevMoves = []) {
+    this.pieces = pieces;
+    this.prevMoves = prevMoves;
+    this.setTurn(turn);
   }
 
-  colorPieces(color) {
-    return color === WHITE ? this.pieces.whitePieces : this.pieces.blackPieces;
+  setTurn(turn, opp) {
+    this.turn = turn;
+    this.opp = opp || this.getOppColor();
+    this.notOwnPieces = this.getTurnPieces().not();
+    this.occupied = this.getTurnPieces().or(this.getOppPieces());
   }
 
-  turnColorPieceSet(pieceType) {
-    return this.turnPieces.and(this.pieces[pieceType]);
+  swapTurn() {
+    this.setTurn(this.opp, this.turn);
   }
 
-  otherColorPieces() {
-    return this.turn === WHITE ? this.pieces.blackPieces : this.pieces.whitePieces;
+  getOppColor() {
+    return this.turn == WHITE ? BLACK : WHITE;
   }
 
-  turnColorPieces() {
-    return this.turn === WHITE ? this.pieces.whitePieces : this.pieces.blackPieces;
+  getTurnPieces() {
+    return this.pieces[this.turn];
+  }
+
+  getOppPieces() {
+    return this.pieces[this.opp];
+  }
+
+  getTurnPieceSet(pieceType) {
+    return this.getTurnPieces().and(this.pieces[pieceType]);
+  }
+
+  getOppPieceSet(pieceType) {
+    return this.getOppPieces().and(this.pieces[pieceType]);
+  }
+
+  isAttacked(pos) {
+    const oppPawns = this.turn === WHITE ? BlackPawns : WhitePawns;
+    const posBB = new BitBoard().setBit(pos);
+
+    return (!oppPawns.attacks(this.getOppPieceSet('pawns'), posBB).isZero() ||
+            !Knight.moves(pos, this.getOppPieceSet('knights')).isZero() ||
+            !Bishop.moves(pos, this.occupied, this.getOppPieceSet('bishops')).isZero() ||
+            !Rook.moves(pos, this.occupied, this.getOppPieceSet('rooks')).isZero() ||
+            !Queen.moves(pos, this.occupied, this.getOppPieceSet('queens')).isZero() ||
+            !King.moves(pos, this.getOppPieceSet('kings')).isZero());
+  }
+
+  kingInCheck() {
+    const kingPos = this.getTurnPieceSet('kings').bitScanForward();
+    return this.isAttacked(kingPos);
   }
 
   generateMoves() {
     let pawnMoves;
-    const pawnsPos = this.turnColorPieceSet('pawns');
+    const pawnsPos = this.getTurnPieceSet('pawns');
 
     if (this.turn === WHITE) {
-      pawnMoves = WhitePawns.attacks(pawnsPos, this.oppPieces).or(WhitePawns.pushes(pawnsPos, this.oppPieces));
+      pawnMoves = WhitePawns.attacks(pawnsPos, this.getOppPieces()).or(WhitePawns.pushes(pawnsPos, this.getOppPieces()));
     } else {
       pawnMoves = BlackPawns.attacks(pawnsPos, this.occupied).or(BlackPawns.pushes(pawnsPos, this.occupied));
     }
 
-    const knightsPos = this.turnColorPieceSet('knights');
+    const knightsPos = this.getTurnPieceSet('knights');
     let knightsMoves = new BitBoard();
     knightsPos.forEach1Bit((pos) => {
       knightsMoves = knightsMoves.or(Knight.moves(pos, this.notOwnPieces));
     });
 
-    const bishopsPos = this.turnColorPieceSet('bishops');
+    const bishopsPos = this.getTurnPieceSet('bishops');
     let bishopsMoves = new BitBoard();
     bishopsPos.forEach1Bit((pos) => {
       bishopsMoves = bishopsMoves.or(Bishop.moves(pos, this.occupied, this.notOwnPieces));
     });
 
-    const rooksPos = this.turnColorPieceSet('rooks');
+    const rooksPos = this.getTurnPieceSet('rooks');
     let rooksMoves = new BitBoard();
     rooksPos.forEach1Bit((pos) => {
       rooksMoves = rooksMoves.or(Rook.moves(pos, this.occupied, this.notOwnPieces));
     });
 
-    const queensPos = this.turnColorPieceSet('queens');
+    const queensPos = this.getTurnPieceSet('queens');
     let queensMoves = new BitBoard();
     queensPos.forEach1Bit((pos) => {
       queensMoves = queensMoves.or(Queen.moves(pos, this.occupied, this.notOwnPieces));
     });
 
-    const kingsPos = this.turnColorPieceSet('kings');
+    const kingsPos = this.getTurnPieceSet('kings');
     let kingsMoves = new BitBoard();
     kingsPos.forEach1Bit((pos) => {
       kingsMoves = kingsMoves.or(King.moves(pos, this.notOwnPieces));
@@ -85,6 +114,7 @@ class Position {
 }
 
 let pos = new Position();
-pos.generateMoves();
+console.log(pos.kingInCheck());
+// pos.generateMoves();
 
 module.exports = Position;

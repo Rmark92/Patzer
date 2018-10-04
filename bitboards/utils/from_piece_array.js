@@ -33,8 +33,8 @@ function fromPieceArray(piecesArr) {
     rooks: new BitBoard(),
     queens: new BitBoard(),
     kings: new BitBoard(),
-    whitePieces: new BitBoard(),
-    blackPieces: new BitBoard()
+    white: new BitBoard(),
+    black: new BitBoard()
   };
 
   function assignPiece(i) {
@@ -62,9 +62,9 @@ function fromPieceArray(piecesArr) {
     }
 
     if (piecesArr[i].toLowerCase() === piecesArr[i]) {
-      pieces.whitePieces = pieces.whitePieces.setBit(i);
+      pieces.white = pieces.white.setBit(i);
     } else {
-      pieces.blackPieces = pieces.blackPieces.setBit(i);
+      pieces.black = pieces.black.setBit(i);
     }
 
   }
