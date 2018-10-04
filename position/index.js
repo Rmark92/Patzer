@@ -10,7 +10,7 @@ const BLACK = 'black';
 class Position {
   constructor(pieces, turn) {
     this.pieces = pieces || BBfromPieceArray();
-    this.turn = turn || WHITE;
+    this.turn = turn || BLACK;
     this.turnPieces = this.turnColorPieces();
     this.oppPieces = this.otherColorPieces();
     this.notOwnPieces = this.turnPieces.not();
