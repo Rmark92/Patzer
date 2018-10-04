@@ -2,7 +2,7 @@ const BitBoard = require('../bitboard');
 const GlobMasks = require('./global.js');
 const stepMove = require('../../position/movements/step_move.js');
 
-function generateStepBitboards(dirs) {
+function generateStepBitBoards(dirs) {
   const res = [];
   let pos = 0;
   let initial;
@@ -28,7 +28,7 @@ const KNIGHT_MOVES = function() {
                 [-1, 2], [-1, -2],
                 [-2, 1], [-2, -1]];
 
-  return generateStepBitboards(dirs);
+  return generateStepBitBoards(dirs);
 }();
 
 const KING_MOVES = function() {
@@ -37,7 +37,7 @@ const KING_MOVES = function() {
                 [-1, 1], [-1, -1],
                 [0, -1], [0, 1]];
 
-  return generateStepBitboards(dirs);
+  return generateStepBitBoards(dirs);
 }();
 
 const SLIDE_MOVES = function() {

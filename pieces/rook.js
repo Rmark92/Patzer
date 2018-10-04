@@ -2,8 +2,8 @@ const { horizVert } = require('../position/movements/slide_moves.js');
 
 const Rook = {
   value: 5,
-  moves: (position, occupied) => {
-    return horizVert(position, occupied);
+  moves: (position, occupied, notOwnPieces) => {
+    return horizVert(position, occupied, notOwnPieces);
   },
 };
 

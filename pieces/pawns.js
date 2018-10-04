@@ -2,8 +2,8 @@ const stepMove = require('../position/movements/step_move.js');
 
 const WhitePawns = {
   value: 1,
-  attacks: (positions, occupied) => {
-    return (stepMove(positions, 1, -1).and(occupied)).or(stepMove(positions, 1, 1).and(occupied));
+  attacks: (positions, oppPieces) => {
+    return (stepMove(positions, 1, -1).and(oppPieces)).or(stepMove(positions, 1, 1).and(oppPieces));
   },
   pushes: (positions, occupied) => {
     const notOccupied = occupied.not();
@@ -13,8 +13,8 @@ const WhitePawns = {
 
 const BlackPawns = {
   value: 1,
-  attacks: (positions, occupied) => {
-    return (stepMove(positions, -1, -1).and(occupied)).or(stepMove(positions, -1, 1).and(occupied));
+  attacks: (positions, oppPieces) => {
+    return (stepMove(positions, -1, -1).and(oppPieces)).or(stepMove(positions, -1, 1).and(oppPieces));
   },
   pushes: (positions, occupied) => {
     const notOccupied = occupied.not();

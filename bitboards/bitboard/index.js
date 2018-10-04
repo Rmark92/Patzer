@@ -129,6 +129,21 @@ class BitBoard {
     }
   }
 
+  forEach1Bit(cb) {
+    let newLowBits = this.low;
+    let newHighBits = this.high;
+
+    while (newLowBits) {
+      cb(Int32Utils.bitScanForward(newLowBits));
+      newLowBits = Int32Utils.clearLeastSigBit(newLowBits);
+    }
+
+    while (newHighBits) {
+      cb(Int32Utils.bitScanForward(newHighBits) + 32);
+      newHighBits = Int32Utils.clearLeastSigBit(newHighBits);
+    }
+  }
+
   static fromPositions(positions) {
     return positions.reduce((res, pos) => {
       return res.setBit(pos);

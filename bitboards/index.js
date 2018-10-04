@@ -4,6 +4,6 @@ const fromPieceArray = require('./utils/from_piece_array.js');
 
 module.exports = {
   BitBoard,
-  masks,
-  fromPieceArray
+  BBMasks: masks,
+  BBfromPieceArray: fromPieceArray
 };

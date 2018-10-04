@@ -40,8 +40,13 @@ function bitScanReverse(int) {
   return res + mostSigBitTable[int];
 }
 
+function clearLeastSigBit(int) {
+  return (int & (int - 1));
+}
+
 module.exports = {
   popCount,
   bitScanForward,
-  bitScanReverse
+  bitScanReverse,
+  clearLeastSigBit
 };

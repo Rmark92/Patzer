@@ -1,4 +1,4 @@
-const BitBoard = require('./bitboard');
+const BitBoard = require('../bitboard');
 
 const defaultPieces = [
 "r", "n", "b", "q", "k", "b", "n", "r",
