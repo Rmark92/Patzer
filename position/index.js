@@ -6,7 +6,7 @@ const { Pawns, Knight, Bishop,
         PieceTypes, Colors } = require('../pieces');
 
 class Position {
-  constructor(pieces = generatePieceSets(), turn = Colors.WHITE, prevMoves = []) {
+  constructor(pieces = generatePieceSets(), turn = Colors.BLACK, prevMoves = []) {
     this.pieces = pieces;
     this.prevMoves = prevMoves;
 
@@ -54,7 +54,7 @@ class Position {
   }
 
   isAttacked(pos) {
-    const posBB = new BitBoard().setBit(pos);
+    const posBB = BitBoard.fromPos(pos);
     const oppPawns = this.getOppPieceSet(PieceTypes.PAWNS);
 
     return (!Pawns.leftAttacks(this.turn, oppPawns, posBB).isZero() ||
@@ -104,39 +104,39 @@ class Position {
 
     newPositions.forEach1Bit((pos) => {
       type = this.getOppPieces().hasSetBit(pos) ? MoveTypes.CAPT : MoveTypes.QUIET;
-      console.log(type);
       moves.push(new Move(startPos, pos, type));
     });
   }
 
   addNormalMoves(moves) {
     const notOwnPieces = this.getTurnPieces().not();
-
-    const knightsPos = this.getTurnPieceSet(PieceTypes.KNIGHTS);
-    let knightMoves;
-    knightsPos.forEach1Bit((pos) => {
-      knightMoves = Knight.moves(pos, notOwnPieces);
-      this.addNormalMoveSet(knightMoves, pos, moves);
-    });
-
-    const bishopsPos = this.getTurnPieceSet(PieceTypes.BISHOPS);
-    let bishopMoves;
-    bishopsPos.forEach1Bit((pos) => {
-      bishopMoves = Bishop.moves(pos, this.getOccupied(), notOwnPieces);
-      this.addNormalMoveSet(bishopMoves, pos, moves);
-    });
-
-    const rooksPos = this.getTurnPieceSet(PieceTypes.ROOKS);
-    let rookMoves;
-    rooksPos.forEach1Bit((pos) => {
-      rookMoves = Rook.moves(pos, this.getOccupied(), notOwnPieces);
-      this.addNormalMoveSet(bishopMoves, pos, moves);
-    });
+    //
+    // const knightsPos = this.getTurnPieceSet(PieceTypes.KNIGHTS);
+    // let knightMoves;
+    // knightsPos.forEach1Bit((pos) => {
+    //   knightMoves = Knight.moves(pos, notOwnPieces);
+    //   this.addNormalMoveSet(knightMoves, pos, moves);
+    // });
+    //
+    // const bishopsPos = this.getTurnPieceSet(PieceTypes.BISHOPS);
+    // let bishopMoves;
+    // bishopsPos.forEach1Bit((pos) => {
+    //   bishopMoves = Bishop.moves(pos, this.getOccupied(), notOwnPieces);
+    //   this.addNormalMoveSet(bishopMoves, pos, moves);
+    // });
+    //
+    // const rooksPos = this.getTurnPieceSet(PieceTypes.ROOKS);
+    // let rookMoves;
+    // rooksPos.forEach1Bit((pos) => {
+    //   rookMoves = Rook.moves(pos, this.getOccupied(), notOwnPieces);
+    //   this.addNormalMoveSet(rookMoves, pos, moves);
+    // });
 
     const queenPos = this.getTurnPieceSet(PieceTypes.QUEENS).bitScanForward();
     if (queenPos !== null) {
       const queenMoves = Queen.moves(queenPos, this.getOccupied(), notOwnPieces);
-      this.addNormalMoveSet(queenMoves, pos, moves);
+      queenMoves.render();
+      this.addNormalMoveSet(queenMoves, queenPos, moves);
     }
   }
 
@@ -176,8 +176,8 @@ class Position {
 
   generateMoves(captsOnly = false) {
     const moves = [];
-    this.addPawnMoves(moves, captsOnly);
-    // this.addNormalMoves(moves, captsOnly);
+    // this.addPawnMoves(moves, captsOnly);
+    this.addNormalMoves(moves, captsOnly);
     // this.addKingMoves(moves, captsOnly);
 
     return moves;
@@ -210,12 +210,12 @@ class Position {
       case MoveTypes.DBL_PPUSH:
         break;
       case MoveTypes.CSTL_KING:
-        
+
         break;
       case MoveTypes.CSTL_QUEEN:
         break;
       case MoveTypes.CAPT:
-        this.pieces[this.opp] = this.pieces[this.opp].clearBit(to);
+        this.pieces[this.opp].clearBit(to);
         break;
       case MoveTypes.EP_CAPT:
         break;
@@ -242,13 +242,14 @@ class Position {
     const from = move.getFrom();
     const to = move.getTo();
     const type = move.getType();
+    console.log(from, to);
 
 
     let pieceType = this.getPieceAt(from);
-    this.pieces[pieceType] = this.pieces[pieceType].setBit(to);
-    this.pieces[pieceType] = this.pieces[pieceType].clearBit(from);
-    this.pieces[this.turn] = this.pieces[this.turn].setBit(to);
-    this.pieces[this.turn] = this.pieces[this.turn].clearBit(from);
+    this.pieces[pieceType].setBit(to);
+    this.pieces[pieceType].clearBit(from);
+    this.pieces[this.turn].setBit(to);
+    this.pieces[this.turn].clearBit(from);
 
     this.handleMoveType(from, to, type);
   }
@@ -261,6 +262,7 @@ class Position {
   }
 }
 
+
 let pos = new Position();
 const moves = pos.generateMoves();
 console.log(moves);
@@ -268,7 +270,7 @@ console.log(moves.length);
 
 moves.forEach((move) => {
   pos = new Position();
-  console.log(move.getType());
+  // console.log(move.getType());
   pos.makeMove(move);
   pos.pieces[Colors.WHITE].render();
   pos.pieces[Colors.BLACK].render();

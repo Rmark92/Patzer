@@ -13,7 +13,7 @@ function generateStepBitBoards(dirs) {
   };
 
   while (pos < 64) {
-    initial = new BitBoard().setBit(pos);
+    initial = BitBoard.fromPos(pos);
     posRes = dirs.reduce((currRes, dir) => addMove(currRes, dir), new BitBoard());
     res.push(posRes);
     pos++;

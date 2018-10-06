@@ -92,28 +92,17 @@ class BitBoard {
   setBit(pos) {
     if (pos >= 32 && pos < 64) {
       this.high = (this.high | Math.pow(2, pos - 32)) >>> 0;
-      // return new BitBoard(this.low, this.high | Math.pow(2, pos - 32));
-    } else if (pos >= 0 && pos < 64) {
+    } else if (pos >= 0 && pos < 32) {
       this.low = (this.low | Math.pow(2, pos)) >>> 0;
-      // return new BitBoard(this.low | Math.pow(2, pos), this.high);
     }
-    // else {
-    //   return new BitBoard(this.low, this.high);
-    // }
   }
 
   clearBit(pos) {
     if (pos >= 32 && pos < 64) {
       this.high = (this.high ^ Math.pow(2, pos - 32)) >>> 0;
-      // return new BitBoard(this.low, this.high ^ Math.pow(2, pos - 32));
     } else if (pos >= 0 && pos < 32) {
       this.low = (this.low ^ Math.pow(2, pos)) >>> 0;
-
-      // return new BitBoard(this.low ^ Math.pow(2, pos), this.high);
     }
-    // else {
-    //   return new BitBoard(this.low, this.high);
-    // }
   }
 
   bitScanForward() {
@@ -160,7 +149,10 @@ class BitBoard {
   }
 
   static fromPos(pos) {
-    return new BitBoard().setBit(Math.pow(2, pos));
+    const res = new BitBoard();
+    res.setBit(pos);
+
+    return res;
   }
 
   static fromPositions(positions) {
@@ -171,19 +163,15 @@ class BitBoard {
     });
 
     return res;
-
-    // return positions.reduce((res, pos) => {
-    //   return res.setBit(pos);
-    // }, new BitBoard());
   }
 
   static fromCol(colNum) {
-    let res = new BitBoard();
+    const res = new BitBoard();
     if (colNum < 0 || colNum > 7) { return res; }
     let pos = colNum;
 
     while (pos < 64) {
-      res = res.setBit(pos);
+      res.setBit(pos);
       pos += 8;
     }
 
@@ -191,14 +179,14 @@ class BitBoard {
   }
 
   static fromRow(rowNum) {
-    let res = new BitBoard();
+    const res = new BitBoard();
     if (rowNum < 0 || rowNum > 7) { return res; }
 
     let pos = rowNum * 8;
     let posMax = pos + 7;
 
     while (pos <= posMax) {
-      res = res.setBit(pos);
+      res.setBit(pos);
       pos++;
     }
 
@@ -206,31 +194,33 @@ class BitBoard {
   }
 
   static upperRightDiag(startPos) {
-    let bb = new BitBoard().setBit(startPos);
+    const res = BitBoard.fromPos(startPos);
+    if (startPos < 0 || startPos > 63) { return res; }
     let pos = startPos + 9;
 
     while (pos < 64 && pos % 8 !== 0) {
-      bb = bb.or(new BitBoard().setBit(pos));
+      res.setBit(pos);
       pos += 9;
     }
 
-    return bb;
+    return res;
   }
 
   static upperLeftDiag(startPos) {
+    const res = new BitBoard();
+    if (startPos < 0 || startPos > 63) { return res; }
     let pos = startPos;
-    let bb = new BitBoard();
 
     while (pos < 64 && pos % 8 !== 0) {
-      bb = bb.or(new BitBoard().setBit(pos));
+      res.setBit(pos);
       pos += 7;
     }
 
     if (pos < 64) {
-      bb = bb.or(new BitBoard().setBit(pos));
+      res.setBit(pos);
     }
 
-    return bb;
+    return res;
   }
 
   render() {
@@ -260,5 +250,6 @@ class BitBoard {
     console.log('------');
   }
 }
+
 
 module.exports = BitBoard;
