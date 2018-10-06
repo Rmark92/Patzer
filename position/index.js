@@ -104,6 +104,7 @@ class Position {
 
     newPositions.forEach1Bit((pos) => {
       type = this.getOppPieces().hasSetBit(pos) ? MoveTypes.CAPT : MoveTypes.QUIET;
+      console.log(type);
       moves.push(new Move(startPos, pos, type));
     });
   }
@@ -133,27 +134,29 @@ class Position {
     });
 
     const queenPos = this.getTurnPieceSet(PieceTypes.QUEENS).bitScanForward();
-    const queenMoves = Queen.moves(queenPos, this.getOccupied(), notOwnPieces);
-    this.addNormalMoveSet(queenMoves, pos, moves);
+    if (queenPos !== null) {
+      const queenMoves = Queen.moves(queenPos, this.getOccupied(), notOwnPieces);
+      this.addNormalMoveSet(queenMoves, pos, moves);
+    }
   }
 
   addCastleMoves(moves) {
     const turnCastleRights = this.getTurnCastleRights();
     const startPos = King.INIT_POS[this.turn];
 
-    let castleSlides;
+    let castleSlide;
 
     if (turnCastleRights & 0b1) {
-      castleSlides = King.castleSlides(this.turn, 'west', this.getOccupied());
-      if (castleSlides.popCount() === 3) {
-        moves.push(startPos, startPos - 4, MoveTypes.CSTL_QUEEN);
+      castleSlide = King.castleSlide(this.turn, 'west', this.getOccupied());
+      if (castleSlide.popCount() === 3) {
+        moves.push(new Move(startPos, startPos - 4, MoveTypes.CSTL_QUEEN));
       }
     }
 
     if (turnCastleRights & 0b10) {
-      castleSlides = King.castleSlides(this.turn, 'east', this.getOccupied());
-      if (castleSlides.popCount() === 2) {
-        moves.push(startPos, startPos + 3, MoveTypes.CSTL_KING);
+      castleSlide = King.castleSlide(this.turn, 'east', this.getOccupied());
+      if (castleSlide.popCount() === 2) {
+        moves.push(new Move(startPos, startPos + 3, MoveTypes.CSTL_KING));
       }
     }
   }
@@ -162,17 +165,92 @@ class Position {
       const notOwnPieces = this.getTurnPieces().not();
       const kingPos = this.getTurnPieceSet(PieceTypes.KINGS).bitScanForward();
 
+      // for testing purposes...
+      if (kingPos === null) { return; }
+
       const normalMoves = King.moves(kingPos, notOwnPieces);
       this.addNormalMoveSet(normalMoves, kingPos, moves);
+
+      this.addCastleMoves(moves);
   }
 
   generateMoves(captsOnly = false) {
     const moves = [];
     this.addPawnMoves(moves, captsOnly);
-    this.addNormalMoves(moves, captsOnly);
-    this.addKingMoves(moves, captsOnly);
+    // this.addNormalMoves(moves, captsOnly);
+    // this.addKingMoves(moves, captsOnly);
 
     return moves;
+  }
+
+  getPieceAt(pos) {
+    const types = Object.values(PieceTypes);
+
+    let idx;
+    let type;
+
+    for (idx = 0; idx < types.length; idx++) {
+      type = types[idx];
+      if (this.pieces[type].hasSetBit(pos)) {
+        return type;
+      }
+    }
+
+    return null;
+  }
+
+  testMove(move) {
+
+  }
+
+  handleMoveType(from, to, type) {
+    switch(type) {
+      case MoveTypes.QUIET:
+        return;
+      case MoveTypes.DBL_PPUSH:
+        break;
+      case MoveTypes.CSTL_KING:
+        
+        break;
+      case MoveTypes.CSTL_QUEEN:
+        break;
+      case MoveTypes.CAPT:
+        this.pieces[this.opp] = this.pieces[this.opp].clearBit(to);
+        break;
+      case MoveTypes.EP_CAPT:
+        break;
+      case MoveTypes.NPROMO:
+        break;
+      case MoveTypes.BPROMO:
+        break;
+      case MoveTypes.RPROMO:
+        break;
+      case MoveTypes.QPROMO:
+        break;
+      case MoveTypes.NPROMO_CAPT:
+        break;
+      case MoveTypes.BPROMO_CAPT:
+        break;
+      case MoveTypes.RPROMO_CAPT:
+        break;
+      case MoveTypes.QPROMO_CAPT:
+        break;
+    }
+  }
+
+  makeMove(move) {
+    const from = move.getFrom();
+    const to = move.getTo();
+    const type = move.getType();
+
+
+    let pieceType = this.getPieceAt(from);
+    this.pieces[pieceType] = this.pieces[pieceType].setBit(to);
+    this.pieces[pieceType] = this.pieces[pieceType].clearBit(from);
+    this.pieces[this.turn] = this.pieces[this.turn].setBit(to);
+    this.pieces[this.turn] = this.pieces[this.turn].clearBit(from);
+
+    this.handleMoveType(from, to, type);
   }
 
   render() {
@@ -184,11 +262,16 @@ class Position {
 }
 
 let pos = new Position();
-// console.log(pos.turn);
-// console.log(pos.opp);
-// pos.getOppPieces().render();
-// pos.render();
-console.log(pos.generateMoves());
-// console.log(pos.generateMoves());
+const moves = pos.generateMoves();
+console.log(moves);
+console.log(moves.length);
+
+moves.forEach((move) => {
+  pos = new Position();
+  console.log(move.getType());
+  pos.makeMove(move);
+  pos.pieces[Colors.WHITE].render();
+  pos.pieces[Colors.BLACK].render();
+});
 
 module.exports = Position;

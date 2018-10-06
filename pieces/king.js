@@ -1,7 +1,9 @@
 const { BBMasks } = require('../bitboards');
+const { Colors } = require('./constants.js');
+
 const INIT_POS = {
-  'black': 60,
-  'white': 4
+  [Colors.BLACK]: 60,
+  [Colors.WHITE]: 4
 };
 
 const King = {

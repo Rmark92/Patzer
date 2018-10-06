@@ -91,22 +91,29 @@ class BitBoard {
 
   setBit(pos) {
     if (pos >= 32 && pos < 64) {
-      return new BitBoard(this.low, this.high | Math.pow(2, pos - 32));
+      this.high = (this.high | Math.pow(2, pos - 32)) >>> 0;
+      // return new BitBoard(this.low, this.high | Math.pow(2, pos - 32));
     } else if (pos >= 0 && pos < 64) {
-      return new BitBoard(this.low | Math.pow(2, pos), this.high);
-    } else {
-      return new BitBoard(this.low, this.high);
+      this.low = (this.low | Math.pow(2, pos)) >>> 0;
+      // return new BitBoard(this.low | Math.pow(2, pos), this.high);
     }
+    // else {
+    //   return new BitBoard(this.low, this.high);
+    // }
   }
 
   clearBit(pos) {
     if (pos >= 32 && pos < 64) {
-      return new BitBoard(this.low, this.high ^ Math.pow(2, pos - 32));
-    } else if (pos >= 0 && pos < 64) {
-      return new BitBoard(this.low ^ Math.pow(2, pos), this.high);
-    } else {
-      return new BitBoard(this.low, this.high);
+      this.high = (this.high ^ Math.pow(2, pos - 32)) >>> 0;
+      // return new BitBoard(this.low, this.high ^ Math.pow(2, pos - 32));
+    } else if (pos >= 0 && pos < 32) {
+      this.low = (this.low ^ Math.pow(2, pos)) >>> 0;
+
+      // return new BitBoard(this.low ^ Math.pow(2, pos), this.high);
     }
+    // else {
+    //   return new BitBoard(this.low, this.high);
+    // }
   }
 
   bitScanForward() {
@@ -120,11 +127,10 @@ class BitBoard {
   }
 
   hasSetBit(pos) {
-    const pos32 = Math.pow(2, pos);
     if (pos < 32) {
-      return Boolean(this.low & pos);
+      return Boolean(this.low & Math.pow(2, pos));
     } else {
-      return Boolean(this.high & pos);
+      return Boolean(this.high & Math.pow(2, pos - 32));
     }
   }
 
@@ -153,10 +159,22 @@ class BitBoard {
     }
   }
 
+  static fromPos(pos) {
+    return new BitBoard().setBit(Math.pow(2, pos));
+  }
+
   static fromPositions(positions) {
-    return positions.reduce((res, pos) => {
-      return res.setBit(pos);
-    }, new BitBoard());
+    const res = new BitBoard();
+
+    positions.forEach((pos) => {
+      res.setBit(pos);
+    });
+
+    return res;
+
+    // return positions.reduce((res, pos) => {
+    //   return res.setBit(pos);
+    // }, new BitBoard());
   }
 
   static fromCol(colNum) {
