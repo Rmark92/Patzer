@@ -110,27 +110,27 @@ class Position {
 
   addNormalMoves(moves) {
     const notOwnPieces = this.getTurnPieces().not();
-    //
-    // const knightsPos = this.getTurnPieceSet(PieceTypes.KNIGHTS);
-    // let knightMoves;
-    // knightsPos.forEach1Bit((pos) => {
-    //   knightMoves = Knight.moves(pos, notOwnPieces);
-    //   this.addNormalMoveSet(knightMoves, pos, moves);
-    // });
-    //
-    // const bishopsPos = this.getTurnPieceSet(PieceTypes.BISHOPS);
-    // let bishopMoves;
-    // bishopsPos.forEach1Bit((pos) => {
-    //   bishopMoves = Bishop.moves(pos, this.getOccupied(), notOwnPieces);
-    //   this.addNormalMoveSet(bishopMoves, pos, moves);
-    // });
-    //
-    // const rooksPos = this.getTurnPieceSet(PieceTypes.ROOKS);
-    // let rookMoves;
-    // rooksPos.forEach1Bit((pos) => {
-    //   rookMoves = Rook.moves(pos, this.getOccupied(), notOwnPieces);
-    //   this.addNormalMoveSet(rookMoves, pos, moves);
-    // });
+
+    const knightsPos = this.getTurnPieceSet(PieceTypes.KNIGHTS);
+    let knightMoves;
+    knightsPos.forEach1Bit((pos) => {
+      knightMoves = Knight.moves(pos, notOwnPieces);
+      this.addNormalMoveSet(knightMoves, pos, moves);
+    });
+
+    const bishopsPos = this.getTurnPieceSet(PieceTypes.BISHOPS);
+    let bishopMoves;
+    bishopsPos.forEach1Bit((pos) => {
+      bishopMoves = Bishop.moves(pos, this.getOccupied(), notOwnPieces);
+      this.addNormalMoveSet(bishopMoves, pos, moves);
+    });
+
+    const rooksPos = this.getTurnPieceSet(PieceTypes.ROOKS);
+    let rookMoves;
+    rooksPos.forEach1Bit((pos) => {
+      rookMoves = Rook.moves(pos, this.getOccupied(), notOwnPieces);
+      this.addNormalMoveSet(rookMoves, pos, moves);
+    });
 
     const queenPos = this.getTurnPieceSet(PieceTypes.QUEENS).bitScanForward();
     if (queenPos !== null) {
@@ -149,14 +149,15 @@ class Position {
     if (turnCastleRights & 0b1) {
       castleSlide = King.castleSlide(this.turn, 'west', this.getOccupied());
       if (castleSlide.popCount() === 3) {
-        moves.push(new Move(startPos, startPos - 4, MoveTypes.CSTL_QUEEN));
+        moves.push(new Move(startPos, startPos - 2, MoveTypes.CSTL_QUEEN));
       }
     }
 
     if (turnCastleRights & 0b10) {
       castleSlide = King.castleSlide(this.turn, 'east', this.getOccupied());
       if (castleSlide.popCount() === 2) {
-        moves.push(new Move(startPos, startPos + 3, MoveTypes.CSTL_KING));
+
+        moves.push(new Move(startPos, startPos + 2, MoveTypes.CSTL_KING));
       }
     }
   }
@@ -176,9 +177,9 @@ class Position {
 
   generateMoves(captsOnly = false) {
     const moves = [];
-    // this.addPawnMoves(moves, captsOnly);
+    this.addPawnMoves(moves, captsOnly);
     this.addNormalMoves(moves, captsOnly);
-    // this.addKingMoves(moves, captsOnly);
+    this.addKingMoves(moves, captsOnly);
 
     return moves;
   }
@@ -199,10 +200,6 @@ class Position {
     return null;
   }
 
-  testMove(move) {
-
-  }
-
   handleMoveType(from, to, type) {
     switch(type) {
       case MoveTypes.QUIET:
@@ -210,9 +207,16 @@ class Position {
       case MoveTypes.DBL_PPUSH:
         break;
       case MoveTypes.CSTL_KING:
-
+        this.pieces[PieceTypes.ROOKS].clearBit(from + 3);
+        this.pieces[this.turn].clearBit(from + 3);
+        this.pieces[PieceTypes.ROOKS].setBit(from + 1);
+        this.pieces[this.turn].setBit(from + 1);
         break;
       case MoveTypes.CSTL_QUEEN:
+        this.pieces[PieceTypes.ROOKS].clearBit(from - 4);
+        this.pieces[this.turn].clearBit(from - 4);
+        this.pieces[PieceTypes.ROOKS].setBit(from - 1);
+        this.pieces[this.turn].setBit(from - 1);
         break;
       case MoveTypes.CAPT:
         this.pieces[this.opp].clearBit(to);
