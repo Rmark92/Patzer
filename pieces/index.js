@@ -1,4 +1,6 @@
-const { WhitePawns, BlackPawns } = require('./pawns.js');
+// const { WhitePawns, BlackPawns } = require('./pawns.js');
+const Constants = require('./constants.js');
+const Pawns = require('./pawns.js');
 const Knight = require('./knight.js');
 const Bishop = require('./bishop.js');
 const Rook = require('./rook.js');
@@ -6,8 +8,9 @@ const Queen = require('./queen.js');
 const King = require('./king.js');
 
 module.exports = {
-  WhitePawns,
-  BlackPawns,
+  PieceTypes: Constants.Types,
+  Colors: Constants.Colors,
+  Pawns,
   Knight,
   Bishop,
   Rook,

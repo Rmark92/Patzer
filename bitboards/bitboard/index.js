@@ -119,6 +119,15 @@ class BitBoard {
     }
   }
 
+  hasSetBit(pos) {
+    const pos32 = Math.pow(2, pos);
+    if (pos < 32) {
+      return Boolean(this.low & pos);
+    } else {
+      return Boolean(this.high & pos);
+    }
+  }
+
   bitScanReverse() {
     if (this.high) {
       return Int32Utils.bitScanReverse(this.high) + 32;

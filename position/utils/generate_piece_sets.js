@@ -1,4 +1,5 @@
-const BitBoard = require('../bitboard');
+const { BitBoard } = require('../../bitboards');
+const { PieceTypes, Colors } = require('../../pieces');
 
 const defaultPieces = [
 "r", "n", "b", "q", "k", "b", "n", "r",
@@ -22,49 +23,49 @@ function newPieceSet() {
   };
 }
 
-function fromPieceArray(piecesArr) {
+function generatePieceSets(piecesArr) {
   let pos;
   piecesArr = piecesArr || defaultPieces;
 
   const pieces = {
-    pawns: new BitBoard(),
-    knights: new BitBoard(),
-    bishops: new BitBoard(),
-    rooks: new BitBoard(),
-    queens: new BitBoard(),
-    kings: new BitBoard(),
-    white: new BitBoard(),
-    black: new BitBoard()
+    [PieceTypes.PAWNS]: new BitBoard(),
+    [PieceTypes.KNIGHTS]: new BitBoard(),
+    [PieceTypes.BISHOPS]: new BitBoard(),
+    [PieceTypes.ROOKS]: new BitBoard(),
+    [PieceTypes.QUEENS]: new BitBoard(),
+    [PieceTypes.KINGS]: new BitBoard(),
+    [Colors.WHITE]: new BitBoard(),
+    [Colors.BLACK]: new BitBoard()
   };
 
   function assignPiece(i) {
     switch (piecesArr[i].toLowerCase()) {
       case 'p':
-        pieces.pawns = pieces.pawns.setBit(i);
+        pieces[PieceTypes.PAWNS] = pieces[PieceTypes.PAWNS].setBit(i);
         break;
       case 'n':
-        pieces.knights = pieces.knights.setBit(i);
+        pieces[PieceTypes.KNIGHTS] = pieces[PieceTypes.KNIGHTS].setBit(i);
         break;
       case 'b':
-        pieces.bishops = pieces.bishops.setBit(i);
+        pieces[PieceTypes.BISHOPS] = pieces[PieceTypes.BISHOPS].setBit(i);
         break;
       case 'r':
-        pieces.rooks = pieces.rooks.setBit(i);
+        pieces[PieceTypes.ROOKS] = pieces[PieceTypes.ROOKS].setBit(i);
         break;
       case 'q':
-        pieces.queens = pieces.queens.setBit(i);
+        pieces[PieceTypes.QUEENS] = pieces[PieceTypes.QUEENS].setBit(i);
         break;
       case 'k':
-        pieces.kings = pieces.kings.setBit(i);
+        pieces[PieceTypes.KINGS] = pieces[PieceTypes.KINGS].setBit(i);
         break;
       default:
         return;
     }
 
     if (piecesArr[i].toLowerCase() === piecesArr[i]) {
-      pieces.white = pieces.white.setBit(i);
+      pieces[Colors.WHITE] = pieces[Colors.WHITE].setBit(i);
     } else {
-      pieces.black = pieces.black.setBit(i);
+      pieces[Colors.BLACK] = pieces[Colors.BLACK].setBit(i);
     }
 
   }
@@ -76,4 +77,4 @@ function fromPieceArray(piecesArr) {
   return pieces;
 }
 
-module.exports = fromPieceArray;
+module.exports = generatePieceSets;
