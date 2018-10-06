@@ -6,13 +6,14 @@ const { Pawns, Knight, Bishop,
         PieceTypes, Colors } = require('../pieces');
 
 class Position {
-  constructor(pieces = generatePieceSets(), turn = Colors.BLACK, prevMoves = []) {
+  constructor(pieces = generatePieceSets(), turn = Colors.WHITE, prevMoves = []) {
     this.pieces = pieces;
     this.prevMoves = prevMoves;
 
     // castling rights represented by 16bit int
     // bKing bQueen wKing wQueen
     this.castlingRights = 0xf;
+    this.epBB = new BitBoard();
     this.setTurn(turn);
   }
 
@@ -75,25 +76,29 @@ class Position {
     const pawnsPos = this.getTurnPieceSet(PieceTypes.PAWNS);
     const notOccupied = this.getOccupied().not();
 
-    const pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
-    this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.dir(this.turn), MoveTypes.QUIET, moves);
+    // const pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
+    // this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.DIRS[this.turn], MoveTypes.QUIET, moves);
 
     const pawnDoublePushes = Pawns.doublePush(this.turn, pawnsPos, notOccupied);
-    this.addPawnMoveSet(pawnDoublePushes, 16 * Pawns.dir(this.turn), MoveTypes.DBL_PPUSH, moves);
+    this.addPawnMoveSet(pawnDoublePushes, 16 * Pawns.DIRS[this.turn], MoveTypes.DBL_PPUSH, moves);
 
-    const pawnLeftAttacks = Pawns.attacksLeft(this.turn, pawnsPos, this.getOppPieces());
-    this.addPawnMoveSet(pawnLeftAttacks, 7 * Pawns.dir(this.turn), MoveTypes.CAPT, moves);
+    let oppPositions = this.getOppPieces().or(this.epBB);
 
-    const pawnRightAttacks = Pawns.attacksRight(this.turn, pawnsPos, this.getOppPieces());
-    this.addPawnMoveSet(pawnRightAttacks, 9 * Pawns.dir(this.turn), MoveTypes.CAPT, moves);
+    const pawnLeftAttacks = Pawns.attacksLeft(this.turn, pawnsPos, oppPositions);
+    this.addPawnMoveSet(pawnLeftAttacks, 7 * Pawns.DIRS[this.turn], MoveTypes.CAPT, moves);
+
+    const pawnRightAttacks = Pawns.attacksRight(this.turn, pawnsPos, oppPositions);
+    this.addPawnMoveSet(pawnRightAttacks, 9 * Pawns.DIRS[this.turn], MoveTypes.CAPT, moves);
   }
 
   addPawnMoveSet(newPositions, shiftAmt, type, moves) {
     let newPos;
     let newMove;
+    let moveType;
 
     newPositions.forEach1Bit((pos) => {
-      moves.push(new Move(pos - shiftAmt, pos, type));
+      moveType = type === MoveTypes.CAPT && this.epBB.hasSetBit(pos) ? MoveTypes.EP_CAPT : type;
+      moves.push(new Move(pos - shiftAmt, pos, moveType));
     });
   }
 
@@ -178,8 +183,8 @@ class Position {
   generateMoves(captsOnly = false) {
     const moves = [];
     this.addPawnMoves(moves, captsOnly);
-    this.addNormalMoves(moves, captsOnly);
-    this.addKingMoves(moves, captsOnly);
+    // this.addNormalMoves(moves, captsOnly);
+    // this.addKingMoves(moves, captsOnly);
 
     return moves;
   }
@@ -205,6 +210,8 @@ class Position {
       case MoveTypes.QUIET:
         return;
       case MoveTypes.DBL_PPUSH:
+        let epPos = to + (-Pawns.DIRS[this.turn] * 8);
+        this.epBB = BitBoard.fromPos(epPos);
         break;
       case MoveTypes.CSTL_KING:
         this.pieces[PieceTypes.ROOKS].clearBit(from + 3);
@@ -222,6 +229,10 @@ class Position {
         this.pieces[this.opp].clearBit(to);
         break;
       case MoveTypes.EP_CAPT:
+        let capturedPos = to - (Pawns.DIRS[this.turn] * 8);
+        console.log('CAPTURED POS: ' + capturedPos);
+        this.pieces[PieceTypes.PAWNS].clearBit(capturedPos);
+        this.pieces[this.opp].clearBit(capturedPos);
         break;
       case MoveTypes.NPROMO:
         break;
@@ -255,7 +266,10 @@ class Position {
     this.pieces[this.turn].setBit(to);
     this.pieces[this.turn].clearBit(from);
 
+
+    this.epBB = new BitBoard();
     this.handleMoveType(from, to, type);
+    this.swapTurn();
   }
 
   render() {
@@ -269,15 +283,26 @@ class Position {
 
 let pos = new Position();
 const moves = pos.generateMoves();
+let nextMoves;
+
 console.log(moves);
 console.log(moves.length);
 
 moves.forEach((move) => {
+  console.log('DEPT = 1');
   pos = new Position();
-  // console.log(move.getType());
+  console.log(move.getType());
   pos.makeMove(move);
   pos.pieces[Colors.WHITE].render();
   pos.pieces[Colors.BLACK].render();
+  nextMoves = pos.generateMoves();
+  nextMoves.forEach((nextMove) => {
+    console.log('DEPT = 2');
+    console.log(nextMove.getType());
+    pos.makeMove(nextMove);
+    pos.pieces[Colors.WHITE].render();
+    pos.pieces[Colors.BLACK].render();
+  });
 });
 
 module.exports = Position;

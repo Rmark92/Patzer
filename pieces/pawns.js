@@ -2,27 +2,27 @@ const stepMove = require('../position/movements/step_move.js');
 const { BBMasks } = require('../bitboards');
 const { Colors } = require('./constants.js');
 
-const ColorDirs = {
+const DIRS = {
   [Colors.WHITE]: 1,
   [Colors.BLACK]: -1
 };
 
 const Pawns = {
   value: 1,
-  dir: (color) => ColorDirs[color],
+  DIRS,
   promoRow: (color) => color === Colors.WHITE ? BBMasks.ROWS[7] : BBMasks.ROWS[0],
   attacksLeft: (color, positions, oppPieces) => {
-    return stepMove(positions, ColorDirs[color], -ColorDirs[color]).and(oppPieces);
+    return stepMove(positions, DIRS[color], -DIRS[color]).and(oppPieces);
   },
   attacksRight: (color, positions, oppPieces) => {
-    return stepMove(positions, ColorDirs[color], ColorDirs[color]).and(oppPieces);
+    return stepMove(positions, DIRS[color], DIRS[color]).and(oppPieces);
   },
   singlePush: (color, positions, notOccupied) => {
-    return stepMove(positions, ColorDirs[color], 0).and(notOccupied);
+    return stepMove(positions, DIRS[color], 0).and(notOccupied);
   },
   doublePush: (color, positions, notOccupied) => {
     const initMask = color === Colors.WHITE ? BBMasks.ROWS[1] : BBMasks.ROWS[6];
-    return stepMove(positions.and(initMask), 2 * ColorDirs[color], 0).and(notOccupied);
+    return stepMove(positions.and(initMask), 2 * DIRS[color], 0).and(notOccupied);
   }
 };
 
