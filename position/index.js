@@ -75,9 +75,9 @@ class Position {
   addPawnMoves(moves) {
     const pawnsPos = this.getTurnPieceSet(PieceTypes.PAWNS);
     const notOccupied = this.getOccupied().not();
-
-    // const pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
-    // this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.DIRS[this.turn], MoveTypes.QUIET, moves);
+    
+    const pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
+    this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.DIRS[this.turn], MoveTypes.QUIET, moves);
 
     const pawnDoublePushes = Pawns.doublePush(this.turn, pawnsPos, notOccupied);
     this.addPawnMoveSet(pawnDoublePushes, 16 * Pawns.DIRS[this.turn], MoveTypes.DBL_PPUSH, moves);
@@ -91,14 +91,32 @@ class Position {
     this.addPawnMoveSet(pawnRightAttacks, 9 * Pawns.DIRS[this.turn], MoveTypes.CAPT, moves);
   }
 
+  addPromos(from, to, isCapt, moves) {
+    console.log(moves);
+    let promos;
+    if (isCapt) {
+      promos = [MoveTypes.NPROMO_CAPT, MoveTypes.BPROMO_CAPT,
+                MoveTypes.RPROMO_CAPT, MoveTypes.QPROMO_CAPT];
+    } else {
+      promos = [MoveTypes.NPROMO, MoveTypes.BPROMO,
+                MoveTypes.RPROMO, MoveTypes.QPROMO];
+    }
+
+    promos.forEach((promoType) => moves.push(new Move(from, to, promoType)));
+  }
+
   addPawnMoveSet(newPositions, shiftAmt, type, moves) {
-    let newPos;
-    let newMove;
-    let moveType;
+    let from;
 
     newPositions.forEach1Bit((pos) => {
-      moveType = type === MoveTypes.CAPT && this.epBB.hasSetBit(pos) ? MoveTypes.EP_CAPT : type;
-      moves.push(new Move(pos - shiftAmt, pos, moveType));
+      from = pos - shiftAmt;
+      if (type === MoveTypes.CAPT && this.epBB.hasSetBit(pos)) {
+        moves.push(new Move(from, pos, MoveTypes.EP_CAPT));
+      } else if (Pawns.PROMO_MASKS[this.turn].hasSetBit(pos)) {
+        this.addPromos(from, pos, type === MoveTypes.CAPT, moves);
+      } else {
+        moves.push(new Move(from, pos, type));
+      }
     });
   }
 
@@ -230,25 +248,44 @@ class Position {
         break;
       case MoveTypes.EP_CAPT:
         let capturedPos = to - (Pawns.DIRS[this.turn] * 8);
-        console.log('CAPTURED POS: ' + capturedPos);
         this.pieces[PieceTypes.PAWNS].clearBit(capturedPos);
         this.pieces[this.opp].clearBit(capturedPos);
         break;
       case MoveTypes.NPROMO:
+        this.pieces[PieceTypes.PAWNS].clearBit(to);
+        this.pieces[PieceTypes.KNIGHTS].setBit(to);
         break;
       case MoveTypes.BPROMO:
+        this.pieces[PieceTypes.PAWNS].clearBit(to);
+        this.pieces[PieceTypes.BISHOPS].setBit(to);
         break;
       case MoveTypes.RPROMO:
+        this.pieces[PieceTypes.PAWNS].clearBit(to);
+        this.pieces[PieceTypes.ROOKS].setBit(to);
         break;
       case MoveTypes.QPROMO:
+        this.pieces[PieceTypes.PAWNS].clearBit(to);
+        this.pieces[PieceTypes.QUEENS].setBit(to);
         break;
       case MoveTypes.NPROMO_CAPT:
+        this.pieces[PieceTypes.PAWNS].clearBit(to);
+        this.pieces[PieceTypes.KNIGHTS].setBit(to);
+        this.pieces[this.opp].clearBit(to);
         break;
       case MoveTypes.BPROMO_CAPT:
+        this.pieces[PieceTypes.PAWNS].clearBit(to);
+        this.pieces[PieceTypes.BISHOPS].setBit(to);
+        this.pieces[this.opp].clearBit(to);
         break;
       case MoveTypes.RPROMO_CAPT:
+        this.pieces[PieceTypes.PAWNS].clearBit(to);
+        this.pieces[PieceTypes.ROOKS].setBit(to);
+        this.pieces[this.opp].clearBit(to);
         break;
       case MoveTypes.QPROMO_CAPT:
+        this.pieces[PieceTypes.PAWNS].clearBit(to);
+        this.pieces[PieceTypes.QUEENS].setBit(to);
+        this.pieces[this.opp].clearBit(to);
         break;
     }
   }
@@ -257,8 +294,6 @@ class Position {
     const from = move.getFrom();
     const to = move.getTo();
     const type = move.getType();
-    console.log(from, to);
-
 
     let pieceType = this.getPieceAt(from);
     this.pieces[pieceType].setBit(to);
@@ -295,14 +330,14 @@ moves.forEach((move) => {
   pos.makeMove(move);
   pos.pieces[Colors.WHITE].render();
   pos.pieces[Colors.BLACK].render();
-  nextMoves = pos.generateMoves();
-  nextMoves.forEach((nextMove) => {
-    console.log('DEPT = 2');
-    console.log(nextMove.getType());
-    pos.makeMove(nextMove);
-    pos.pieces[Colors.WHITE].render();
-    pos.pieces[Colors.BLACK].render();
-  });
+  // nextMoves = pos.generateMoves();
+  // nextMoves.forEach((nextMove) => {
+  //   console.log('DEPT = 2');
+  //   console.log(nextMove.getType());
+  //   pos.makeMove(nextMove);
+  //   pos.pieces[Colors.WHITE].render();
+  //   pos.pieces[Colors.BLACK].render();
+  // });
 });
 
 module.exports = Position;
