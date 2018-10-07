@@ -25,61 +25,56 @@ class Position {
 
   setTurn(turn, opp) {
     this.turn = turn;
-    this.opp = opp || this.getOppColor(turn);
+    this.opp = opp || this.getOtherColor(turn);
   }
 
   swapTurn() {
     this.setTurn(this.opp, this.turn);
   }
 
-  getOppColor(color) {
+  getOtherColor(color) {
     return color === Colors.WHITE ? Colors.BLACK : Colors.WHITE;
   }
 
-  getTurnPieces() {
-    return this.pieces[this.turn];
-  }
-
-  getOppPieces() {
-    return this.pieces[this.opp];
+  getColorPieceSet(color, pieceType) {
+    return this.pieces[color].and(this.pieces[pieceType]);
   }
 
   getOccupied() {
-    return this.getTurnPieces().or(this.getOppPieces());
+    return this.pieces[Colors.WHITE].or(this.pieces[Colors.BLACK]);
   }
 
-  getTurnPieceSet(pieceType) {
-    return this.getTurnPieces().and(this.pieces[pieceType]);
-  }
-
-  getOppPieceSet(pieceType) {
-    return this.getOppPieces().and(this.pieces[pieceType]);
+  // returns a BB of all positions that this color does not occupy
+  getNotOccupiedBy(color) {
+    return this.pieces[color].not();
   }
 
   getTurnCastleRights() {
     return this.turn === Colors.WHITE ? this.castleRights & 0b11 : this.castleRights >>> 2;
   }
 
-  isAttacked(pos) {
+  isAttacked(pos, color) {
     const posBB = BitBoard.fromPos(pos);
-    const oppPawns = this.getOppPieceSet(PieceTypes.PAWNS);
+    const occupied = this.getOccupied();
+    const oppColor = this.getOtherColor(color);
+    const pawns = this.getColorPieceSet(oppColor, PieceTypes.PAWNS);
 
-    return (!Pawns.leftAttacks(this.turn, oppPawns, posBB).isZero() ||
-            !Pawns.rightAttacks(this.turn, oppPawns, posBB).isZero() ||
-            !Knight.moves(pos, this.getOppPieceSet(PieceTypes.KNIGHTS)).isZero() ||
-            !Bishop.moves(pos, this.occupied, this.getOppPieceSet(PieceTypes.BISHOPS)).isZero() ||
-            !Rook.moves(pos, this.occupied, this.getOppPieceSet(PieceTypes.ROOKS)).isZero() ||
-            !Queen.moves(pos, this.occupied, this.getOppPieceSet(PieceTypes.QUEENS)).isZero() ||
-            !King.moves(pos, this.getOppPieceSet(PieceTypes.KINGS)).isZero());
+    return (!Pawns.leftAttacks(oppColor, pawns, posBB).isZero() ||
+            !Pawns.rightAttacks(oppColor, pawns, posBB).isZero() ||
+            !Knight.moves(pos, this.getColorPieceSet(oppColor, PieceTypes.KNIGHTS)).isZero() ||
+            !Bishop.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.BISHOPS)).isZero() ||
+            !Rook.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.ROOKS)).isZero() ||
+            !Queen.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.QUEENS)).isZero() ||
+            !King.moves(pos, this.getColorPieceSet(oppColor, PieceTypes.KINGS)).isZero());
   }
 
-  inCheck() {
-    const kingPos = this.getTurnPieceSet(PieceTypes.KINGS).bitScanForward();
-    return this.isAttacked(kingPos);
+  inCheck(color) {
+    const kingPos = this.getColorPieceSet(color, PieceTypes.KINGS).bitScanForward();
+    return this.isAttacked(kingPos, color);
   }
 
   addPawnMoves(moves) {
-    const pawnsPos = this.getTurnPieceSet(PieceTypes.PAWNS);
+    const pawnsPos = this.getColorPieceSet(this.turn, PieceTypes.PAWNS);
     const notOccupied = this.getOccupied().not();
 
     const pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
@@ -88,7 +83,7 @@ class Position {
     const pawnDoublePushes = Pawns.doublePush(this.turn, pawnsPos, notOccupied);
     this.addPawnMoveSet(pawnDoublePushes, 16 * Pawns.DIRS[this.turn], moves, false, true);
 
-    let oppPositions = this.getOppPieces().or(this.epBB);
+    let oppPositions = this.pieces[this.opp].or(this.epBB);
 
     const pawnLeftAttacks = Pawns.attacksLeft(this.turn, pawnsPos, oppPositions);
     this.addPawnMoveSet(pawnLeftAttacks, 7 * Pawns.DIRS[this.turn], moves, true);
@@ -132,38 +127,39 @@ class Position {
     let captType;
 
     newPositions.forEach1Bit((pos) => {
-      captType = this.getOppPieces().hasSetBit(pos) ? this.getPieceAt(pos) : null;
+      captType = this.pieces[this.opp].hasSetBit(pos) ? this.getPieceAt(pos) : null;
       moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));
     });
   }
 
   addNormalMoves(moves) {
-    const notOwnPieces = this.getTurnPieces().not();
+    const occupied = this.getOccupied();
+    const notOwnPieces = this.getNotOccupiedBy(this.turn);
 
-    const knightsPos = this.getTurnPieceSet(PieceTypes.KNIGHTS);
+    const knightsPos = this.getColorPieceSet(this.turn, PieceTypes.KNIGHTS);
     let knightMoves;
     knightsPos.forEach1Bit((pos) => {
       knightMoves = Knight.moves(pos, notOwnPieces);
       this.addNormalMoveSet(knightMoves, pos, PieceTypes.KNIGHTS, moves);
     });
 
-    const bishopsPos = this.getTurnPieceSet(PieceTypes.BISHOPS);
+    const bishopsPos = this.getColorPieceSet(this.turn, PieceTypes.BISHOPS);
     let bishopMoves;
     bishopsPos.forEach1Bit((pos) => {
-      bishopMoves = Bishop.moves(pos, this.getOccupied(), notOwnPieces);
+      bishopMoves = Bishop.moves(pos, occupied, notOwnPieces);
       this.addNormalMoveSet(bishopMoves, pos, PieceTypes.BISHOPS, moves);
     });
 
-    const rooksPos = this.getTurnPieceSet(PieceTypes.ROOKS);
+    const rooksPos = this.getColorPieceSet(this.turn, PieceTypes.ROOKS);
     let rookMoves;
     rooksPos.forEach1Bit((pos) => {
-      rookMoves = Rook.moves(pos, this.getOccupied(), notOwnPieces);
+      rookMoves = Rook.moves(pos, occupied, notOwnPieces);
       this.addNormalMoveSet(rookMoves, pos, PieceTypes.ROOKS, moves);
     });
 
-    const queenPos = this.getTurnPieceSet(PieceTypes.QUEENS).bitScanForward();
+    const queenPos = this.getColorPieceSet(this.turn, PieceTypes.QUEENS).bitScanForward();
     if (queenPos !== null) {
-      const queenMoves = Queen.moves(queenPos, this.getOccupied(), notOwnPieces);
+      const queenMoves = Queen.moves(queenPos, occupied, notOwnPieces);
       this.addNormalMoveSet(queenMoves, queenPos, PieceTypes.QUEENS, moves);
     }
   }
@@ -190,8 +186,8 @@ class Position {
   }
 
   addKingMoves(moves) {
-      const notOwnPieces = this.getTurnPieces().not();
-      const kingPos = this.getTurnPieceSet(PieceTypes.KINGS).bitScanForward();
+      const notOwnPieces = this.getNotOccupiedBy(this.turn);
+      const kingPos = this.getColorPieceSet(this.turn, PieceTypes.KINGS).bitScanForward();
 
       // for testing purposes...
       if (kingPos === null) { return; }
@@ -395,6 +391,7 @@ class Position {
 
     let pos;
     let rowStr = '';
+    console.log("\n");
     for (pos = 63; pos >= 0; pos--) {
       rowStr = boardArr[pos] + rowStr;
       if (pos % 8 === 0) {
@@ -402,6 +399,7 @@ class Position {
         rowStr = '';
       }
     }
+    console.log("\n");
   }
 }
 
