@@ -1,4 +1,4 @@
-const Types = require('./type_constants.js');
+const { Types, PromoMask } = require('./type_constants.js');
 
 class Move {
   constructor(from, to, type, piece, captPiece) {
@@ -28,6 +28,10 @@ class Move {
   getType() {
     return this.val >>> 18;
   }
+
+  isPromo() {
+    return Boolean(PromoMask & this.val);
+  }
 }
 
-module.exports = { Move, MoveTypes: Types.Encode };
+module.exports = { Move, MoveTypes: Types };

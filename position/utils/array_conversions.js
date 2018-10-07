@@ -20,7 +20,7 @@ const BK = PieceConv.pieceToLetter(PieceTypes.KINGS, Colors.BLACK);
 
 const defaultBoardArr = [
 WR, WN, WB, WQ, WK, WB, WN, WR,
-WP, WP, WP, WP, WP, WP, WP, WP,
+WP, WP, WP, WP, WP, WP, WP, BP,
 xx, xx, xx, xx, xx, xx, xx, xx,
 xx, xx, xx, xx, xx, xx, xx, xx,
 xx, xx, xx, xx, xx, xx, xx, xx,

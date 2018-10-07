@@ -16,7 +16,7 @@ const Pawns = {
   value: 1,
   DIRS,
   PROMO_MASKS: { [Colors.WHITE]: BBMasks.ROWS[7],
-                 [Colors.BLACK]: BBMasks.ROWS[7]
+                 [Colors.BLACK]: BBMasks.ROWS[0]
                },
   attacksLeft: (color, positions, oppPieces) => {
     return stepMove(positions, DIRS[color], -DIRS[color]).and(oppPieces);

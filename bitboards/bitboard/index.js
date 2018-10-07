@@ -99,9 +99,9 @@ class BitBoard {
 
   clearBit(pos) {
     if (pos >= 32 && pos < 64) {
-      this.high = (this.high ^ Math.pow(2, pos - 32)) >>> 0;
+      this.high = (this.high & (~Math.pow(2, pos - 32))) >>> 0;
     } else if (pos >= 0 && pos < 32) {
-      this.low = (this.low ^ Math.pow(2, pos)) >>> 0;
+      this.low = (this.low & (~Math.pow(2, pos))) >>> 0;
     }
   }
 
