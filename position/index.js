@@ -9,11 +9,13 @@ class Position {
   constructor(pieces = generatePieceSets(), turn = Colors.WHITE, prevMoves = []) {
     this.pieces = pieces;
     this.prevMoves = prevMoves;
+    this.prevStates = [];
 
     // castling rights represented by 16bit int
     // bKing bQueen wKing wQueen
     this.castlingRights = 0xf;
     this.epBB = new BitBoard();
+
     this.setTurn(turn);
   }
 
@@ -75,9 +77,9 @@ class Position {
   addPawnMoves(moves) {
     const pawnsPos = this.getTurnPieceSet(PieceTypes.PAWNS);
     const notOccupied = this.getOccupied().not();
-    
+
     const pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
-    this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.DIRS[this.turn], MoveTypes.QUIET, moves);
+    this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.DIRS[this.turn], MoveTypes.NORMAL, moves);
 
     const pawnDoublePushes = Pawns.doublePush(this.turn, pawnsPos, notOccupied);
     this.addPawnMoveSet(pawnDoublePushes, 16 * Pawns.DIRS[this.turn], MoveTypes.DBL_PPUSH, moves);
@@ -92,17 +94,11 @@ class Position {
   }
 
   addPromos(from, to, isCapt, moves) {
-    console.log(moves);
-    let promos;
-    if (isCapt) {
-      promos = [MoveTypes.NPROMO_CAPT, MoveTypes.BPROMO_CAPT,
-                MoveTypes.RPROMO_CAPT, MoveTypes.QPROMO_CAPT];
-    } else {
-      promos = [MoveTypes.NPROMO, MoveTypes.BPROMO,
-                MoveTypes.RPROMO, MoveTypes.QPROMO];
-    }
-
-    promos.forEach((promoType) => moves.push(new Move(from, to, promoType)));
+    const captType = isCapt ? this.getPieceAt(to) : null;
+    [MoveTypes.NPROMO, MoveTypes.BPROMO,
+     MoveTypes.RPROMO, MoveTypes.QPROMO].forEach((promoType) => {
+       moves.push(new Move(from, to, promoType, PieceTypes.PAWNS, captType));
+     });
   }
 
   addPawnMoveSet(newPositions, shiftAmt, type, moves) {
@@ -111,23 +107,23 @@ class Position {
     newPositions.forEach1Bit((pos) => {
       from = pos - shiftAmt;
       if (type === MoveTypes.CAPT && this.epBB.hasSetBit(pos)) {
-        moves.push(new Move(from, pos, MoveTypes.EP_CAPT));
+        moves.push(new Move(from, pos, MoveTypes.EP_CAPT, PieceTypes.PAWNS));
       } else if (Pawns.PROMO_MASKS[this.turn].hasSetBit(pos)) {
         this.addPromos(from, pos, type === MoveTypes.CAPT, moves);
       } else {
-        moves.push(new Move(from, pos, type));
+        moves.push(new Move(from, pos, type, PieceTypes.PAWNS));
       }
     });
   }
 
-  addNormalMoveSet(newPositions, startPos, moves) {
+  addNormalMoveSet(newPositions, startPos, pieceType, moves) {
     let newPos;
     let newMove;
-    let type;
+    let captType;
 
     newPositions.forEach1Bit((pos) => {
-      type = this.getOppPieces().hasSetBit(pos) ? MoveTypes.CAPT : MoveTypes.QUIET;
-      moves.push(new Move(startPos, pos, type));
+      captType = this.getOppPieces().hasSetBit(pos) ? this.getPieceAt(pos) : null;
+      moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));
     });
   }
 
@@ -138,28 +134,28 @@ class Position {
     let knightMoves;
     knightsPos.forEach1Bit((pos) => {
       knightMoves = Knight.moves(pos, notOwnPieces);
-      this.addNormalMoveSet(knightMoves, pos, moves);
+      this.addNormalMoveSet(knightMoves, pos, PieceTypes.KNIGHTS, moves);
     });
 
     const bishopsPos = this.getTurnPieceSet(PieceTypes.BISHOPS);
     let bishopMoves;
     bishopsPos.forEach1Bit((pos) => {
       bishopMoves = Bishop.moves(pos, this.getOccupied(), notOwnPieces);
-      this.addNormalMoveSet(bishopMoves, pos, moves);
+      this.addNormalMoveSet(bishopMoves, pos, PieceTypes.BISHOPS, moves);
     });
 
     const rooksPos = this.getTurnPieceSet(PieceTypes.ROOKS);
     let rookMoves;
     rooksPos.forEach1Bit((pos) => {
       rookMoves = Rook.moves(pos, this.getOccupied(), notOwnPieces);
-      this.addNormalMoveSet(rookMoves, pos, moves);
+      this.addNormalMoveSet(rookMoves, pos, PieceTypes.ROOKS, moves);
     });
 
     const queenPos = this.getTurnPieceSet(PieceTypes.QUEENS).bitScanForward();
     if (queenPos !== null) {
       const queenMoves = Queen.moves(queenPos, this.getOccupied(), notOwnPieces);
       queenMoves.render();
-      this.addNormalMoveSet(queenMoves, queenPos, moves);
+      this.addNormalMoveSet(queenMoves, queenPos, PieceTypes.QUEENS, moves);
     }
   }
 
@@ -172,15 +168,14 @@ class Position {
     if (turnCastleRights & 0b1) {
       castleSlide = King.castleSlide(this.turn, 'west', this.getOccupied());
       if (castleSlide.popCount() === 3) {
-        moves.push(new Move(startPos, startPos - 2, MoveTypes.CSTL_QUEEN));
+        moves.push(new Move(startPos, startPos - 2, MoveTypes.CSTL_QUEEN, PieceTypes.KINGS));
       }
     }
 
     if (turnCastleRights & 0b10) {
       castleSlide = King.castleSlide(this.turn, 'east', this.getOccupied());
       if (castleSlide.popCount() === 2) {
-
-        moves.push(new Move(startPos, startPos + 2, MoveTypes.CSTL_KING));
+        moves.push(new Move(startPos, startPos + 2, MoveTypes.CSTL_KING, PieceTypes.KINGS));
       }
     }
   }
@@ -193,7 +188,7 @@ class Position {
       if (kingPos === null) { return; }
 
       const normalMoves = King.moves(kingPos, notOwnPieces);
-      this.addNormalMoveSet(normalMoves, kingPos, moves);
+      this.addNormalMoveSet(normalMoves, kingPos, PieceTypes.KINGS, moves);
 
       this.addCastleMoves(moves);
   }
@@ -223,88 +218,167 @@ class Position {
     return null;
   }
 
-  handleMoveType(from, to, type) {
+  movePiece(from, to, color, pieceType) {
+    this.clearPieceAt(from, color, pieceType);
+    this.setPieceAt(to, color, pieceType);
+  }
+
+  setPieceAt(pos, color, pieceType) {
+    this.pieces[color].setBit(pos);
+    this.pieces[pieceType].setBit(pos);
+  }
+
+  clearPieceAt(pos, color, pieceType) {
+    this.pieces[color].clearBit(pos);
+    this.pieces[pieceType].clearBit(pos);
+  }
+
+  changePieceType(pos, fromPieceType, toPieceType) {
+    this.pieces[fromPieceType].clearBit(pos);
+    this.pieces[toPieceType].setBit(pos);
+  }
+
+  promote(pos, pieceType) {
+    this.pieces[PieceTypes.PAWNS].clearBit(pos);
+    this.pieces[pieceType].setBit(pos);
+  }
+
+  demote(pos, pieceType) {
+    this.pieces[PieceTypes.PAWNS].clearBit(pos);
+  }
+
+  execMoveType(from, to, type) {
     switch(type) {
-      case MoveTypes.QUIET:
+      case MoveTypes.NORMAL:
         return;
       case MoveTypes.DBL_PPUSH:
         let epPos = to + (-Pawns.DIRS[this.turn] * 8);
         this.epBB = BitBoard.fromPos(epPos);
         break;
       case MoveTypes.CSTL_KING:
-        this.pieces[PieceTypes.ROOKS].clearBit(from + 3);
-        this.pieces[this.turn].clearBit(from + 3);
-        this.pieces[PieceTypes.ROOKS].setBit(from + 1);
-        this.pieces[this.turn].setBit(from + 1);
+        this.movePiece(from + 3, from + 1, this.turn, PieceTypes.ROOKS);
         break;
       case MoveTypes.CSTL_QUEEN:
-        this.pieces[PieceTypes.ROOKS].clearBit(from - 4);
-        this.pieces[this.turn].clearBit(from - 4);
-        this.pieces[PieceTypes.ROOKS].setBit(from - 1);
-        this.pieces[this.turn].setBit(from - 1);
-        break;
-      case MoveTypes.CAPT:
-        this.pieces[this.opp].clearBit(to);
+        this.movePiece(from - 4, from - 1, this.turn, PieceTypes.ROOKS);
         break;
       case MoveTypes.EP_CAPT:
         let capturedPos = to - (Pawns.DIRS[this.turn] * 8);
-        this.pieces[PieceTypes.PAWNS].clearBit(capturedPos);
-        this.pieces[this.opp].clearBit(capturedPos);
+        this.clearPieceAt(capturedPos, this.opp, PieceTypes.PAWNS);
         break;
       case MoveTypes.NPROMO:
-        this.pieces[PieceTypes.PAWNS].clearBit(to);
-        this.pieces[PieceTypes.KNIGHTS].setBit(to);
+        this.changePieceType(to, PieceTypes.PAWNS, PieceTypes.KNIGHTS);
         break;
       case MoveTypes.BPROMO:
-        this.pieces[PieceTypes.PAWNS].clearBit(to);
-        this.pieces[PieceTypes.BISHOPS].setBit(to);
+        this.changePieceType(to, PieceTypes.PAWNS, PieceTypes.BISHOPS);
         break;
       case MoveTypes.RPROMO:
-        this.pieces[PieceTypes.PAWNS].clearBit(to);
-        this.pieces[PieceTypes.ROOKS].setBit(to);
+        this.changePieceType(to, PieceTypes.PAWNS, PieceTypes.ROOKS);
         break;
       case MoveTypes.QPROMO:
-        this.pieces[PieceTypes.PAWNS].clearBit(to);
-        this.pieces[PieceTypes.QUEENS].setBit(to);
-        break;
-      case MoveTypes.NPROMO_CAPT:
-        this.pieces[PieceTypes.PAWNS].clearBit(to);
-        this.pieces[PieceTypes.KNIGHTS].setBit(to);
-        this.pieces[this.opp].clearBit(to);
-        break;
-      case MoveTypes.BPROMO_CAPT:
-        this.pieces[PieceTypes.PAWNS].clearBit(to);
-        this.pieces[PieceTypes.BISHOPS].setBit(to);
-        this.pieces[this.opp].clearBit(to);
-        break;
-      case MoveTypes.RPROMO_CAPT:
-        this.pieces[PieceTypes.PAWNS].clearBit(to);
-        this.pieces[PieceTypes.ROOKS].setBit(to);
-        this.pieces[this.opp].clearBit(to);
-        break;
-      case MoveTypes.QPROMO_CAPT:
-        this.pieces[PieceTypes.PAWNS].clearBit(to);
-        this.pieces[PieceTypes.QUEENS].setBit(to);
-        this.pieces[this.opp].clearBit(to);
+        this.changePieceType(to, PieceTypes.PAWNS, PieceTypes.QUEENS);
         break;
     }
+  }
+
+  reverseMoveType(from, to, type) {
+    switch(type) {
+      case MoveTypes.NORMAL:
+      case MoveTypes.DBL_PPUSH:
+        return;
+      case MoveTypes.CSTL_KING:
+        this.movePiece(from + 1, from + 3, this.turn, PieceTypes.ROOKS);
+        break;
+      case MoveTypes.CSTL_QUEEN:
+        this.movePiece(from - 1, from - 4, this.turn, PieceTypes.ROOKS);
+        break;
+      case MoveTypes.EP_CAPT:
+        let capturedPos = to - (Pawns.DIRS[this.turn] * 8);
+        this.setPieceAt(capturedPos, this.opp, PieceTypes.PAWNS);
+        break;
+      case MoveTypes.NPROMO:
+        this.clearPieceAt(to, this.turn, PieceTypes.KNIGHTS);
+        break;
+      case MoveTypes.BPROMO:
+        this.clearPieceAt(to, this.turn, PieceTypes.BISHOPS);
+        break;
+      case MoveTypes.RPROMO:
+        this.clearPieceAt(to, this.turn, PieceTypes.ROOKS);
+        break;
+      case MoveTypes.QPROMO:
+        this.clearPieceAt(to, this.turn, PieceTypes.QUEENS);
+        break;
+    }
+  }
+
+  testMove(move, cb) {
+    this.makeMove(move);
+    cb();
+    this.unmakeMove();
+  }
+
+  handleCastleRights(pieceType, from) {
+    let clearCastleRightsMask;
+    if (pieceType === PieceTypes.KINGS) {
+      clearCastleRightsMask = this.turn === Colors.WHITE ? 0b0 : 0b11;
+      this.castleRights &= clearCastleRightsMask;
+    } else if (pieceType === PieceTypes.ROOKS) {
+      clearCastleRightsMask = (from < King.INIT_POS[this.turn]) ? 0b0 : 0b10;
+      if (this.turn === Colors.BLACK) { clearCastleRightsMask <<= 2; }
+      this.castleRights &= clearCastleRightsMask;
+    }
+  }
+
+  addPrevState() {
+    const state = { epBB: this.epBB, castleRights: this.castleRights };
+    this.prevStates.push(state);
   }
 
   makeMove(move) {
     const from = move.getFrom();
     const to = move.getTo();
     const type = move.getType();
+    const pieceType = move.getPiece();
+    console.log('MAKE PIECE TYPE: ' +  pieceType);
+    const captPieceType = move.getCaptPiece();
 
-    let pieceType = this.getPieceAt(from);
-    this.pieces[pieceType].setBit(to);
-    this.pieces[pieceType].clearBit(from);
-    this.pieces[this.turn].setBit(to);
-    this.pieces[this.turn].clearBit(from);
+    this.addPrevState();
 
+    if (captPieceType) {
+      this.clearPieceAt(to, this.opp, captPieceType);
+    }
 
+    this.movePiece(from, to, this.turn, pieceType);
+
+    this.handleCastleRights(pieceType, from);
     this.epBB = new BitBoard();
-    this.handleMoveType(from, to, type);
+
+    this.execMoveType(from, to, type);
+
+    this.prevMoves.push(move);
     this.swapTurn();
+  }
+
+  unmakePrevMove() {
+    this.swapTurn();
+    const move = this.prevMoves.pop();
+    const from = move.getFrom();
+    const to = move.getTo();
+    const type = move.getType();
+    const pieceType = move.getPiece();
+    console.log('UNMAKE PIECE TYPE:' + pieceType);
+    const captPieceType = move.getCaptPiece();
+
+    this.reverseMoveType(from, to, type);
+
+    const prevState = this.prevStates.pop();
+    this.epBB = prevState.epBB;
+    this.castleRights = prevState.castleRights;
+
+    this.movePiece(to, from, this.turn, pieceType);
+
+    if (captPieceType) {
+      this.setPieceAt(to, this.opp, captPieceType);
+    }
   }
 
   render() {
@@ -328,6 +402,9 @@ moves.forEach((move) => {
   pos = new Position();
   console.log(move.getType());
   pos.makeMove(move);
+  pos.pieces[Colors.WHITE].render();
+  pos.pieces[Colors.BLACK].render();
+  pos.unmakePrevMove();
   pos.pieces[Colors.WHITE].render();
   pos.pieces[Colors.BLACK].render();
   // nextMoves = pos.generateMoves();

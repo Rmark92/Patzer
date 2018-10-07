@@ -11,7 +11,7 @@
 // global.KINGS = 'KINGS';
 //
 // // move types
-// global.QUIET = 'QUIET';
+// global.NORMAL = 'NORMAL';
 // global.DBL_PPUSH = 'DBL_PPUSH';
 // global.CSTL_KING = 'CSTL_KING';
 // global.CSTL_QUEEN = 'CSTL_QUEEN';

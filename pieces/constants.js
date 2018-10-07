@@ -12,4 +12,13 @@ const Types = {
   KINGS: 7
 };
 
-module.exports = { Types, Colors };
+const PieceTypeLetters = {
+  [Types.PAWNS]: 'p',
+  [Types.KNIGHTS]: 'n',
+  [Types.BISHOPS]: 'b',
+  [Types.ROOKS]: 'r',
+  [Types.QUEENS]: 'q',
+  [Types.KINGS]: 'k',
+};
+
+module.exports = { Types, Colors, PieceTypeLetters };
