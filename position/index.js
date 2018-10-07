@@ -201,11 +201,11 @@ class Position {
       this.addCastleMoves(moves);
   }
 
-  generateMoves(captsOnly = false) {
+  generateMoves() {
     const moves = [];
-    // this.addPawnMoves(moves, captsOnly);
-    this.addNormalMoves(moves, captsOnly);
-    // this.addKingMoves(moves, captsOnly);
+    this.addPawnMoves(moves);
+    this.addNormalMoves(moves);
+    this.addKingMoves(moves);
 
     return moves;
   }
@@ -347,7 +347,6 @@ class Position {
     const type = move.getType();
     const pieceType = move.getPiece();
     const captPieceType = move.getCaptPiece();
-    console.log('CAPT PIECE TYPE: ' +  captPieceType);
 
     this.addPrevState();
 
@@ -374,7 +373,6 @@ class Position {
     const type = move.getType();
     const pieceType = move.getPiece();
     const captPieceType = move.getCaptPiece();
-    console.log('UNMAKE CAP PIECE TYPE:' + captPieceType);
 
     this.reverseMoveType(from, to, type);
 
@@ -410,33 +408,5 @@ class Position {
     }
   }
 }
-
-
-let pos = new Position();
-const moves = pos.generateMoves();
-let nextMoves;
-
-console.log(moves);
-console.log(moves.length);
-
-moves.forEach((move) => {
-  console.log('DEPT = 1');
-  pos = new Position();
-  console.log(move.getType());
-  pos.makeMove(move);
-  console.log('MAKE CASTLE RIGHTS' + pos.castleRights);
-  pos.renderBoardArr();
-  pos.unmakePrevMove();
-  console.log('UNMAKE CASTLE RIGHTS' + pos.castleRights);
-  pos.renderBoardArr();
-  // nextMoves = pos.generateMoves();
-  // nextMoves.forEach((nextMove) => {
-  //   console.log('DEPT = 2');
-  //   console.log(nextMove.getType());
-  //   pos.makeMove(nextMove);
-  //   pos.pieces[Colors.WHITE].render();
-  //   pos.pieces[Colors.BLACK].render();
-  // });
-});
 
 module.exports = Position;
