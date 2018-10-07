@@ -6,7 +6,7 @@ const Bishop = require('./bishop.js');
 const Rook = require('./rook.js');
 const Queen = require('./queen.js');
 const King = require('./king.js');
-const Conversions = require('./conversions.js');
+const PieceConv = require('./conversions.js');
 
 module.exports = {
   PieceTypes: Constants.Types,
@@ -17,5 +17,5 @@ module.exports = {
   Rook,
   Queen,
   King,
-  Conversions
+  PieceConv
 };

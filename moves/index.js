@@ -2,7 +2,8 @@ const Types = require('./type_constants.js');
 
 class Move {
   constructor(from, to, type, piece, captPiece) {
-    // console.log(from, to, type, piece, captPiece);
+    console.log('MOVE DATA:');
+    console.log(from, to, type, piece, captPiece);
     this.val = (((type & 0xf) << 18) >>> 0) |
                ((((captPiece || 0) & 0x7) << 15) >>> 0) |
                (((piece & 0x7) << 12) >>> 0) |

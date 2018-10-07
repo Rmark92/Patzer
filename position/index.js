@@ -17,7 +17,7 @@ class Position {
 
     // castling rights represented by 16bit int
     // bKing bQueen wKing wQueen
-    this.castlingRights = 0xf;
+    this.castleRights = 0xf;
     this.epBB = new BitBoard();
 
     this.setTurn(turn);
@@ -57,7 +57,7 @@ class Position {
   }
 
   getTurnCastleRights() {
-    return this.turn === Colors.WHITE ? this.castlingRights & 0b11 : this.castlingRights >>> 2;
+    return this.turn === Colors.WHITE ? this.castleRights & 0b11 : this.castleRights >>> 2;
   }
 
   isAttacked(pos) {
@@ -91,31 +91,35 @@ class Position {
     let oppPositions = this.getOppPieces().or(this.epBB);
 
     const pawnLeftAttacks = Pawns.attacksLeft(this.turn, pawnsPos, oppPositions);
-    this.addPawnMoveSet(pawnLeftAttacks, 7 * Pawns.DIRS[this.turn], MoveTypes.CAPT, moves);
+    this.addPawnMoveSet(pawnLeftAttacks, 7 * Pawns.DIRS[this.turn], moves, true);
 
     const pawnRightAttacks = Pawns.attacksRight(this.turn, pawnsPos, oppPositions);
-    this.addPawnMoveSet(pawnRightAttacks, 9 * Pawns.DIRS[this.turn], MoveTypes.CAPT, moves);
+    this.addPawnMoveSet(pawnRightAttacks, 9 * Pawns.DIRS[this.turn], moves, true);
   }
 
-  addPromos(from, to, isCapt, moves) {
-    const captType = isCapt ? this.getPieceAt(to) : null;
+  addPromos(from, to, moves, captured) {
     [MoveTypes.NPROMO, MoveTypes.BPROMO,
      MoveTypes.RPROMO, MoveTypes.QPROMO].forEach((promoType) => {
-       moves.push(new Move(from, to, promoType, PieceTypes.PAWNS, captType));
+       moves.push(new Move(from, to, promoType, PieceTypes.PAWNS, captured));
      });
   }
 
-  addPawnMoveSet(newPositions, shiftAmt, type, moves) {
+  addPawnMoveSet(newPositions, shiftAmt, moves, isCapture) {
     let from;
+    let captured = null;
 
     newPositions.forEach1Bit((pos) => {
       from = pos - shiftAmt;
-      if (type === MoveTypes.CAPT && this.epBB.hasSetBit(pos)) {
+      if (isCapture && this.epBB.hasSetBit(pos)) {
         moves.push(new Move(from, pos, MoveTypes.EP_CAPT, PieceTypes.PAWNS));
-      } else if (Pawns.PROMO_MASKS[this.turn].hasSetBit(pos)) {
-        this.addPromos(from, pos, type === MoveTypes.CAPT, moves);
       } else {
-        moves.push(new Move(from, pos, type, PieceTypes.PAWNS));
+        if (isCapture) { captured = this.getPieceAt(pos); }
+
+        if (Pawns.PROMO_MASKS[this.turn].hasSetBit(pos)) {
+          this.addPromos(from, pos, moves, captured);
+        } else {
+          moves.push(new Move(from, pos, MoveTypes.NORMAL, PieceTypes.PAWNS, captured));
+        }
       }
     });
   }
@@ -199,8 +203,8 @@ class Position {
 
   generateMoves(captsOnly = false) {
     const moves = [];
-    this.addPawnMoves(moves, captsOnly);
-    // this.addNormalMoves(moves, captsOnly);
+    // this.addPawnMoves(moves, captsOnly);
+    this.addNormalMoves(moves, captsOnly);
     // this.addKingMoves(moves, captsOnly);
 
     return moves;
@@ -321,14 +325,14 @@ class Position {
   }
 
   handleCastleRights(pieceType, from) {
-    let clearCastleRightsMask;
     if (pieceType === PieceTypes.KINGS) {
-      clearCastleRightsMask = this.turn === Colors.WHITE ? 0b0 : 0b11;
+      let clearCastleRightsMask = this.turn === Colors.WHITE ? 0b1100 : 0b11;
       this.castleRights &= clearCastleRightsMask;
     } else if (pieceType === PieceTypes.ROOKS) {
-      clearCastleRightsMask = (from < King.INIT_POS[this.turn]) ? 0b0 : 0b10;
-      if (this.turn === Colors.BLACK) { clearCastleRightsMask <<= 2; }
-      this.castleRights &= clearCastleRightsMask;
+      let clearCastlePos = 0;
+      if (from > King.INIT_POS[this.turn]) { clearCastlePos++; }
+      if (this.turn === Colors.BLACK) { clearCastlePos += 2; }
+      this.castleRights = this.castleRights & (~Math.pow(2, clearCastlePos));
     }
   }
 
@@ -342,8 +346,8 @@ class Position {
     const to = move.getTo();
     const type = move.getType();
     const pieceType = move.getPiece();
-    console.log('MAKE PIECE TYPE: ' +  pieceType);
     const captPieceType = move.getCaptPiece();
+    console.log('CAPT PIECE TYPE: ' +  captPieceType);
 
     this.addPrevState();
 
@@ -369,8 +373,8 @@ class Position {
     const to = move.getTo();
     const type = move.getType();
     const pieceType = move.getPiece();
-    console.log('UNMAKE PIECE TYPE:' + pieceType);
     const captPieceType = move.getCaptPiece();
+    console.log('UNMAKE CAP PIECE TYPE:' + captPieceType);
 
     this.reverseMoveType(from, to, type);
 
@@ -398,7 +402,7 @@ class Position {
     let pos;
     let rowStr = '';
     for (pos = 63; pos >= 0; pos--) {
-      rowStr += boardArr[pos];
+      rowStr = boardArr[pos] + rowStr;
       if (pos % 8 === 0) {
         console.log(rowStr);
         rowStr = '';
@@ -420,8 +424,10 @@ moves.forEach((move) => {
   pos = new Position();
   console.log(move.getType());
   pos.makeMove(move);
+  console.log('MAKE CASTLE RIGHTS' + pos.castleRights);
   pos.renderBoardArr();
   pos.unmakePrevMove();
+  console.log('UNMAKE CASTLE RIGHTS' + pos.castleRights);
   pos.renderBoardArr();
   // nextMoves = pos.generateMoves();
   // nextMoves.forEach((nextMove) => {
