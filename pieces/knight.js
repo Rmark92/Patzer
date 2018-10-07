@@ -1,4 +1,4 @@
-const { KNIGHT_MOVES } = require('../bitboards/masks/positional.js');
+const { KNIGHT_MOVES } = require('./movements/constants.js');
 
 const Knight = {
   value: 3,

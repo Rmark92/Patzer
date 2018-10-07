@@ -1,4 +1,4 @@
-const { horizVert } = require('../position/movements/slide_moves.js');
+const { horizVert } = require('./movements/slide_moves.js');
 
 const Rook = {
   value: 5,

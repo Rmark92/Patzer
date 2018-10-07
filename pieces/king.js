@@ -1,4 +1,5 @@
-const { BBMasks } = require('../bitboards');
+const { BBMasks } = require('../bitboard');
+const { KING_MOVES } = require('./movements/constants.js');
 const { Colors } = require('./constants.js');
 
 const INIT_POS = {
@@ -10,7 +11,7 @@ const King = {
   value: 100,
   INIT_POS,
   moves: (position, notOwnPieces) => {
-    return BBMasks.KING_MOVES[position].and(notOwnPieces);
+    return KING_MOVES[position].and(notOwnPieces);
   },
   castleSlide: (color, dir, occupied) => {
     const initRow = Math.floor(INIT_POS[color] / 8);

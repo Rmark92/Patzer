@@ -1,6 +1,6 @@
-const { BitBoard, BBMasks } = require('../bitboards');
+const { BitBoard, BBMasks } = require('../bitboard');
 
-const { Move, MoveTypes } = require('../moves');
+const { Move, MoveTypes } = require('../move');
 
 const { Pawns, Knight, Bishop,
         Rook, King, Queen,
@@ -164,7 +164,6 @@ class Position {
     const queenPos = this.getTurnPieceSet(PieceTypes.QUEENS).bitScanForward();
     if (queenPos !== null) {
       const queenMoves = Queen.moves(queenPos, this.getOccupied(), notOwnPieces);
-      queenMoves.render();
       this.addNormalMoveSet(queenMoves, queenPos, PieceTypes.QUEENS, moves);
     }
   }
@@ -370,7 +369,6 @@ class Position {
     const type = move.getType();
     const pieceType = move.getPiece();
     const captPieceType = move.getCaptPiece();
-    console.log('CAPT PIECE: ' + captPieceType);
 
     this.reverseMoveType(from, to, type);
 

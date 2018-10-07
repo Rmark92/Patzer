@@ -1,4 +1,4 @@
-const Int32Utils = require('./int32_utils.js');
+const Utils = require('./utils.js');
 
 //56 57 58 59 60 61 62 63
 //48 49 50 51 52 53 54 55  ^
@@ -85,7 +85,7 @@ class BitBoard {
 
   popCount() {
       return [this.low, this.high].reduce((count, int32) => {
-        return count + Int32Utils.popCount(int32);
+        return count + Utils.popCount32(int32);
       }, 0);
   }
 
@@ -107,9 +107,9 @@ class BitBoard {
 
   bitScanForward() {
     if (this.low) {
-      return Int32Utils.bitScanForward(this.low);
+      return Utils.bitScanForward32(this.low);
     } else if (this.high) {
-      return Int32Utils.bitScanForward(this.high) + 32;
+      return Utils.bitScanForward32(this.high) + 32;
     } else {
       return null;
     }
@@ -125,9 +125,9 @@ class BitBoard {
 
   bitScanReverse() {
     if (this.high) {
-      return Int32Utils.bitScanReverse(this.high) + 32;
+      return Utils.bitScanReverse32(this.high) + 32;
     } else if (this.low) {
-      return Int32Utils.bitScanReverse(this.low);
+      return Utils.bitScanReverse32(this.low);
     } else {
       return null;
     }
@@ -138,13 +138,13 @@ class BitBoard {
     let newHighBits = this.high;
 
     while (newLowBits) {
-      cb(Int32Utils.bitScanForward(newLowBits));
-      newLowBits = Int32Utils.clearLeastSigBit(newLowBits);
+      cb(Utils.bitScanForward32(newLowBits));
+      newLowBits = Utils.clearLeastSigBit32(newLowBits);
     }
 
     while (newHighBits) {
-      cb(Int32Utils.bitScanForward(newHighBits) + 32);
-      newHighBits = Int32Utils.clearLeastSigBit(newHighBits);
+      cb(Utils.bitScanForward32(newHighBits) + 32);
+      newHighBits = Utils.clearLeastSigBit32(newHighBits);
     }
   }
 

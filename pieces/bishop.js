@@ -1,4 +1,4 @@
-const { diag } = require('../position/movements/slide_moves.js');
+const { diag } = require('./movements/slide_moves.js');
 
 const Bishop = {
   value: 3,

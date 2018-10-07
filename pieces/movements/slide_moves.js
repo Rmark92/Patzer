@@ -1,5 +1,5 @@
-const BitBoard = require('../../bitboards/bitboard');
-const { SLIDE_MOVES } = require('../../bitboards/masks/positional.js');
+const { BitBoard } = require('../../bitboard');
+const { SLIDE_MOVES } = require('./constants.js');
 
 const isPosRay = {
   'north': true,

@@ -1,4 +1,4 @@
-function popCount(int) {
+function popCount32(int) {
   let count = 0;
 
   while (int) {
@@ -9,8 +9,8 @@ function popCount(int) {
   return count;
 }
 
-function bitScanForward(int) {
-  return popCount((int & -int) - 1);
+function bitScanForward32(int) {
+  return popCount32((int & -int) - 1);
 }
 
 function generateMSBTable(max) {
@@ -25,7 +25,7 @@ function generateMSBTable(max) {
 
 const mostSigBitTable = generateMSBTable(255);
 
-function bitScanReverse(int) {
+function bitScanReverse32(int) {
   let res = 0;
   if (int > 0xFFFF) {
     int >>>= 16;
@@ -40,13 +40,13 @@ function bitScanReverse(int) {
   return res + mostSigBitTable[int];
 }
 
-function clearLeastSigBit(int) {
+function clearLeastSigBit32(int) {
   return (int & (int - 1));
 }
 
 module.exports = {
-  popCount,
-  bitScanForward,
-  bitScanReverse,
-  clearLeastSigBit
+  popCount32,
+  bitScanForward32,
+  bitScanReverse32,
+  clearLeastSigBit32
 };

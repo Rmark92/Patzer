@@ -1,4 +1,4 @@
-const BitBoard = require('../bitboard');
+const BitBoard = require('./bitboard.js');
 
 const FULL_BOARD = new BitBoard().not();
 

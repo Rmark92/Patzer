@@ -1,4 +1,4 @@
-const { Types, PromoMask } = require('./type_constants.js');
+const { Types, PromoMask } = require('./constants.js');
 
 class Move {
   constructor(from, to, type, piece, captPiece) {

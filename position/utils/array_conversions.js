@@ -1,5 +1,5 @@
 const { PieceConv, PieceTypes, Colors } = require('../../pieces');
-const { BitBoard } = require('../../bitboards');
+const { BitBoard } = require('../../bitboard');
 
 const xx = "_";
 
@@ -20,7 +20,7 @@ const BK = PieceConv.pieceToLetter(PieceTypes.KINGS, Colors.BLACK);
 
 const defaultBoardArr = [
 WR, WN, WB, WQ, WK, WB, WN, WR,
-WP, WP, WP, WP, WP, WP, WP, BP,
+WP, WP, WP, WP, WP, WP, WP, WP,
 xx, xx, xx, xx, xx, xx, xx, xx,
 xx, xx, xx, xx, xx, xx, xx, xx,
 xx, xx, xx, xx, xx, xx, xx, xx,

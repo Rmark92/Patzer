@@ -1,4 +1,4 @@
-const { diag, horizVert } = require('../position/movements/slide_moves.js');
+const { diag, horizVert } = require('./movements/slide_moves.js');
 
 const Queen = {
   value: 9,

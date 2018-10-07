@@ -1,6 +1,5 @@
-const BitBoard = require('../bitboard');
-const GlobMasks = require('./global.js');
-const stepMove = require('../../position/movements/step_move.js');
+const { BitBoard, BBMasks } = require('../../bitboard');
+const stepMove = require('./step_move.js');
 
 function generateStepBitBoards(dirs) {
   const res = [];
@@ -59,14 +58,14 @@ const SLIDE_MOVES = function() {
     } else {
       antiDiagIdx = (pos < (rowIdx + 1) * 7) ? (pos % 7) : (pos % 7) + 7;
     }
-    movements.north = GlobMasks.COLS[colIdx].and(GlobMasks.NORTH_OF_ROW[rowIdx]);
-    movements.south = GlobMasks.COLS[colIdx].and(GlobMasks.SOUTH_OF_ROW[rowIdx]);
-    movements.east = GlobMasks.ROWS[rowIdx].and(GlobMasks.EAST_OF_COL[colIdx]);
-    movements.west = GlobMasks.ROWS[rowIdx].and(GlobMasks.WEST_OF_COL[colIdx]);
-    movements.noea = GlobMasks.DIAGS[diagIdx].and(GlobMasks.NORTH_OF_ROW[rowIdx]);
-    movements.sowe = GlobMasks.DIAGS[diagIdx].and(GlobMasks.SOUTH_OF_ROW[rowIdx]);
-    movements.nowe = GlobMasks.ANTI_DIAGS[antiDiagIdx].and(GlobMasks.NORTH_OF_ROW[rowIdx]);
-    movements.soea = GlobMasks.ANTI_DIAGS[antiDiagIdx].and(GlobMasks.SOUTH_OF_ROW[rowIdx]);
+    movements.north = BBMasks.COLS[colIdx].and(BBMasks.NORTH_OF_ROW[rowIdx]);
+    movements.south = BBMasks.COLS[colIdx].and(BBMasks.SOUTH_OF_ROW[rowIdx]);
+    movements.east = BBMasks.ROWS[rowIdx].and(BBMasks.EAST_OF_COL[colIdx]);
+    movements.west = BBMasks.ROWS[rowIdx].and(BBMasks.WEST_OF_COL[colIdx]);
+    movements.noea = BBMasks.DIAGS[diagIdx].and(BBMasks.NORTH_OF_ROW[rowIdx]);
+    movements.sowe = BBMasks.DIAGS[diagIdx].and(BBMasks.SOUTH_OF_ROW[rowIdx]);
+    movements.nowe = BBMasks.ANTI_DIAGS[antiDiagIdx].and(BBMasks.NORTH_OF_ROW[rowIdx]);
+    movements.soea = BBMasks.ANTI_DIAGS[antiDiagIdx].and(BBMasks.SOUTH_OF_ROW[rowIdx]);
     res.push(movements);
     pos++;
   }

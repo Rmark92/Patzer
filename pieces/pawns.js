@@ -1,5 +1,5 @@
-const stepMove = require('../position/movements/step_move.js');
-const { BBMasks } = require('../bitboards');
+const stepMove = require('./movements/step_move.js');
+const { BBMasks } = require('../bitboard');
 const { Colors } = require('./constants.js');
 
 const DIRS = {
