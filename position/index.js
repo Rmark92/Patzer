@@ -1,12 +1,16 @@
 const { BitBoard, BBMasks } = require('../bitboards');
+
 const { Move, MoveTypes } = require('../moves');
-const generatePieceSets = require('./utils/generate_piece_sets.js');
+
 const { Pawns, Knight, Bishop,
         Rook, King, Queen,
         PieceTypes, Colors } = require('../pieces');
 
+const { pieceSetsToArray,
+        pieceSetsFromArray } = require('./utils/array_conversions.js');
+
 class Position {
-  constructor(pieces = generatePieceSets(), turn = Colors.WHITE, prevMoves = []) {
+  constructor(pieces = pieceSetsFromArray(), turn = Colors.WHITE, prevMoves = []) {
     this.pieces = pieces;
     this.prevMoves = prevMoves;
     this.prevStates = [];
@@ -381,11 +385,25 @@ class Position {
     }
   }
 
-  render() {
+  renderPieceSets() {
     Object.keys(this.pieces).forEach((boardType) => {
       console.log(boardType);
       this.pieces[boardType].render();
     });
+  }
+
+  renderBoardArr() {
+    const boardArr = pieceSetsToArray(this.pieces);
+
+    let pos;
+    let rowStr = '';
+    for (pos = 63; pos >= 0; pos--) {
+      rowStr += boardArr[pos];
+      if (pos % 8 === 0) {
+        console.log(rowStr);
+        rowStr = '';
+      }
+    }
   }
 }
 
@@ -402,11 +420,9 @@ moves.forEach((move) => {
   pos = new Position();
   console.log(move.getType());
   pos.makeMove(move);
-  pos.pieces[Colors.WHITE].render();
-  pos.pieces[Colors.BLACK].render();
+  pos.renderBoardArr();
   pos.unmakePrevMove();
-  pos.pieces[Colors.WHITE].render();
-  pos.pieces[Colors.BLACK].render();
+  pos.renderBoardArr();
   // nextMoves = pos.generateMoves();
   // nextMoves.forEach((nextMove) => {
   //   console.log('DEPT = 2');

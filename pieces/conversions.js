@@ -1,12 +1,15 @@
-const { Types, Colors, PieceTypeLetters } = require('../../constants');
+const { Types, Colors, PieceTypeLetters } = require('./constants.js');
 
-function generateLetter(type, color) {
+function pieceToLetter(type, color) {
   if (color === Colors.WHITE) { return PieceTypeLetters[type]; }
   else { return PieceTypeLetters[type].toUpperCase(); }
 }
 
-function generatePieceTypeAndColor(letter) {
-  const color = letter.toUpperCase() === letter ? Colors.BLACK : Colors.WHITE;
+function letterToColor(letter) {
+  return letter.toUpperCase() === letter ? Colors.BLACK : Colors.WHITE;
+}
+
+function letterToType(letter) {
   const pieceTypes = Object.values(Types);
   let pieceType;
   let idx;
@@ -18,9 +21,7 @@ function generatePieceTypeAndColor(letter) {
     }
   }
 
-  if (pieceType) {
-    return { type: pieceType, color };
-  } else {
-    return null;
-  }
+  return pieceType;
 }
+
+module.exports = { pieceToLetter, letterToColor, letterToType };
