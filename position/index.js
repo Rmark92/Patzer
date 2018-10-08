@@ -13,12 +13,20 @@ class Position {
   constructor(pieces = pieceSetsFromArray(), turn = Colors.WHITE, prevMoves = []) {
     this.pieces = pieces;
     this.prevMoves = prevMoves;
-    this.prevStates = [];
 
-    // castling rights represented by 16bit int
+    // castling rights represented by 4bit int
+    // in the following order (left bit to right):
     // bKing bQueen wKing wQueen
     this.castleRights = 0xf;
+
+    // the en passant BB will either be empty
+    // or have one position marked that indicates
+    // the destination of an en passant attack
     this.epBB = new BitBoard();
+
+    // holds previous state info (castling rights, en passant)
+    // for move reversal purposes
+    this.prevStates = [];
 
     this.setTurn(turn);
   }
@@ -36,10 +44,12 @@ class Position {
     return color === Colors.WHITE ? Colors.BLACK : Colors.WHITE;
   }
 
+  // returns a BB with occupied positions for a given color and piece type
   getColorPieceSet(color, pieceType) {
     return this.pieces[color].and(this.pieces[pieceType]);
   }
 
+  // returns a BB of all occupied positions
   getOccupied() {
     return this.pieces[Colors.WHITE].or(this.pieces[Colors.BLACK]);
   }
@@ -49,18 +59,40 @@ class Position {
     return this.pieces[color].not();
   }
 
-  getTurnCastleRights() {
-    return this.turn === Colors.WHITE ? this.castleRights & 0b11 : this.castleRights >>> 2;
+  // returns 2bit value for the color's castling rights
+  // left bit => king-side rights
+  // right bit => queen-side rights
+  getCastleRights(color) {
+    return color === Colors.WHITE ? this.castleRights & 0b11 : this.castleRights >>> 2;
   }
 
+  // returns the piece type that occupies the given position
+  // if no piece is found, returns null
+  getPieceAt(pos) {
+    const types = Object.values(PieceTypes);
+
+    let idx;
+    let type;
+
+    for (idx = 0; idx < types.length; idx++) {
+      type = types[idx];
+      if (this.pieces[type].hasSetBit(pos)) {
+        return type;
+      }
+    }
+
+    return null;
+  }
+
+  // returns boolean for whether any opponent color piece is attacking the provided position
   isAttacked(pos, color) {
     const posBB = BitBoard.fromPos(pos);
     const occupied = this.getOccupied();
     const oppColor = this.getOtherColor(color);
     const pawns = this.getColorPieceSet(oppColor, PieceTypes.PAWNS);
 
-    return (!Pawns.leftAttacks(oppColor, pawns, posBB).isZero() ||
-            !Pawns.rightAttacks(oppColor, pawns, posBB).isZero() ||
+    return (!Pawns.attacksLeft(oppColor, pawns, posBB).isZero() ||
+            !Pawns.attacksRight(oppColor, pawns, posBB).isZero() ||
             !Knight.moves(pos, this.getColorPieceSet(oppColor, PieceTypes.KNIGHTS)).isZero() ||
             !Bishop.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.BISHOPS)).isZero() ||
             !Rook.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.ROOKS)).isZero() ||
@@ -68,11 +100,13 @@ class Position {
             !King.moves(pos, this.getColorPieceSet(oppColor, PieceTypes.KINGS)).isZero());
   }
 
+  // returns boolean for whether the provided color's king is in check
   inCheck(color) {
     const kingPos = this.getColorPieceSet(color, PieceTypes.KINGS).bitScanForward();
     return this.isAttacked(kingPos, color);
   }
 
+  // inserts pawn moves into the moves array
   addPawnMoves(moves) {
     const pawnsPos = this.getColorPieceSet(this.turn, PieceTypes.PAWNS);
     const notOccupied = this.getOccupied().not();
@@ -92,6 +126,9 @@ class Position {
     this.addPawnMoveSet(pawnRightAttacks, 9 * Pawns.DIRS[this.turn], moves, true);
   }
 
+  // adds a move to the moves array
+  // for each possible promotion type
+  // side note: why would you ever promote to a rook or bishop?
   addPromos(from, to, moves, captured) {
     [MoveTypes.NPROMO, MoveTypes.BPROMO,
      MoveTypes.RPROMO, MoveTypes.QPROMO].forEach((promoType) => {
@@ -99,6 +136,12 @@ class Position {
      });
   }
 
+  // takes a new position set for pawns and adds each corresponding move
+  // to the moves array, with special distinctions for en passants and promotions
+
+  // note: unlike other pieces, we map pawn movements from the set of all existing pawns
+  // rather than each pawn individually, so the function takes a shift amount to determine
+  // the location of the individual pawn that moved to a new position
   addPawnMoveSet(newPositions, shiftAmt, moves, isCapture, isDblPush) {
     let from;
     let captured = null;
@@ -121,6 +164,9 @@ class Position {
     });
   }
 
+  // takes a BB of possible new positions for a single
+  // normal piece (not pawns or king) and adds each corresponding
+  // move to the moves array
   addNormalMoveSet(newPositions, startPos, pieceType, moves) {
     let newPos;
     let newMove;
@@ -132,6 +178,8 @@ class Position {
     });
   }
 
+  // adds moves to the moves array for all pieces that don't
+  // have 'special' moves, ie not pawns or kings
   addNormalMoves(moves) {
     const occupied = this.getOccupied();
     const notOwnPieces = this.getNotOccupiedBy(this.turn);
@@ -164,27 +212,39 @@ class Position {
     }
   }
 
+  // returns boolean for whether the king would be sliding
+  // through check
+  isLegalCastleSlide(slidePositions) {
+    let isLegal = true;
+    slidePositions.forEach1Bit((pos) => {
+      if (this.isAttacked(pos, this.turn)) { isLegal = false; }
+    });
+    return isLegal;
+  }
+
+  // adds available castling moves to the moves array
   addCastleMoves(moves) {
-    const turnCastleRights = this.getTurnCastleRights();
+    const turnCastleRights = this.getCastleRights(this.turn);
     const startPos = King.INIT_POS[this.turn];
 
     let castleSlide;
 
     if (turnCastleRights & 0b1) {
       castleSlide = King.castleSlide(this.turn, 'west', this.getOccupied());
-      if (castleSlide.popCount() === 3) {
+      if (castleSlide.popCount() === 3 && this.isLegalCastleSlide(castleSlide)) {
         moves.push(new Move(startPos, startPos - 2, MoveTypes.CSTL_QUEEN, PieceTypes.KINGS));
       }
     }
 
     if (turnCastleRights & 0b10) {
       castleSlide = King.castleSlide(this.turn, 'east', this.getOccupied());
-      if (castleSlide.popCount() === 2) {
+      if (castleSlide.popCount() === 2 && this.isLegalCastleSlide(castleSlide)) {
         moves.push(new Move(startPos, startPos + 2, MoveTypes.CSTL_KING, PieceTypes.KINGS));
       }
     }
   }
 
+  // adds available king moves to the moves array
   addKingMoves(moves) {
       const notOwnPieces = this.getNotOccupiedBy(this.turn);
       const kingPos = this.getColorPieceSet(this.turn, PieceTypes.KINGS).bitScanForward();
@@ -199,10 +259,14 @@ class Position {
   }
 
   isMoveLegal(move) {
+    const color = this.turn;
     this.makeMove(move);
-
+    const isLegal = !this.inCheck(color);
+    this.unmakeMove(move);
+    return isLegal;
   }
 
+  // generates all possible moves
   generateMoves() {
     const moves = [];
     this.addPawnMoves(moves);
@@ -212,37 +276,28 @@ class Position {
     return moves;
   }
 
-  getPieceAt(pos) {
-    const types = Object.values(PieceTypes);
-
-    let idx;
-    let type;
-
-    for (idx = 0; idx < types.length; idx++) {
-      type = types[idx];
-      if (this.pieces[type].hasSetBit(pos)) {
-        return type;
-      }
-    }
-
-    return null;
-  }
-
+  // moves piece from one position to another
   movePiece(from, to, color, pieceType) {
     this.clearPieceAt(from, color, pieceType);
     this.setPieceAt(to, color, pieceType);
   }
 
+  // marks the given color and pieceType BBs
+  // as occupied at the specified position
   setPieceAt(pos, color, pieceType) {
     this.pieces[color].setBit(pos);
     this.pieces[pieceType].setBit(pos);
   }
 
+  // marks the given color and pieceType BBs
+  // as unoccupied at the specified position
   clearPieceAt(pos, color, pieceType) {
     this.pieces[color].clearBit(pos);
     this.pieces[pieceType].clearBit(pos);
   }
 
+  // makes special adjustments to the position
+  // based on the move type
   execMoveType(from, to, type) {
     switch(type) {
       case MoveTypes.NORMAL:
@@ -276,6 +331,8 @@ class Position {
     }
   }
 
+  // unmakes special adjustments to the position
+  // based on the unmade move type
   reverseMoveType(from, to, type) {
     switch(type) {
       case MoveTypes.NORMAL:
@@ -312,6 +369,8 @@ class Position {
     this.unmakeMove();
   }
 
+  // makes adjustments to the castling rights
+  // if a rook or king is moved
   handleCastleRights(pieceType, from) {
     if (pieceType === PieceTypes.KINGS) {
       let clearCastleRightsMask = this.turn === Colors.WHITE ? 0b1100 : 0b11;
@@ -324,11 +383,14 @@ class Position {
     }
   }
 
+  // adds the current state values to the prevStates array
+  // used for move unmaking purposes
   addPrevState() {
     const state = { epBB: this.epBB, castleRights: this.castleRights };
     this.prevStates.push(state);
   }
 
+  // makes a specified move, updating the current position
   makeMove(move) {
     const from = move.getFrom();
     const to = move.getTo();
@@ -357,6 +419,7 @@ class Position {
     this.swapTurn();
   }
 
+  // unmakes the previous move, updating the current position
   unmakePrevMove() {
     this.swapTurn();
     const move = this.prevMoves.pop();
@@ -379,6 +442,7 @@ class Position {
     }
   }
 
+  // renders BBs for all piece sets
   renderPieceSets() {
     Object.keys(this.pieces).forEach((boardType) => {
       console.log(boardType);
@@ -386,6 +450,7 @@ class Position {
     });
   }
 
+  // renders the board for the current position
   renderBoardArr() {
     const boardArr = pieceSetsToArray(this.pieces);
 
