@@ -1,4 +1,4 @@
-const { KNIGHT_MOVES } = require('./movements/constants.js');
+const { KNIGHT_MOVES } = require('./movements/masks.js');
 
 const Knight = {
   value: 3,

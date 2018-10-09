@@ -11,6 +11,4 @@ const Types = typesArr.reduce((res, type, idx) => {
   return res;
 }, {});
 
-const PromoMask = (0b1111 << 22) >>> 0;
-
-module.exports = { Types, PromoMask };
+module.exports = { Types };

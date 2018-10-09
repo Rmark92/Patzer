@@ -7,10 +7,12 @@ const Rook = require('./rook.js');
 const Queen = require('./queen.js');
 const King = require('./king.js');
 const PieceConv = require('./conversions.js');
+const Dirs = require('./movements/dir_constants.js');
 
 module.exports = {
   PieceTypes: Constants.Types,
   Colors: Constants.Colors,
+  Dirs,
   Pawns,
   Knight,
   Bishop,

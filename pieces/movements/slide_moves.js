@@ -1,15 +1,16 @@
 const { BitBoard } = require('../../bitboard');
-const { SLIDE_MOVES } = require('./constants.js');
+const { SLIDE_MOVES } = require('./masks.js');
+const Dirs = require('./dir_constants.js');
 
 const isPosRay = {
-  'north': true,
-  'east': true,
-  'noea': true,
-  'nowe': true,
-  'south': false,
-  'west': false,
-  'soea': false,
-  'sowe': false
+  [Dirs.NORTH]: true,
+  [Dirs.EAST]: true,
+  [Dirs.NOEA]: true,
+  [Dirs.NOWE]: true,
+  [Dirs.SOUTH]: false,
+  [Dirs.WEST]: false,
+  [Dirs.SOEA]: false,
+  [Dirs.SOWE]: false
 };
 
 function findUnblocked(pos, occupied, dir) {
@@ -27,13 +28,13 @@ function findUnblocked(pos, occupied, dir) {
 }
 
 function horizVert(pos, occupied, notOwnPieces) {
-  return ['north', 'south', 'east', 'west'].reduce((res, dir) => {
+  return [Dirs.NORTH, Dirs.SOUTH, Dirs.EAST, Dirs.WEST].reduce((res, dir) => {
     return res.or(findUnblocked(pos, occupied, dir));
   }, new BitBoard()).and(notOwnPieces);
 }
 
 function diag(pos, occupied, notOwnPieces) {
-  return ['noea', 'nowe', 'soea', 'sowe'].reduce((res, dir) => {
+  return [Dirs.NOEA, Dirs.NOWE, Dirs.SOEA, Dirs.SOWE].reduce((res, dir) => {
     return res.or(findUnblocked(pos, occupied, dir));
   }, new BitBoard()).and(notOwnPieces);
 }

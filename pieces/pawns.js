@@ -28,7 +28,8 @@ const Pawns = {
     return stepMove(positions, DIRS[color], 0).and(notOccupied);
   },
   doublePush: (color, positions, notOccupied) => {
-    return stepMove(positions.and(INIT_MASKS[color]), 2 * DIRS[color], 0).and(notOccupied);
+    const onePush = stepMove(positions.and(INIT_MASKS[color]), DIRS[color], 0).and(notOccupied);
+    return stepMove(onePush, DIRS[color], 0).and(notOccupied);
   }
 };
 

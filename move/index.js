@@ -1,4 +1,4 @@
-const { Types, PromoMask } = require('./constants.js');
+const { Types } = require('./constants.js');
 
 class Move {
   constructor(from, to, type, piece, captPiece) {
@@ -7,6 +7,18 @@ class Move {
                (((piece & 0x7) << 12) >>> 0) |
                (((from & 0x3f) << 6) >>> 0) |
                ((to & 0x3f) >>> 0) >>> 0;
+  }
+
+  getData() {
+    return {
+      from: this.getFrom(),
+      to: this.getTo(),
+      type: this.getType(),
+      pieceType: this.getPiece(),
+      captPieceType: this.getCaptPiece(),
+      isPromo: this.isPromo(),
+      isCastle: this.isCastle()
+    };
   }
 
   getFrom() {
@@ -30,7 +42,12 @@ class Move {
   }
 
   isPromo() {
-    return Boolean(PromoMask & this.val);
+    return [Types.NPROMO, Types.BPROMO,
+            Types.RPROMO, Types.QPROMO].includes(this.getType());
+  }
+
+  isCastle() {
+    return [Types.CSTL_KING, Types.CSTL_QUEEN].includes(this.getType());
   }
 }
 
