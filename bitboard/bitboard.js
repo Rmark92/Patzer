@@ -2,8 +2,9 @@ const Utils = require('./utils.js');
 // A standard 8x8 chess board can be represented by a 64bit integer (bitboard),
 // in which a 1 means the position is occupied, a 0 means it's empty
 
-// We use several of these bitboards to represent a chess position, one for each
-// piece type and color
+// We use several of these bitboards to represent a chess position
+// for example, the current set of pieces is represented by a bitboard
+// for each piece type and color
 
 // Since Javascript doesn't support bitwise operations for 64bit integers,
 // we implement most of those operations here, separating the 64bit int
