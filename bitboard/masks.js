@@ -1,5 +1,8 @@
 const BitBoard = require('./bitboard.js');
 
+// this file includes static sets of bitboards that
+// are commonly used throughout the program
+
 const FULL_BOARD = new BitBoard().not();
 
 const COLS = function() {
