@@ -1,0 +1,46 @@
+body {
+  font-family: 'Ubuntu Condensed', sans-serif;
+}
+
+th {
+  padding: 10px;
+}
+
+tr {
+  border: 1px solid black;
+}
+
+#board table {
+  border-spacing: 0px;
+}
+
+.square {
+  height: 80px;
+  width: 80px;
+  font-size: 40px;
+  text-align: center;
+}
+
+.square.light {
+  background-color: #82e0dd;
+}
+
+.square.dark {
+  background-color: #4b64c5;
+}
+
+.ui-draggable:hover {
+  cursor: pointer;
+}
+
+.piece.white {
+  color: white;
+}
+
+.piece.black {
+  color: black;
+}
+
+.can-move-to {
+  box-shadow: inset 0 0 40px #f0f712;
+}

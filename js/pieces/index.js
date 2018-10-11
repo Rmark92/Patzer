@@ -12,6 +12,7 @@ const Dirs = require('./movements/dir_constants.js');
 module.exports = {
   PieceTypes: Constants.Types,
   Colors: Constants.Colors,
+  PieceTypeHTML: Constants.PieceTypeHTML,
   Dirs,
   Pawns,
   Knight,

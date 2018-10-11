@@ -1,14 +1,21 @@
 {
   "name": "chess_js",
-  "version": "1.0.0",
-  "description": "",
-  "main": "board.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "private": true,
+  "dependencies": {
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.4",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-react": "^6.24.1",
+    "webpack": "3.11.0"
   },
   "author": "Ryan Mark",
   "license": "ISC",
-  "dependencies": {
-    "long": "^4.0.0"
+  "engines": {
+    "node": "6.7.0",
+    "npm": "3.10.x"
+  },
+  "scripts": {
+    "postinstall": "webpack",
+    "webpack": "webpack --watch"
   }
 }

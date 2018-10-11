@@ -41,7 +41,7 @@ class Position {
   }
 
   getOtherColor(color) {
-    return color === Colors.WHITE ? Colors.BLACK : Colors.WHITE;
+    return color ^ Colors.BLACK;
   }
 
   // generates all pseudo legal moves, ie moves that may put the king
@@ -318,7 +318,7 @@ class Position {
       return !this.inCheck(this.turn);
     }
   }
-  
+
   isLegalCastle(pos, castleType) {
     const dir = castleType === MoveTypes.CSTL_KING ? 1 : -1;
     let count = 0;
@@ -487,6 +487,10 @@ class Position {
       console.log(boardType);
       this.pieces[boardType].render();
     });
+  }
+
+  getBoardArr() {
+    return pieceSetsToArray(this.pieces);
   }
 
   // renders the board for the current position
