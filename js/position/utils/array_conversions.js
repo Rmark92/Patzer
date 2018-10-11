@@ -17,7 +17,6 @@ const BR = PieceConv.pieceToLetter(PieceTypes.ROOKS, Colors.BLACK);
 const BQ = PieceConv.pieceToLetter(PieceTypes.QUEENS, Colors.BLACK);
 const BK = PieceConv.pieceToLetter(PieceTypes.KINGS, Colors.BLACK);
 
-
 const defaultBoardArr = [
 WR, WN, WB, WQ, WK, WB, WN, WR,
 WP, WP, WP, WP, WP, WP, WP, WP,

@@ -50,11 +50,11 @@ class Position {
   // and then considers each move individually. some of those moves
   // will not be considered due to pruning cutoffs, so it's more efficient
   // to only check for full legality of moves that we actually consider
-  generatePseudoMoves() {
+  generatePseudoMoves(includeQuiet = true) {
     const moves = [];
-    this.addPawnMoves(moves);
-    this.addNormalMoves(moves);
-    this.addKingMoves(moves);
+    this.addPawnMoves(moves, includeQuiet);
+    this.addNormalMoves(moves, includeQuiet);
+    this.addKingMoves(moves, includeQuiet);
 
     return moves;
   }
@@ -80,15 +80,18 @@ class Position {
   }
 
   // inserts pawn moves into the moves array
-  addPawnMoves(moves) {
+  addPawnMoves(moves, includeQuiet) {
     const pawnsPos = this.getColorPieceSet(this.turn, PieceTypes.PAWNS);
-    const notOccupied = this.getOccupied().not();
 
-    const pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
-    this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.DIRS[this.turn], moves);
+    if (includeQuiet) {
+      const notOccupied = this.getOccupied().not();
 
-    const pawnDoublePushes = Pawns.doublePush(this.turn, pawnsPos, notOccupied);
-    this.addPawnMoveSet(pawnDoublePushes, 16 * Pawns.DIRS[this.turn], moves, false, true);
+      const pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
+      this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.DIRS[this.turn], moves);
+
+      const pawnDoublePushes = Pawns.doublePush(this.turn, pawnsPos, notOccupied);
+      this.addPawnMoveSet(pawnDoublePushes, 16 * Pawns.DIRS[this.turn], moves, false, true);
+    }
 
     let oppPositions = this.pieces[this.opp].or(this.epBB);
 
@@ -140,7 +143,7 @@ class Position {
 
   // adds moves to the moves array for all pieces that don't
   // have 'special' moves, ie not pawns or kings
-  addNormalMoves(moves) {
+  addNormalMoves(moves, includeQuiet) {
     const occupied = this.getOccupied();
     const notOwnPieces = this.getNotOccupiedBy(this.turn);
 
@@ -148,32 +151,32 @@ class Position {
     let knightMoves;
     knightsPos.forEach1Bit((pos) => {
       knightMoves = Knight.moves(pos, notOwnPieces);
-      this.addNormalMoveSet(knightMoves, pos, PieceTypes.KNIGHTS, moves);
+      this.addNormalMoveSet(knightMoves, pos, PieceTypes.KNIGHTS, moves, includeQuiet);
     });
 
     const bishopsPos = this.getColorPieceSet(this.turn, PieceTypes.BISHOPS);
     let bishopMoves;
     bishopsPos.forEach1Bit((pos) => {
       bishopMoves = Bishop.moves(pos, occupied, notOwnPieces);
-      this.addNormalMoveSet(bishopMoves, pos, PieceTypes.BISHOPS, moves);
+      this.addNormalMoveSet(bishopMoves, pos, PieceTypes.BISHOPS, moves, includeQuiet);
     });
 
     const rooksPos = this.getColorPieceSet(this.turn, PieceTypes.ROOKS);
     let rookMoves;
     rooksPos.forEach1Bit((pos) => {
       rookMoves = Rook.moves(pos, occupied, notOwnPieces);
-      this.addNormalMoveSet(rookMoves, pos, PieceTypes.ROOKS, moves);
+      this.addNormalMoveSet(rookMoves, pos, PieceTypes.ROOKS, moves, includeQuiet);
     });
 
     const queenPos = this.getColorPieceSet(this.turn, PieceTypes.QUEENS).bitScanForward();
     if (queenPos !== null) {
       const queenMoves = Queen.moves(queenPos, occupied, notOwnPieces);
-      this.addNormalMoveSet(queenMoves, queenPos, PieceTypes.QUEENS, moves);
+      this.addNormalMoveSet(queenMoves, queenPos, PieceTypes.QUEENS, moves, includeQuiet);
     }
   }
 
   // adds available king moves to the moves array
-  addKingMoves(moves) {
+  addKingMoves(moves, includeQuiet) {
       const notOwnPieces = this.getNotOccupiedBy(this.turn);
       const kingPos = this.getColorPieceSet(this.turn, PieceTypes.KINGS).bitScanForward();
 
@@ -181,21 +184,25 @@ class Position {
       if (kingPos === null) { return; }
 
       const normalMoves = King.moves(kingPos, notOwnPieces);
-      this.addNormalMoveSet(normalMoves, kingPos, PieceTypes.KINGS, moves);
+      this.addNormalMoveSet(normalMoves, kingPos, PieceTypes.KINGS, moves, includeQuiet);
 
-      this.addCastleMoves(moves);
+      if (includeQuiet) {
+        this.addCastleMoves(moves);
+      }
   }
 
   // takes a BB of possible new positions for a single
   // piece and adds each corresponding move to the moves array
-  addNormalMoveSet(newPositions, startPos, pieceType, moves) {
+  addNormalMoveSet(newPositions, startPos, pieceType, moves, includeQuiet) {
     let newPos;
     let newMove;
     let captType;
 
     newPositions.forEach1Bit((pos) => {
       captType = this.pieces[this.opp].hasSetBit(pos) ? this.getPieceAt(pos) : null;
-      moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));
+      if (includeQuiet || captType) {
+        moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));
+      }
     });
   }
 
@@ -335,6 +342,7 @@ class Position {
   // returns boolean for whether the provided color's king is in check
   inCheck(color) {
     const kingPos = this.getColorPieceSet(color, PieceTypes.KINGS).bitScanForward();
+    if (!kingPos) { console.log(this.prevMoves); }
     return this.isAttacked(kingPos, color);
   }
 
