@@ -276,7 +276,7 @@ class Position {
 
     this.addPrevState();
 
-    this.adjustCastleRights(moveData.pieceType, moveData.from);
+    this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
     this.epBB = new BitBoard();
 
     this.execMoveType(moveData.from, moveData.to, moveData.type);
@@ -342,7 +342,7 @@ class Position {
   // returns boolean for whether the provided color's king is in check
   inCheck(color) {
     const kingPos = this.getColorPieceSet(color, PieceTypes.KINGS).bitScanForward();
-    if (!kingPos) { console.log(this.prevMoves); }
+    if (kingPos === null) { console.log('NO KING'); }
     return this.isAttacked(kingPos, color);
   }
 
@@ -387,14 +387,22 @@ class Position {
 
   // makes adjustments to the castling rights
   // if a rook or king is moved
-  adjustCastleRights(pieceType, from) {
+  adjustCastleRights(pieceType, from, captPieceType, to) {
+    let clearCastlePos;
     if (pieceType === PieceTypes.KINGS) {
       let clearCastleRightsMask = this.turn === Colors.WHITE ? 0b1100 : 0b11;
       this.castleRights &= clearCastleRightsMask;
     } else if (pieceType === PieceTypes.ROOKS) {
-      let clearCastlePos = 0;
+      clearCastlePos = 0;
       if (from > King.INIT_POS[this.turn]) { clearCastlePos++; }
       if (this.turn === Colors.BLACK) { clearCastlePos += 2; }
+      this.castleRights &= ~Math.pow(2, clearCastlePos);
+    }
+
+    if (captPieceType === PieceTypes.ROOKS) {
+      clearCastlePos = 0;
+      if (to > King.INIT_POS[this.opp]) { clearCastlePos++; }
+      if (this.opp === Colors.BLACK) { clearCastlePos += 2; }
       this.castleRights &= ~Math.pow(2, clearCastlePos);
     }
   }

@@ -1283,7 +1283,7 @@ var Position = function () {
 
       this.addPrevState();
 
-      this.adjustCastleRights(moveData.pieceType, moveData.from);
+      this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
       this.epBB = new BitBoard();
 
       this.execMoveType(moveData.from, moveData.to, moveData.type);
@@ -1363,8 +1363,8 @@ var Position = function () {
     key: 'inCheck',
     value: function inCheck(color) {
       var kingPos = this.getColorPieceSet(color, PieceTypes.KINGS).bitScanForward();
-      if (!kingPos) {
-        console.log(this.prevMoves);
+      if (kingPos === null) {
+        console.log('NO KING');
       }
       return this.isAttacked(kingPos, color);
     }
@@ -1414,16 +1414,28 @@ var Position = function () {
 
   }, {
     key: 'adjustCastleRights',
-    value: function adjustCastleRights(pieceType, from) {
+    value: function adjustCastleRights(pieceType, from, captPieceType, to) {
+      var clearCastlePos = void 0;
       if (pieceType === PieceTypes.KINGS) {
         var clearCastleRightsMask = this.turn === Colors.WHITE ? 12 : 3;
         this.castleRights &= clearCastleRightsMask;
       } else if (pieceType === PieceTypes.ROOKS) {
-        var clearCastlePos = 0;
+        clearCastlePos = 0;
         if (from > King.INIT_POS[this.turn]) {
           clearCastlePos++;
         }
         if (this.turn === Colors.BLACK) {
+          clearCastlePos += 2;
+        }
+        this.castleRights &= ~Math.pow(2, clearCastlePos);
+      }
+
+      if (captPieceType === PieceTypes.ROOKS) {
+        clearCastlePos = 0;
+        if (to > King.INIT_POS[this.opp]) {
+          clearCastlePos++;
+        }
+        if (this.opp === Colors.BLACK) {
           clearCastlePos += 2;
         }
         this.castleRights &= ~Math.pow(2, clearCastlePos);
@@ -2304,7 +2316,7 @@ var AI = function () {
   }, {
     key: 'makeMove',
     value: function makeMove(position) {
-      this.maxDepth = 4;
+      this.maxDepth = 3;
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       position.makeMove(this.bestMove);
     }
@@ -2319,8 +2331,8 @@ var AI = function () {
         alpha = standPatVal;
       }
 
-      // let inCheck = position.inCheck(position.turn);
-      var moves = position.generatePseudoMoves(false);
+      var inCheck = position.inCheck(position.turn);
+      var moves = position.generatePseudoMoves(inCheck);
       var moveIdx = void 0;
       var score = void 0;
 
@@ -2345,8 +2357,8 @@ var AI = function () {
     key: 'negaMax',
     value: function negaMax(position, depth, alpha, beta) {
       if (depth === 0) {
-        return this.evaluate(position);
-        // return this.quiescenceSearch(position, alpha, beta);
+        // return this.evaluate(position);
+        return this.quiescenceSearch(position, alpha, beta);
       }
 
       var moves = position.generatePseudoMoves();

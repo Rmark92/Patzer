@@ -85,7 +85,7 @@ class AI {
   }
 
   makeMove(position) {
-    this.maxDepth = 4;
+    this.maxDepth = 3;
     this.negaMax(position, this.maxDepth, -Infinity, Infinity);
     position.makeMove(this.bestMove);
   }
@@ -99,8 +99,8 @@ class AI {
       alpha = standPatVal;
     }
 
-    // let inCheck = position.inCheck(position.turn);
-    const moves = position.generatePseudoMoves(false);
+    let inCheck = position.inCheck(position.turn);
+    const moves = position.generatePseudoMoves(inCheck);
     let moveIdx;
     let score;
 
@@ -120,8 +120,8 @@ class AI {
 
   negaMax(position, depth, alpha, beta) {
     if (depth === 0) {
-      return this.evaluate(position);
-      // return this.quiescenceSearch(position, alpha, beta);
+      // return this.evaluate(position);
+      return this.quiescenceSearch(position, alpha, beta);
     }
 
     const moves = position.generatePseudoMoves();
