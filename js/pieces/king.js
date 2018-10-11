@@ -8,13 +8,18 @@ const INIT_POS = {
   [Colors.WHITE]: 4
 };
 
-// const CastleDirs = {
-//   [Dirs.EAST]: 1,
-//   [Dirs.WEST]: -1
-// };
-
 const King = {
-  value: 100,
+  value: 40000,
+  positionValues:	[
+		-30, -40, -40, -50, -50, -40, -40, -30,
+		-30, -40, -40, -50, -50, -40, -40, -30,
+		-30, -40, -40, -50, -50, -40, -40, -30,
+		-30, -40, -40, -50, -50, -40, -40, -30,
+		-20, -30, -30, -40, -40, -30, -30, -20,
+		-10, -20, -20, -20, -20, -20, -20, -10,
+		 20, 20, 0, 0, 0, 0, 20, 20,
+		 20, 30, 10, 0, 0, 10, 30, 20
+	],
   INIT_POS,
   moves: (position, notOwnPieces) => {
     return KING_MOVES[position].and(notOwnPieces);

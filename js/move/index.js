@@ -9,6 +9,13 @@ class Move {
                ((to & 0x3f) >>> 0) >>> 0;
   }
 
+  // for testing purposes
+  static fromVal(val) {
+    const newMove = new Move(0, 0, 0, 0, 0);
+    newMove.val = val;
+    return newMove;
+  }
+
   getData() {
     return {
       from: this.getFrom(),

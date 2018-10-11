@@ -1,8 +1,13 @@
 const { Types, Colors, PieceTypeLetters } = require('./constants.js');
 
 function pieceToLetter(type, color) {
-  if (color === Colors.WHITE) { return PieceTypeLetters[type]; }
-  else { return PieceTypeLetters[type].toUpperCase(); }
+  if (color === Colors.WHITE) {
+    return PieceTypeLetters[type];
+  } else if (color === Colors.BLACK) {
+    return PieceTypeLetters[type].toUpperCase();
+  } else {
+    return '?';
+  }
 }
 
 function letterToColor(letter) {

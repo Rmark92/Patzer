@@ -9,7 +9,7 @@ const { ColsFiles, FilesCols,
 class UI {
   constructor() {
     this.position = new Position();
-    this.playerColor = Colors.BLACK;
+    this.playerColor = Colors.WHITE;
     this.ai = new AI();
     this.currMoves = this.position.generateLegalMoves();
     this.makePlayerMove = this.makePlayerMove.bind(this);
@@ -30,7 +30,7 @@ class UI {
     if (this.position.turn === this.playerColor) {
       this.setupPlayerMove();
     } else {
-      this.aiMove();
+      setTimeout(() => this.aiMove(), 1000);
     }
 
   }
@@ -107,12 +107,7 @@ class UI {
     this.playNextTurn();
   }
 
-  pieceMoveEvent() {
-
-  }
-
   makePlayerMove(fromPos, toPos) {
-    console.log('make move called');
     const selectedMove = this.currMoves.filter((move) => {
       return move.getFrom() === fromPos &&
              move.getTo() === toPos;
@@ -145,7 +140,6 @@ class UI {
       fromFileRank = Util.fileRankFromPos(fromPos);
       $(`#${fromFileRank} .piece`).draggable();
       $(`#${fromFileRank} .piece`).mouseenter(() => {
-        console.log('in here');
         moveFromTos[fromPos].forEach( (toPos) => {
           $(`#${Util.fileRankFromPos(toPos)}`).addClass('can-move-to');
         });

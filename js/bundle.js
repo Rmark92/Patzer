@@ -736,7 +736,7 @@ var UI = function () {
     _classCallCheck(this, UI);
 
     this.position = new Position();
-    this.playerColor = Colors.BLACK;
+    this.playerColor = Colors.WHITE;
     this.ai = new AI();
     this.currMoves = this.position.generateLegalMoves();
     this.makePlayerMove = this.makePlayerMove.bind(this);
@@ -751,6 +751,8 @@ var UI = function () {
   }, {
     key: 'playNextTurn',
     value: function playNextTurn() {
+      var _this = this;
+
       this.updatePieces();
       this.currMoves = this.position.generateLegalMoves();
       if (this.currMoves.length === 0) {
@@ -760,7 +762,9 @@ var UI = function () {
       if (this.position.turn === this.playerColor) {
         this.setupPlayerMove();
       } else {
-        this.aiMove();
+        setTimeout(function () {
+          return _this.aiMove();
+        }, 1000);
       }
     }
   }, {
@@ -793,7 +797,7 @@ var UI = function () {
   }, {
     key: 'drawBoard',
     value: function drawBoard() {
-      var _this = this;
+      var _this2 = this;
 
       var table = $('<table>');
 
@@ -802,7 +806,7 @@ var UI = function () {
         newRankRow = $('<tr>');
         newRankRow.append('<th class="rank">' + rank + '</th>');
         ColsFiles.forEach(function (file) {
-          newRankRow.append(_this.generateSquare(file, rank));
+          newRankRow.append(_this2.generateSquare(file, rank));
         });
         newRankRow.append('<th class="rank">' + rank + '</th>');
         table.prepend(newRankRow);
@@ -842,12 +846,8 @@ var UI = function () {
       this.playNextTurn();
     }
   }, {
-    key: 'pieceMoveEvent',
-    value: function pieceMoveEvent() {}
-  }, {
     key: 'makePlayerMove',
     value: function makePlayerMove(fromPos, toPos) {
-      console.log('make move called');
       var selectedMove = this.currMoves.filter(function (move) {
         return move.getFrom() === fromPos && move.getTo() === toPos;
       })[0];
@@ -862,7 +862,7 @@ var UI = function () {
   }, {
     key: 'setupPlayerMove',
     value: function setupPlayerMove() {
-      var _this2 = this;
+      var _this3 = this;
 
       var moves = this.position.generateLegalMoves();
       var movesData = moves.map(function (move) {
@@ -884,7 +884,6 @@ var UI = function () {
         fromFileRank = Util.fileRankFromPos(fromPos);
         $('#' + fromFileRank + ' .piece').draggable();
         $('#' + fromFileRank + ' .piece').mouseenter(function () {
-          console.log('in here');
           moveFromTos[fromPos].forEach(function (toPos) {
             $('#' + Util.fileRankFromPos(toPos)).addClass('can-move-to');
           });
@@ -900,7 +899,7 @@ var UI = function () {
           $('#' + Util.fileRankFromPos(toPos)).droppable({
             drop: function drop(event, ui) {
               droppedPieceSource = $(ui.draggable).parent().attr('id');
-              _this2.makePlayerMove(Util.posFromFileRank(droppedPieceSource), toPos);
+              _this3.makePlayerMove(Util.posFromFileRank(droppedPieceSource), toPos);
             }
           });
         });
@@ -1002,10 +1001,12 @@ var Position = function () {
   }, {
     key: 'generatePseudoMoves',
     value: function generatePseudoMoves() {
+      var includeQuiet = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
+
       var moves = [];
-      this.addPawnMoves(moves);
-      this.addNormalMoves(moves);
-      this.addKingMoves(moves);
+      this.addPawnMoves(moves, includeQuiet);
+      this.addNormalMoves(moves, includeQuiet);
+      this.addKingMoves(moves, includeQuiet);
 
       return moves;
     }
@@ -1039,15 +1040,18 @@ var Position = function () {
 
   }, {
     key: 'addPawnMoves',
-    value: function addPawnMoves(moves) {
+    value: function addPawnMoves(moves, includeQuiet) {
       var pawnsPos = this.getColorPieceSet(this.turn, PieceTypes.PAWNS);
-      var notOccupied = this.getOccupied().not();
 
-      var pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
-      this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.DIRS[this.turn], moves);
+      if (includeQuiet) {
+        var notOccupied = this.getOccupied().not();
 
-      var pawnDoublePushes = Pawns.doublePush(this.turn, pawnsPos, notOccupied);
-      this.addPawnMoveSet(pawnDoublePushes, 16 * Pawns.DIRS[this.turn], moves, false, true);
+        var pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
+        this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.DIRS[this.turn], moves);
+
+        var pawnDoublePushes = Pawns.doublePush(this.turn, pawnsPos, notOccupied);
+        this.addPawnMoveSet(pawnDoublePushes, 16 * Pawns.DIRS[this.turn], moves, false, true);
+      }
 
       var oppPositions = this.pieces[this.opp].or(this.epBB);
 
@@ -1111,7 +1115,7 @@ var Position = function () {
 
   }, {
     key: 'addNormalMoves',
-    value: function addNormalMoves(moves) {
+    value: function addNormalMoves(moves, includeQuiet) {
       var _this3 = this;
 
       var occupied = this.getOccupied();
@@ -1121,27 +1125,27 @@ var Position = function () {
       var knightMoves = void 0;
       knightsPos.forEach1Bit(function (pos) {
         knightMoves = Knight.moves(pos, notOwnPieces);
-        _this3.addNormalMoveSet(knightMoves, pos, PieceTypes.KNIGHTS, moves);
+        _this3.addNormalMoveSet(knightMoves, pos, PieceTypes.KNIGHTS, moves, includeQuiet);
       });
 
       var bishopsPos = this.getColorPieceSet(this.turn, PieceTypes.BISHOPS);
       var bishopMoves = void 0;
       bishopsPos.forEach1Bit(function (pos) {
         bishopMoves = Bishop.moves(pos, occupied, notOwnPieces);
-        _this3.addNormalMoveSet(bishopMoves, pos, PieceTypes.BISHOPS, moves);
+        _this3.addNormalMoveSet(bishopMoves, pos, PieceTypes.BISHOPS, moves, includeQuiet);
       });
 
       var rooksPos = this.getColorPieceSet(this.turn, PieceTypes.ROOKS);
       var rookMoves = void 0;
       rooksPos.forEach1Bit(function (pos) {
         rookMoves = Rook.moves(pos, occupied, notOwnPieces);
-        _this3.addNormalMoveSet(rookMoves, pos, PieceTypes.ROOKS, moves);
+        _this3.addNormalMoveSet(rookMoves, pos, PieceTypes.ROOKS, moves, includeQuiet);
       });
 
       var queenPos = this.getColorPieceSet(this.turn, PieceTypes.QUEENS).bitScanForward();
       if (queenPos !== null) {
         var queenMoves = Queen.moves(queenPos, occupied, notOwnPieces);
-        this.addNormalMoveSet(queenMoves, queenPos, PieceTypes.QUEENS, moves);
+        this.addNormalMoveSet(queenMoves, queenPos, PieceTypes.QUEENS, moves, includeQuiet);
       }
     }
 
@@ -1149,7 +1153,7 @@ var Position = function () {
 
   }, {
     key: 'addKingMoves',
-    value: function addKingMoves(moves) {
+    value: function addKingMoves(moves, includeQuiet) {
       var notOwnPieces = this.getNotOccupiedBy(this.turn);
       var kingPos = this.getColorPieceSet(this.turn, PieceTypes.KINGS).bitScanForward();
 
@@ -1159,9 +1163,11 @@ var Position = function () {
       }
 
       var normalMoves = King.moves(kingPos, notOwnPieces);
-      this.addNormalMoveSet(normalMoves, kingPos, PieceTypes.KINGS, moves);
+      this.addNormalMoveSet(normalMoves, kingPos, PieceTypes.KINGS, moves, includeQuiet);
 
-      this.addCastleMoves(moves);
+      if (includeQuiet) {
+        this.addCastleMoves(moves);
+      }
     }
 
     // takes a BB of possible new positions for a single
@@ -1169,7 +1175,7 @@ var Position = function () {
 
   }, {
     key: 'addNormalMoveSet',
-    value: function addNormalMoveSet(newPositions, startPos, pieceType, moves) {
+    value: function addNormalMoveSet(newPositions, startPos, pieceType, moves, includeQuiet) {
       var _this4 = this;
 
       var newPos = void 0;
@@ -1178,7 +1184,9 @@ var Position = function () {
 
       newPositions.forEach1Bit(function (pos) {
         captType = _this4.pieces[_this4.opp].hasSetBit(pos) ? _this4.getPieceAt(pos) : null;
-        moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));
+        if (includeQuiet || captType) {
+          moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));
+        }
       });
     }
 
@@ -1355,6 +1363,9 @@ var Position = function () {
     key: 'inCheck',
     value: function inCheck(color) {
       var kingPos = this.getColorPieceSet(color, PieceTypes.KINGS).bitScanForward();
+      if (!kingPos) {
+        console.log(this.prevMoves);
+      }
       return this.isAttacked(kingPos, color);
     }
 
@@ -1793,6 +1804,9 @@ var Move = function () {
     this.val = (type & 0xf) << 18 >>> 0 | ((captPiece || 0) & 0x7) << 15 >>> 0 | (piece & 0x7) << 12 >>> 0 | (from & 0x3f) << 6 >>> 0 | (to & 0x3f) >>> 0 >>> 0;
   }
 
+  // for testing purposes
+
+
   _createClass(Move, [{
     key: 'getData',
     value: function getData() {
@@ -1840,6 +1854,13 @@ var Move = function () {
     key: 'isCastle',
     value: function isCastle() {
       return [Types.CSTL_KING, Types.CSTL_QUEEN].includes(this.getType());
+    }
+  }], [{
+    key: 'fromVal',
+    value: function fromVal(val) {
+      var newMove = new Move(0, 0, 0, 0, 0);
+      newMove.val = val;
+      return newMove;
     }
   }]);
 
@@ -1891,7 +1912,8 @@ var DIRS = (_DIRS = {}, _defineProperty(_DIRS, Colors.WHITE, 1), _defineProperty
 var INIT_MASKS = (_INIT_MASKS = {}, _defineProperty(_INIT_MASKS, Colors.WHITE, BBMasks.ROWS[1]), _defineProperty(_INIT_MASKS, Colors.BLACK, BBMasks.ROWS[6]), _INIT_MASKS);
 
 var Pawns = {
-  value: 1,
+  value: 100,
+  positionValues: [0, 0, 0, 0, 0, 0, 0, 0, 50, 50, 50, 50, 50, 50, 50, 50, 10, 10, 20, 30, 30, 20, 10, 10, 5, 5, 10, 25, 25, 10, 5, 5, 0, 0, 0, 20, 20, 0, 0, 0, 5, -5, -10, 0, 0, -10, -5, 5, 5, 10, 10, -20, -20, 10, 10, 5, 0, 0, 0, 0, 0, 0, 0, 0],
   DIRS: DIRS,
   PROMO_MASKS: (_PROMO_MASKS = {}, _defineProperty(_PROMO_MASKS, Colors.WHITE, BBMasks.ROWS[7]), _defineProperty(_PROMO_MASKS, Colors.BLACK, BBMasks.ROWS[0]), _PROMO_MASKS),
   attacksLeft: function attacksLeft(color, positions, oppPieces) {
@@ -1922,10 +1944,11 @@ var _require = __webpack_require__(4),
     KNIGHT_MOVES = _require.KNIGHT_MOVES;
 
 var Knight = {
-  value: 3,
-  moves: function moves(position, notOwnPieces) {
-    return KNIGHT_MOVES[position].and(notOwnPieces);
-  }
+		value: 325,
+		positionValues: [-50, -40, -30, -30, -30, -30, -40, -50, -40, -20, 0, 0, 0, 0, -20, -40, -30, 0, 10, 15, 15, 10, 0, -30, -30, 5, 15, 20, 20, 15, 5, -30, -30, 0, 15, 20, 20, 15, 0, -30, -30, 5, 10, 15, 15, 10, 5, -30, -40, -20, 0, 5, 5, 0, -20, -40, -50, -40, -30, -30, -30, -30, -40, -50],
+		moves: function moves(position, notOwnPieces) {
+				return KNIGHT_MOVES[position].and(notOwnPieces);
+		}
 };
 
 module.exports = Knight;
@@ -1941,10 +1964,11 @@ var _require = __webpack_require__(5),
     diag = _require.diag;
 
 var Bishop = {
-  value: 3,
-  moves: function moves(position, occupied, notOwnPieces) {
-    return diag(position, occupied, notOwnPieces);
-  }
+		value: 325,
+		positionValues: [-20, -10, -10, -10, -10, -10, -10, -20, -10, 0, 0, 0, 0, 0, 0, -10, -10, 0, 5, 10, 10, 5, 0, -10, -10, 5, 5, 10, 10, 5, 5, -10, -10, 0, 10, 10, 10, 10, 0, -10, -10, 10, 10, 10, 10, 10, 10, -10, -10, 5, 0, 0, 0, 0, 5, -10, -20, -10, -10, -10, -10, -10, -10, -20],
+		moves: function moves(position, occupied, notOwnPieces) {
+				return diag(position, occupied, notOwnPieces);
+		}
 };
 
 module.exports = Bishop;
@@ -1960,10 +1984,11 @@ var _require = __webpack_require__(5),
     horizVert = _require.horizVert;
 
 var Rook = {
-  value: 5,
-  moves: function moves(position, occupied, notOwnPieces) {
-    return horizVert(position, occupied, notOwnPieces);
-  }
+		value: 500,
+		positionValues: [0, 0, 0, 0, 0, 0, 0, 0, 5, 10, 10, 10, 10, 10, 10, 5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, 0, 0, 0, 5, 5, 0, 0, 0],
+		moves: function moves(position, occupied, notOwnPieces) {
+				return horizVert(position, occupied, notOwnPieces);
+		}
 };
 
 module.exports = Rook;
@@ -1980,10 +2005,11 @@ var _require = __webpack_require__(5),
     horizVert = _require.horizVert;
 
 var Queen = {
-  value: 9,
-  moves: function moves(position, occupied, notOwnPieces) {
-    return diag(position, occupied, notOwnPieces).or(horizVert(position, occupied, notOwnPieces));
-  }
+		value: 1050,
+		positionValues: [-20, -10, -10, -5, -5, -10, -10, -20, -10, 0, 0, 0, 0, 0, 0, -10, -10, 0, 5, 5, 5, 5, 0, -10, -5, 0, 5, 5, 5, 5, 0, -5, 0, 0, 5, 5, 5, 5, 0, -5, -10, 5, 5, 5, 5, 5, 0, -10, -10, 0, 5, 0, 0, 0, 0, -10, -20, -10, -10, -5, -5, -10, -10, -20],
+		moves: function moves(position, occupied, notOwnPieces) {
+				return diag(position, occupied, notOwnPieces).or(horizVert(position, occupied, notOwnPieces));
+		}
 };
 
 module.exports = Queen;
@@ -2013,13 +2039,9 @@ var _require3 = __webpack_require__(1),
 
 var INIT_POS = (_INIT_POS = {}, _defineProperty(_INIT_POS, Colors.BLACK, 60), _defineProperty(_INIT_POS, Colors.WHITE, 4), _INIT_POS);
 
-// const CastleDirs = {
-//   [Dirs.EAST]: 1,
-//   [Dirs.WEST]: -1
-// };
-
 var King = {
-  value: 100,
+  value: 40000,
+  positionValues: [-30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -20, -30, -30, -40, -40, -30, -30, -20, -10, -20, -20, -20, -20, -20, -20, -10, 20, 20, 0, 0, 0, 0, 20, 20, 20, 30, 10, 0, 0, 10, 30, 20],
   INIT_POS: INIT_POS,
   moves: function moves(position, notOwnPieces) {
     return KING_MOVES[position].and(notOwnPieces);
@@ -2051,8 +2073,10 @@ var _require = __webpack_require__(1),
 function pieceToLetter(type, color) {
   if (color === Colors.WHITE) {
     return PieceTypeLetters[type];
-  } else {
+  } else if (color === Colors.BLACK) {
     return PieceTypeLetters[type].toUpperCase();
+  } else {
+    return '?';
   }
 }
 
@@ -2180,19 +2204,186 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var _require = __webpack_require__(3),
+    Pawns = _require.Pawns,
+    Knight = _require.Knight,
+    Bishop = _require.Bishop,
+    Rook = _require.Rook,
+    King = _require.King,
+    Queen = _require.Queen,
+    PieceTypes = _require.PieceTypes,
+    Colors = _require.Colors,
+    Dirs = _require.Dirs;
+
 var AI = function () {
   function AI() {
     _classCallCheck(this, AI);
   }
 
   _createClass(AI, [{
-    key: "reset",
-    value: function reset() {}
+    key: 'sumPawnScore',
+    value: function sumPawnScore(position, color, notOccupied, oppPositions) {
+      var sum = 0;
+
+      var pawnsPos = position.getColorPieceSet(color, PieceTypes.PAWNS);
+
+      pawnsPos.forEach1Bit(function (pos) {
+        sum += Pawns.value;
+        sum += Pawns.positionValues[color ? pos ^ 56 : pos];
+      });
+
+      sum += Pawns.singlePush(color, pawnsPos, notOccupied).popCount();
+      sum += Pawns.doublePush(color, pawnsPos, notOccupied).popCount();
+      sum += Pawns.attacksLeft(color, pawnsPos, oppPositions).popCount();
+      sum += Pawns.attacksRight(color, pawnsPos, oppPositions).popCount();
+
+      return sum;
+    }
   }, {
-    key: "makeMove",
-    value: function makeMove(position, moves) {
-      var chosen = moves[Math.floor(moves.length * Math.random())];
-      position.makeMove(chosen);
+    key: 'sumSteppingPieceScore',
+    value: function sumSteppingPieceScore(position, color, pieceType, pieceConstant, notOwnPieces) {
+      var sum = 0;
+
+      var pieces = position.getColorPieceSet(color, pieceType);
+
+      pieces.forEach1Bit(function (pos) {
+        sum += pieceConstant.value;
+        sum += pieceConstant.positionValues[color ? pos ^ 56 : pos];
+        sum += pieceConstant.moves(pos, notOwnPieces).popCount();
+      });
+
+      return sum;
+    }
+  }, {
+    key: 'sumSlidingPieceScore',
+    value: function sumSlidingPieceScore(position, color, pieceType, pieceConstant, occupied, notOwnPieces) {
+      var sum = 0;
+
+      var pieces = position.getColorPieceSet(color, pieceType);
+
+      pieces.forEach1Bit(function (pos) {
+        sum += pieceConstant.value;
+        sum += pieceConstant.positionValues[color ? pos ^ 56 : pos];
+        sum += pieceConstant.moves(pos, occupied, notOwnPieces).popCount();
+      });
+
+      return sum;
+    }
+  }, {
+    key: 'evaluate',
+    value: function evaluate(position) {
+      var sum = 0;
+
+      var turnPieces = position.pieces[position.turn];
+      var oppPieces = position.pieces[position.opp];
+      var notTurnPieces = position.getNotOccupiedBy(position.turn);
+      var notOppPieces = position.getNotOccupiedBy(position.opp);
+      var occupied = position.getOccupied();
+      var notOccupied = occupied.not();
+
+      sum += this.sumPawnScore(position, position.turn, notOccupied, oppPieces);
+      sum -= this.sumPawnScore(position, position.opp, notOccupied, turnPieces);
+
+      sum += this.sumSteppingPieceScore(position, position.turn, PieceTypes.KNIGHTS, Knight, notTurnPieces);
+      sum -= this.sumSteppingPieceScore(position, position.opp, PieceTypes.KNIGHTS, Knight, notOppPieces);
+
+      sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.BISHOPS, Bishop, occupied, notTurnPieces);
+      sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.BISHOPS, Bishop, occupied, notOppPieces);
+
+      sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.ROOKS, Rook, occupied, notTurnPieces);
+      sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.ROOKS, Rook, occupied, notOppPieces);
+
+      sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.QUEENS, Queen, occupied, notTurnPieces);
+      sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.QUEENS, Queen, occupied, notOppPieces);
+
+      sum += this.sumSteppingPieceScore(position, position.turn, PieceTypes.KINGS, King, notTurnPieces);
+      sum -= this.sumSteppingPieceScore(position, position.opp, PieceTypes.KINGS, King, notOppPieces);
+
+      return sum;
+    }
+  }, {
+    key: 'makeMove',
+    value: function makeMove(position) {
+      this.maxDepth = 4;
+      this.negaMax(position, this.maxDepth, -Infinity, Infinity);
+      position.makeMove(this.bestMove);
+    }
+  }, {
+    key: 'quiescenceSearch',
+    value: function quiescenceSearch(position, alpha, beta) {
+      var standPatVal = this.evaluate(position);
+
+      if (standPatVal >= beta) {
+        return beta;
+      } else if (alpha < standPatVal) {
+        alpha = standPatVal;
+      }
+
+      // let inCheck = position.inCheck(position.turn);
+      var moves = position.generatePseudoMoves(false);
+      var moveIdx = void 0;
+      var score = void 0;
+
+      // if (inCheck) { position.renderBoardArr(); }
+      for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
+        if (position.makeMove(moves[moveIdx])) {
+          score = -this.quiescenceSearch(position, -beta, -alpha);
+          position.unmakePrevMove();
+
+          if (score >= beta) {
+            return beta;
+          }
+          if (score > alpha) {
+            alpha = score;
+          }
+        }
+      }
+
+      return alpha;
+    }
+  }, {
+    key: 'negaMax',
+    value: function negaMax(position, depth, alpha, beta) {
+      if (depth === 0) {
+        return this.evaluate(position);
+        // return this.quiescenceSearch(position, alpha, beta);
+      }
+
+      var moves = position.generatePseudoMoves();
+      var moveIdx = void 0;
+      var canMove = false;
+      var score = void 0;
+      var bestScore = -Infinity;
+
+      for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
+        if (position.makeMove(moves[moveIdx])) {
+          canMove = true;
+          score = -this.negaMax(position, depth - 1, -beta, -alpha);
+          position.unmakePrevMove();
+          if (score > bestScore) {
+            bestScore = score;
+            if (bestScore > alpha) {
+              alpha = bestScore;
+            }
+            if (depth === this.maxDepth) {
+              this.bestMove = moves[moveIdx];
+            }
+          }
+          if (alpha >= beta) {
+            break;
+          }
+        }
+      }
+
+      if (!canMove) {
+        if (position.inCheck(position.turn)) {
+          return -King.value;
+        } else {
+          return 0;
+        }
+      } else {
+        return bestScore;
+      }
     }
   }]);
 
