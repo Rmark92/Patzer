@@ -30,7 +30,7 @@ class UI {
     if (this.position.turn === this.playerColor) {
       this.setupPlayerMove();
     } else {
-      setTimeout(() => this.aiMove(), 1000);
+      setTimeout(() => this.aiMove(), 0);
     }
 
   }

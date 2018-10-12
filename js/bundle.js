@@ -766,7 +766,7 @@ var UI = function () {
       } else {
         setTimeout(function () {
           return _this.aiMove();
-        }, 1000);
+        }, 0);
       }
     }
   }, {
@@ -2234,87 +2234,148 @@ var AI = function () {
     _classCallCheck(this, AI);
   }
 
+  // sumPawnScore(position, color, notOccupied, oppPositions) {
+  //   let sum = 0;
+  //
+  //   const pawnsPos = position.getColorPieceSet(color, PieceTypes.PAWNS);
+  //
+  //   pawnsPos.dup().pop1Bits((pos) => {
+  //     sum += Pawns.value;
+  //     sum += Pawns.positionValues[color ? (pos ^ 56) : pos];
+  //   });
+  //
+  //   sum += Pawns.singlePush(color, pawnsPos, notOccupied).popCount();
+  //   sum += Pawns.doublePush(color, pawnsPos, notOccupied).popCount();
+  //   sum += Pawns.attacksLeft(color, pawnsPos, oppPositions).popCount();
+  //   sum += Pawns.attacksRight(color, pawnsPos, oppPositions).popCount();
+  //
+  //   return sum;
+  // }
+  //
+  // sumSteppingPieceScore(position, color, pieceType, pieceConstant, notOwnPieces) {
+  //   let sum = 0;
+  //
+  //   const pieces = position.getColorPieceSet(color, pieceType);
+  //
+  //   pieces.dup().pop1Bits((pos) => {
+  //     sum += pieceConstant.value;
+  //     sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
+  //     sum += pieceConstant.moves(pos, notOwnPieces).popCount();
+  //   });
+  //
+  //   return sum;
+  // }
+  //
+  // sumSlidingPieceScore(position, color, pieceType, pieceConstant, occupied, notOwnPieces) {
+  //   let sum = 0;
+  //
+  //   const pieces = position.getColorPieceSet(color, pieceType);
+  //
+  //   pieces.dup().pop1Bits((pos) => {
+  //     sum += pieceConstant.value;
+  //     sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
+  //     sum += pieceConstant.moves(pos, occupied, notOwnPieces).popCount();
+  //   });
+  //
+  //   return sum;
+  // }
+  //
+  // sumPieceSetScore(piecePositions, pieceConstant, color) {
+  //   let sum = 0;
+  //   piecePositions.dup().pop1Bits((pos) => {
+  //     sum += pieceConstant.value;
+  //     sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
+  //   });
+  //
+  //   return sum;
+  // }
+  //
+  // sumPieceScore(pos, pieceConstant, color) {
+  //   let sum = 0;
+  //
+  //   if (pos !== null) {
+  //     sum += pieceConstant.value;
+  //     sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
+  //   }
+  //
+  //   return sum;
+  // }
+
   _createClass(AI, [{
-    key: 'sumPawnScore',
-    value: function sumPawnScore(position, color, notOccupied, oppPositions) {
-      var sum = 0;
-
-      var pawnsPos = position.getColorPieceSet(color, PieceTypes.PAWNS);
-
-      pawnsPos.dup().pop1Bits(function (pos) {
-        sum += Pawns.value;
-        sum += Pawns.positionValues[color ? pos ^ 56 : pos];
-      });
-
-      sum += Pawns.singlePush(color, pawnsPos, notOccupied).popCount();
-      sum += Pawns.doublePush(color, pawnsPos, notOccupied).popCount();
-      sum += Pawns.attacksLeft(color, pawnsPos, oppPositions).popCount();
-      sum += Pawns.attacksRight(color, pawnsPos, oppPositions).popCount();
-
-      return sum;
-    }
-  }, {
-    key: 'sumSteppingPieceScore',
-    value: function sumSteppingPieceScore(position, color, pieceType, pieceConstant, notOwnPieces) {
-      var sum = 0;
-
-      var pieces = position.getColorPieceSet(color, pieceType);
-
-      pieces.dup().pop1Bits(function (pos) {
-        sum += pieceConstant.value;
-        sum += pieceConstant.positionValues[color ? pos ^ 56 : pos];
-        sum += pieceConstant.moves(pos, notOwnPieces).popCount();
-      });
-
-      return sum;
-    }
-  }, {
-    key: 'sumSlidingPieceScore',
-    value: function sumSlidingPieceScore(position, color, pieceType, pieceConstant, occupied, notOwnPieces) {
-      var sum = 0;
-
-      var pieces = position.getColorPieceSet(color, pieceType);
-
-      pieces.dup().pop1Bits(function (pos) {
-        sum += pieceConstant.value;
-        sum += pieceConstant.positionValues[color ? pos ^ 56 : pos];
-        sum += pieceConstant.moves(pos, occupied, notOwnPieces).popCount();
-      });
-
-      return sum;
-    }
-  }, {
     key: 'evaluate',
     value: function evaluate(position) {
       var sum = 0;
 
-      var turnPieces = position.pieces[position.turn];
-      var oppPieces = position.pieces[position.opp];
-      var notTurnPieces = position.getNotOccupiedBy(position.turn);
-      var notOppPieces = position.getNotOccupiedBy(position.opp);
-      var occupied = position.getOccupied();
-      var notOccupied = occupied.not();
+      var turnPawns = position.getColorPieceSet(position.turn, PieceTypes.PAWNS);
+      sum += this.sumPieceSetScore(turnPawns, Pawns, position.turn);
 
-      sum += this.sumPawnScore(position, position.turn, notOccupied, oppPieces);
-      sum -= this.sumPawnScore(position, position.opp, notOccupied, turnPieces);
+      var turnKnights = position.getColorPieceSet(position.turn, PieceTypes.KNIGHTS);
+      sum += this.sumPieceSetScore(turnKnights, Knight, position.turn);
 
-      sum += this.sumSteppingPieceScore(position, position.turn, PieceTypes.KNIGHTS, Knight, notTurnPieces);
-      sum -= this.sumSteppingPieceScore(position, position.opp, PieceTypes.KNIGHTS, Knight, notOppPieces);
+      var turnBishops = position.getColorPieceSet(position.turn, PieceTypes.BISHOPS);
+      sum += this.sumPieceSetScore(turnBishops, Bishop, position.turn);
 
-      sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.BISHOPS, Bishop, occupied, notTurnPieces);
-      sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.BISHOPS, Bishop, occupied, notOppPieces);
+      var turnRooks = position.getColorPieceSet(position.turn, PieceTypes.ROOKS);
+      sum += this.sumPieceSetScore(turnRooks, Rook, position.turn);
 
-      sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.ROOKS, Rook, occupied, notTurnPieces);
-      sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.ROOKS, Rook, occupied, notOppPieces);
+      var turnQueenPos = position.getColorPieceSet(position.turn, PieceTypes.QUEENS).bitScanForward();
+      sum += this.sumPieceScore(turnQueenPos, Queen, position.turn);
 
-      sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.QUEENS, Queen, occupied, notTurnPieces);
-      sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.QUEENS, Queen, occupied, notOppPieces);
+      var turnKingPos = position.getColorPieceSet(position.turn, PieceTypes.KINGS).bitScanForward();
+      sum += this.sumPieceScore(turnKingPos, King, position.turn);
 
-      sum += this.sumSteppingPieceScore(position, position.turn, PieceTypes.KINGS, King, notTurnPieces);
-      sum -= this.sumSteppingPieceScore(position, position.opp, PieceTypes.KINGS, King, notOppPieces);
+      var oppPawns = position.getColorPieceSet(position.opp, PieceTypes.PAWNS);
+      sum -= this.sumPieceSetScore(oppPawns, Pawns, position.opp);
+
+      var oppKnights = position.getColorPieceSet(position.opp, PieceTypes.KNIGHTS);
+      sum -= this.sumPieceSetScore(oppKnights, Knight, position.opp);
+
+      var oppBishops = position.getColorPieceSet(position.opp, PieceTypes.BISHOPS);
+      sum -= this.sumPieceSetScore(oppBishops, Bishop, position.opp);
+
+      var oppRooks = position.getColorPieceSet(position.opp, PieceTypes.ROOKS);
+      sum -= this.sumPieceSetScore(oppRooks, Rook, position.opp);
+
+      var oppQueenPos = position.getColorPieceSet(position.opp, PieceTypes.QUEENS).bitScanForward();
+      sum -= this.sumPieceScore(oppQueenPos, Queen, position.turn);
+
+      var oppKingPos = position.getColorPieceSet(position.opp, PieceTypes.KINGS).bitScanForward();
+      sum -= this.sumPieceScore(oppKingPos, King, position.opp);
 
       return sum;
     }
+
+    // evaluate(position) {
+    //   let sum = 0;
+    //
+    //   const turnPieces = position.pieces[position.turn];
+    //   const oppPieces = position.pieces[position.opp];
+    //   const notTurnPieces = position.getNotOccupiedBy(position.turn);
+    //   const notOppPieces = position.getNotOccupiedBy(position.opp);
+    //   const occupied = position.getOccupied();
+    //   const notOccupied = occupied.not();
+    //
+    //   sum += this.sumPawnScore(position, position.turn, notOccupied, oppPieces);
+    //   sum -= this.sumPawnScore(position, position.opp, notOccupied, turnPieces);
+    //
+    //   sum += this.sumSteppingPieceScore(position, position.turn, PieceTypes.KNIGHTS, Knight, notTurnPieces);
+    //   sum -= this.sumSteppingPieceScore(position, position.opp, PieceTypes.KNIGHTS, Knight, notOppPieces);
+    //
+    //   sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.BISHOPS, Bishop, occupied, notTurnPieces);
+    //   sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.BISHOPS, Bishop, occupied, notOppPieces);
+    //
+    //   sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.ROOKS, Rook, occupied, notTurnPieces);
+    //   sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.ROOKS, Rook, occupied, notOppPieces);
+    //
+    //   sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.QUEENS, Queen, occupied, notTurnPieces);
+    //   sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.QUEENS, Queen, occupied, notOppPieces);
+    //
+    //   sum += this.sumSteppingPieceScore(position, position.turn, PieceTypes.KINGS, King, notTurnPieces);
+    //   sum -= this.sumSteppingPieceScore(position, position.opp, PieceTypes.KINGS, King, notOppPieces);
+    //
+    //   return sum;
+    // }
+
   }, {
     key: 'makeMove',
     value: function makeMove(position) {
@@ -2409,8 +2470,8 @@ var AI = function () {
     value: function sortMoves(moves) {
       function calculateScore(move) {
         var score = move.getCaptPiece();
-        score = score * 6 + move.getPiece();
-        score = score * 16 + move.getType();
+        score = score * 10 + move.getPiece();
+        score = score * 10 + move.getType();
       }
 
       moves.sort(function (moveA, moveB) {
