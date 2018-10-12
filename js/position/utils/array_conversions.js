@@ -45,7 +45,7 @@ function pieceSetsToArray(pieces) {
 
   const pieceTypes = Object.values(PieceTypes);
   pieceTypes.forEach((type) => {
-    pieces[type].forEach1Bit((pos) => {
+    pieces[type].dup().pop1Bits((pos) => {
       if (pieces[Colors.WHITE].hasSetBit(pos)) {
         res[pos] = PieceConv.pieceToLetter(type, Colors.WHITE);
       } else {

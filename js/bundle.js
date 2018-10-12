@@ -85,6 +85,38 @@ module.exports = {
 "use strict";
 
 
+// const { WhitePawns, BlackPawns } = require('./pawns.js');
+var Constants = __webpack_require__(2);
+var Pawns = __webpack_require__(16);
+var Knight = __webpack_require__(17);
+var Bishop = __webpack_require__(18);
+var Rook = __webpack_require__(19);
+var Queen = __webpack_require__(20);
+var King = __webpack_require__(21);
+var PieceConv = __webpack_require__(22);
+var Dirs = __webpack_require__(3);
+
+module.exports = {
+  PieceTypes: Constants.Types,
+  Colors: Constants.Colors,
+  PieceTypeHTML: Constants.PieceTypeHTML,
+  Dirs: Dirs,
+  Pawns: Pawns,
+  Knight: Knight,
+  Bishop: Bishop,
+  Rook: Rook,
+  Queen: Queen,
+  King: King,
+  PieceConv: PieceConv
+};
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
 var _PieceTypeLetters, _PieceTypeHTML;
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -110,7 +142,7 @@ var PieceTypeHTML = (_PieceTypeHTML = {}, _defineProperty(_PieceTypeHTML, Types.
 module.exports = { Types: Types, Colors: Colors, PieceTypeLetters: PieceTypeLetters, PieceTypeHTML: PieceTypeHTML };
 
 /***/ }),
-/* 2 */
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -130,38 +162,6 @@ var DIRS = {
 module.exports = DIRS;
 
 /***/ }),
-/* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-// const { WhitePawns, BlackPawns } = require('./pawns.js');
-var Constants = __webpack_require__(1);
-var Pawns = __webpack_require__(16);
-var Knight = __webpack_require__(17);
-var Bishop = __webpack_require__(18);
-var Rook = __webpack_require__(19);
-var Queen = __webpack_require__(20);
-var King = __webpack_require__(21);
-var PieceConv = __webpack_require__(22);
-var Dirs = __webpack_require__(2);
-
-module.exports = {
-  PieceTypes: Constants.Types,
-  Colors: Constants.Colors,
-  PieceTypeHTML: Constants.PieceTypeHTML,
-  Dirs: Dirs,
-  Pawns: Pawns,
-  Knight: Knight,
-  Bishop: Bishop,
-  Rook: Rook,
-  Queen: Queen,
-  King: King,
-  PieceConv: PieceConv
-};
-
-/***/ }),
 /* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -172,7 +172,7 @@ var _require = __webpack_require__(0),
     BitBoard = _require.BitBoard,
     BBMasks = _require.BBMasks;
 
-var Dirs = __webpack_require__(2);
+var Dirs = __webpack_require__(3);
 var stepMove = __webpack_require__(7);
 
 function generateStepBitBoards(dirs) {
@@ -266,7 +266,7 @@ var _require = __webpack_require__(0),
 var _require2 = __webpack_require__(4),
     SLIDE_MOVES = _require2.SLIDE_MOVES;
 
-var Dirs = __webpack_require__(2);
+var Dirs = __webpack_require__(3);
 
 var isPosRay = (_isPosRay = {}, _defineProperty(_isPosRay, Dirs.NORTH, true), _defineProperty(_isPosRay, Dirs.EAST, true), _defineProperty(_isPosRay, Dirs.NOEA, true), _defineProperty(_isPosRay, Dirs.NOWE, true), _defineProperty(_isPosRay, Dirs.SOUTH, false), _defineProperty(_isPosRay, Dirs.WEST, false), _defineProperty(_isPosRay, Dirs.SOEA, false), _defineProperty(_isPosRay, Dirs.SOWE, false), _isPosRay);
 
@@ -478,20 +478,22 @@ var BitBoard = function () {
       }
     }
   }, {
-    key: 'forEach1Bit',
-    value: function forEach1Bit(cb) {
-      var newLowBits = this.low;
-      var newHighBits = this.high;
-
-      while (newLowBits) {
-        cb(Utils.bitScanForward32(newLowBits));
-        newLowBits = Utils.clearLeastSigBit32(newLowBits);
+    key: 'pop1Bits',
+    value: function pop1Bits(cb) {
+      while (this.low) {
+        cb(Utils.bitScanForward32(this.low));
+        this.low = Utils.clearLeastSigBit32(this.low);
       }
 
-      while (newHighBits) {
-        cb(Utils.bitScanForward32(newHighBits) + 32);
-        newHighBits = Utils.clearLeastSigBit32(newHighBits);
+      while (this.high) {
+        cb(Utils.bitScanForward32(this.high) + 32);
+        this.high = Utils.clearLeastSigBit32(this.high);
       }
+    }
+  }, {
+    key: 'dup',
+    value: function dup() {
+      return new BitBoard(this.low, this.high);
     }
   }, {
     key: 'render',
@@ -717,7 +719,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var Position = __webpack_require__(11);
 var AI = __webpack_require__(24);
 
-var _require = __webpack_require__(3),
+var _require = __webpack_require__(1),
     PieceTypes = _require.PieceTypes,
     Colors = _require.Colors,
     PieceTypeHTML = _require.PieceTypeHTML;
@@ -827,7 +829,7 @@ var UI = function () {
       var newPiece = void 0;
 
       pieceTypes.forEach(function (pieceType) {
-        pieces[pieceType].forEach1Bit(function (pos) {
+        pieces[pieceType].dup().pop1Bits(function (pos) {
           newPiece = $('<div class="piece">' + PieceTypeHTML[pieceType] + '<div>');
           if (pieces[Colors.WHITE].hasSetBit(pos)) {
             newPiece.addClass('white');
@@ -931,7 +933,7 @@ var _require2 = __webpack_require__(14),
     Move = _require2.Move,
     MoveTypes = _require2.MoveTypes;
 
-var _require3 = __webpack_require__(3),
+var _require3 = __webpack_require__(1),
     Pawns = _require3.Pawns,
     Knight = _require3.Knight,
     Bishop = _require3.Bishop,
@@ -1077,7 +1079,7 @@ var Position = function () {
       var from = void 0;
       var captured = null;
 
-      newPositions.forEach1Bit(function (pos) {
+      newPositions.pop1Bits(function (pos) {
         from = pos - shiftAmt;
         if (isDblPush) {
           moves.push(new Move(from, pos, MoveTypes.DBL_PPUSH, PieceTypes.PAWNS));
@@ -1123,21 +1125,21 @@ var Position = function () {
 
       var knightsPos = this.getColorPieceSet(this.turn, PieceTypes.KNIGHTS);
       var knightMoves = void 0;
-      knightsPos.forEach1Bit(function (pos) {
+      knightsPos.dup().pop1Bits(function (pos) {
         knightMoves = Knight.moves(pos, notOwnPieces);
         _this3.addNormalMoveSet(knightMoves, pos, PieceTypes.KNIGHTS, moves, includeQuiet);
       });
 
       var bishopsPos = this.getColorPieceSet(this.turn, PieceTypes.BISHOPS);
       var bishopMoves = void 0;
-      bishopsPos.forEach1Bit(function (pos) {
+      bishopsPos.dup().pop1Bits(function (pos) {
         bishopMoves = Bishop.moves(pos, occupied, notOwnPieces);
         _this3.addNormalMoveSet(bishopMoves, pos, PieceTypes.BISHOPS, moves, includeQuiet);
       });
 
       var rooksPos = this.getColorPieceSet(this.turn, PieceTypes.ROOKS);
       var rookMoves = void 0;
-      rooksPos.forEach1Bit(function (pos) {
+      rooksPos.dup().pop1Bits(function (pos) {
         rookMoves = Rook.moves(pos, occupied, notOwnPieces);
         _this3.addNormalMoveSet(rookMoves, pos, PieceTypes.ROOKS, moves, includeQuiet);
       });
@@ -1182,7 +1184,7 @@ var Position = function () {
       var newMove = void 0;
       var captType = void 0;
 
-      newPositions.forEach1Bit(function (pos) {
+      newPositions.pop1Bits(function (pos) {
         captType = _this4.pieces[_this4.opp].hasSetBit(pos) ? _this4.getPieceAt(pos) : null;
         if (includeQuiet || captType) {
           moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));
@@ -1916,7 +1918,7 @@ var stepMove = __webpack_require__(7);
 var _require = __webpack_require__(0),
     BBMasks = _require.BBMasks;
 
-var _require2 = __webpack_require__(1),
+var _require2 = __webpack_require__(2),
     Colors = _require2.Colors;
 
 var DIRS = (_DIRS = {}, _defineProperty(_DIRS, Colors.WHITE, 1), _defineProperty(_DIRS, Colors.BLACK, -1), _DIRS);
@@ -2040,13 +2042,13 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 var _require = __webpack_require__(0),
     BBMasks = _require.BBMasks;
 
-var Dirs = __webpack_require__(2);
+var Dirs = __webpack_require__(3);
 
 var _require2 = __webpack_require__(4),
     KING_MOVES = _require2.KING_MOVES,
     SLIDE_MOVES = _require2.SLIDE_MOVES;
 
-var _require3 = __webpack_require__(1),
+var _require3 = __webpack_require__(2),
     Colors = _require3.Colors;
 
 var INIT_POS = (_INIT_POS = {}, _defineProperty(_INIT_POS, Colors.BLACK, 60), _defineProperty(_INIT_POS, Colors.WHITE, 4), _INIT_POS);
@@ -2077,7 +2079,7 @@ module.exports = King;
 "use strict";
 
 
-var _require = __webpack_require__(1),
+var _require = __webpack_require__(2),
     Types = _require.Types,
     Colors = _require.Colors,
     PieceTypeLetters = _require.PieceTypeLetters;
@@ -2120,7 +2122,7 @@ module.exports = { pieceToLetter: pieceToLetter, letterToColor: letterToColor, l
 "use strict";
 
 
-var _require = __webpack_require__(3),
+var _require = __webpack_require__(1),
     PieceConv = _require.PieceConv,
     PieceTypes = _require.PieceTypes,
     Colors = _require.Colors;
@@ -2163,7 +2165,7 @@ function pieceSetsToArray(pieces) {
 
   var pieceTypes = Object.values(PieceTypes);
   pieceTypes.forEach(function (type) {
-    pieces[type].forEach1Bit(function (pos) {
+    pieces[type].dup().pop1Bits(function (pos) {
       if (pieces[Colors.WHITE].hasSetBit(pos)) {
         res[pos] = PieceConv.pieceToLetter(type, Colors.WHITE);
       } else {
@@ -2216,7 +2218,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var _require = __webpack_require__(3),
+var _require = __webpack_require__(1),
     Pawns = _require.Pawns,
     Knight = _require.Knight,
     Bishop = _require.Bishop,
@@ -2239,7 +2241,7 @@ var AI = function () {
 
       var pawnsPos = position.getColorPieceSet(color, PieceTypes.PAWNS);
 
-      pawnsPos.forEach1Bit(function (pos) {
+      pawnsPos.dup().pop1Bits(function (pos) {
         sum += Pawns.value;
         sum += Pawns.positionValues[color ? pos ^ 56 : pos];
       });
@@ -2258,7 +2260,7 @@ var AI = function () {
 
       var pieces = position.getColorPieceSet(color, pieceType);
 
-      pieces.forEach1Bit(function (pos) {
+      pieces.dup().pop1Bits(function (pos) {
         sum += pieceConstant.value;
         sum += pieceConstant.positionValues[color ? pos ^ 56 : pos];
         sum += pieceConstant.moves(pos, notOwnPieces).popCount();
@@ -2273,7 +2275,7 @@ var AI = function () {
 
       var pieces = position.getColorPieceSet(color, pieceType);
 
-      pieces.forEach1Bit(function (pos) {
+      pieces.dup().pop1Bits(function (pos) {
         sum += pieceConstant.value;
         sum += pieceConstant.positionValues[color ? pos ^ 56 : pos];
         sum += pieceConstant.moves(pos, occupied, notOwnPieces).popCount();
@@ -2316,7 +2318,10 @@ var AI = function () {
   }, {
     key: 'makeMove',
     value: function makeMove(position) {
-      this.maxDepth = 3;
+      // const moves = position.generateLegalMoves();
+      // const move = moves[Math.floor(Math.random() * moves.length)];
+      // position.makeMove(move);
+      this.maxDepth = 4;
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       position.makeMove(this.bestMove);
     }
@@ -2333,6 +2338,7 @@ var AI = function () {
 
       var inCheck = position.inCheck(position.turn);
       var moves = position.generatePseudoMoves(inCheck);
+      this.sortMoves(moves);
       var moveIdx = void 0;
       var score = void 0;
 
@@ -2362,6 +2368,7 @@ var AI = function () {
       }
 
       var moves = position.generatePseudoMoves();
+      this.sortMoves(moves);
       var moveIdx = void 0;
       var canMove = false;
       var score = void 0;
@@ -2396,6 +2403,19 @@ var AI = function () {
       } else {
         return bestScore;
       }
+    }
+  }, {
+    key: 'sortMoves',
+    value: function sortMoves(moves) {
+      function calculateScore(move) {
+        var score = move.getCaptPiece();
+        score = score * 6 + move.getPiece();
+        score = score * 16 + move.getType();
+      }
+
+      moves.sort(function (moveA, moveB) {
+        return calculateScore(moveA) > calculateScore(moveB) ? -1 : 1;
+      });
     }
   }]);
 

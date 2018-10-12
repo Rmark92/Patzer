@@ -112,7 +112,7 @@ class Position {
     let from;
     let captured = null;
 
-    newPositions.forEach1Bit((pos) => {
+    newPositions.pop1Bits((pos) => {
       from = pos - shiftAmt;
       if (isDblPush) {
         moves.push(new Move(from, pos, MoveTypes.DBL_PPUSH, PieceTypes.PAWNS));
@@ -149,21 +149,21 @@ class Position {
 
     const knightsPos = this.getColorPieceSet(this.turn, PieceTypes.KNIGHTS);
     let knightMoves;
-    knightsPos.forEach1Bit((pos) => {
+    knightsPos.dup().pop1Bits((pos) => {
       knightMoves = Knight.moves(pos, notOwnPieces);
       this.addNormalMoveSet(knightMoves, pos, PieceTypes.KNIGHTS, moves, includeQuiet);
     });
 
     const bishopsPos = this.getColorPieceSet(this.turn, PieceTypes.BISHOPS);
     let bishopMoves;
-    bishopsPos.forEach1Bit((pos) => {
+    bishopsPos.dup().pop1Bits((pos) => {
       bishopMoves = Bishop.moves(pos, occupied, notOwnPieces);
       this.addNormalMoveSet(bishopMoves, pos, PieceTypes.BISHOPS, moves, includeQuiet);
     });
 
     const rooksPos = this.getColorPieceSet(this.turn, PieceTypes.ROOKS);
     let rookMoves;
-    rooksPos.forEach1Bit((pos) => {
+    rooksPos.dup().pop1Bits((pos) => {
       rookMoves = Rook.moves(pos, occupied, notOwnPieces);
       this.addNormalMoveSet(rookMoves, pos, PieceTypes.ROOKS, moves, includeQuiet);
     });
@@ -198,7 +198,7 @@ class Position {
     let newMove;
     let captType;
 
-    newPositions.forEach1Bit((pos) => {
+    newPositions.pop1Bits((pos) => {
       captType = this.pieces[this.opp].hasSetBit(pos) ? this.getPieceAt(pos) : null;
       if (includeQuiet || captType) {
         moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));

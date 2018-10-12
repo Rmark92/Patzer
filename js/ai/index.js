@@ -12,7 +12,7 @@ class AI {
 
     const pawnsPos = position.getColorPieceSet(color, PieceTypes.PAWNS);
 
-    pawnsPos.forEach1Bit((pos) => {
+    pawnsPos.dup().pop1Bits((pos) => {
       sum += Pawns.value;
       sum += Pawns.positionValues[color ? (pos ^ 56) : pos];
     });
@@ -30,7 +30,7 @@ class AI {
 
     const pieces = position.getColorPieceSet(color, pieceType);
 
-    pieces.forEach1Bit((pos) => {
+    pieces.dup().pop1Bits((pos) => {
       sum += pieceConstant.value;
       sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
       sum += pieceConstant.moves(pos, notOwnPieces).popCount();
@@ -44,7 +44,7 @@ class AI {
 
     const pieces = position.getColorPieceSet(color, pieceType);
 
-    pieces.forEach1Bit((pos) => {
+    pieces.dup().pop1Bits((pos) => {
       sum += pieceConstant.value;
       sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
       sum += pieceConstant.moves(pos, occupied, notOwnPieces).popCount();
@@ -85,7 +85,10 @@ class AI {
   }
 
   makeMove(position) {
-    this.maxDepth = 3;
+    // const moves = position.generateLegalMoves();
+    // const move = moves[Math.floor(Math.random() * moves.length)];
+    // position.makeMove(move);
+    this.maxDepth = 4;
     this.negaMax(position, this.maxDepth, -Infinity, Infinity);
     position.makeMove(this.bestMove);
   }
@@ -101,6 +104,7 @@ class AI {
 
     let inCheck = position.inCheck(position.turn);
     const moves = position.generatePseudoMoves(inCheck);
+    this.sortMoves(moves);
     let moveIdx;
     let score;
 
@@ -125,6 +129,7 @@ class AI {
     }
 
     const moves = position.generatePseudoMoves();
+    this.sortMoves(moves);
     let moveIdx;
     let canMove = false;
     let score;
@@ -153,6 +158,18 @@ class AI {
     } else {
       return bestScore;
     }
+  }
+
+  sortMoves(moves) {
+    function calculateScore(move) {
+      let score = move.getCaptPiece();
+      score = score * 6 + move.getPiece();
+      score = score * 16 + move.getType();
+    }
+
+    moves.sort((moveA, moveB) => {
+      return calculateScore(moveA) > calculateScore(moveB) ? -1 : 1;
+    });
   }
 }
 

@@ -143,19 +143,20 @@ class BitBoard {
     }
   }
 
-  forEach1Bit(cb) {
-    let newLowBits = this.low;
-    let newHighBits = this.high;
-
-    while (newLowBits) {
-      cb(Utils.bitScanForward32(newLowBits));
-      newLowBits = Utils.clearLeastSigBit32(newLowBits);
+  pop1Bits(cb) {
+    while (this.low) {
+      cb(Utils.bitScanForward32(this.low));
+      this.low = Utils.clearLeastSigBit32(this.low);
     }
 
-    while (newHighBits) {
-      cb(Utils.bitScanForward32(newHighBits) + 32);
-      newHighBits = Utils.clearLeastSigBit32(newHighBits);
+    while (this.high) {
+      cb(Utils.bitScanForward32(this.high) + 32);
+      this.high = Utils.clearLeastSigBit32(this.high);
     }
+  }
+
+  dup() {
+    return new BitBoard(this.low, this.high);
   }
 
   static fromPos(pos) {

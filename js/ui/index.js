@@ -89,7 +89,7 @@ class UI {
     let newPiece;
 
     pieceTypes.forEach((pieceType) => {
-      pieces[pieceType].forEach1Bit((pos) => {
+      pieces[pieceType].dup().pop1Bits((pos) => {
         newPiece = $(`<div class="piece">${PieceTypeHTML[pieceType]}<div>`);
         if (pieces[Colors.WHITE].hasSetBit(pos)) {
           newPiece.addClass('white');
