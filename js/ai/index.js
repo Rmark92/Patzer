@@ -53,26 +53,26 @@ class AI {
   //   return sum;
   // }
   //
-  // sumPieceSetScore(piecePositions, pieceConstant, color) {
-  //   let sum = 0;
-  //   piecePositions.dup().pop1Bits((pos) => {
-  //     sum += pieceConstant.value;
-  //     sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
-  //   });
-  //
-  //   return sum;
-  // }
-  //
-  // sumPieceScore(pos, pieceConstant, color) {
-  //   let sum = 0;
-  //
-  //   if (pos !== null) {
-  //     sum += pieceConstant.value;
-  //     sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
-  //   }
-  //
-  //   return sum;
-  // }
+  sumPieceSetScore(piecePositions, pieceConstant, color) {
+    let sum = 0;
+    piecePositions.dup().pop1Bits((pos) => {
+      sum += pieceConstant.value;
+      sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
+    });
+
+    return sum;
+  }
+
+  sumPieceScore(pos, pieceConstant, color) {
+    let sum = 0;
+
+    if (pos !== null) {
+      sum += pieceConstant.value;
+      sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
+    }
+
+    return sum;
+  }
 
   evaluate(position) {
     let sum = 0;

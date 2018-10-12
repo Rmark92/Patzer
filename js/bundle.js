@@ -2280,28 +2280,32 @@ var AI = function () {
   //   return sum;
   // }
   //
-  // sumPieceSetScore(piecePositions, pieceConstant, color) {
-  //   let sum = 0;
-  //   piecePositions.dup().pop1Bits((pos) => {
-  //     sum += pieceConstant.value;
-  //     sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
-  //   });
-  //
-  //   return sum;
-  // }
-  //
-  // sumPieceScore(pos, pieceConstant, color) {
-  //   let sum = 0;
-  //
-  //   if (pos !== null) {
-  //     sum += pieceConstant.value;
-  //     sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
-  //   }
-  //
-  //   return sum;
-  // }
+
 
   _createClass(AI, [{
+    key: 'sumPieceSetScore',
+    value: function sumPieceSetScore(piecePositions, pieceConstant, color) {
+      var sum = 0;
+      piecePositions.dup().pop1Bits(function (pos) {
+        sum += pieceConstant.value;
+        sum += pieceConstant.positionValues[color ? pos ^ 56 : pos];
+      });
+
+      return sum;
+    }
+  }, {
+    key: 'sumPieceScore',
+    value: function sumPieceScore(pos, pieceConstant, color) {
+      var sum = 0;
+
+      if (pos !== null) {
+        sum += pieceConstant.value;
+        sum += pieceConstant.positionValues[color ? pos ^ 56 : pos];
+      }
+
+      return sum;
+    }
+  }, {
     key: 'evaluate',
     value: function evaluate(position) {
       var sum = 0;
