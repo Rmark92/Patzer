@@ -1381,7 +1381,8 @@ var Position = function () {
       var oppColor = this.getOtherColor(color);
       var pawns = this.getColorPieceSet(oppColor, PieceTypes.PAWNS);
 
-      return !Pawns.attacksLeft(oppColor, pawns, posBB).isZero() || !Pawns.attacksRight(oppColor, pawns, posBB).isZero() || !Knight.moves(pos, this.getColorPieceSet(oppColor, PieceTypes.KNIGHTS)).isZero() || !Bishop.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.BISHOPS)).isZero() || !Rook.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.ROOKS)).isZero() || !Queen.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.QUEENS)).isZero() || !King.moves(pos, this.getColorPieceSet(oppColor, PieceTypes.KINGS)).isZero();
+      var queenBB = this.getColorPieceSet(oppColor, PieceTypes.QUEENS);
+      return !Pawns.attacksLeft(oppColor, pawns, posBB).isZero() || !Pawns.attacksRight(oppColor, pawns, posBB).isZero() || !Knight.moves(pos, this.getColorPieceSet(oppColor, PieceTypes.KNIGHTS)).isZero() || !Bishop.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.BISHOPS).or(queenBB)).isZero() || !Rook.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.ROOKS).or(queenBB)).isZero();
     }
 
     // unmakes the previous move, updating the current position
