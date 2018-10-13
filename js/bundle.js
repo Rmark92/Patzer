@@ -261,7 +261,8 @@ var _isPosRay;
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 var _require = __webpack_require__(0),
-    BitBoard = _require.BitBoard;
+    BitBoard = _require.BitBoard,
+    BBMasks = _require.BBMasks;
 
 var _require2 = __webpack_require__(4),
     SLIDE_MOVES = _require2.SLIDE_MOVES;
@@ -2402,8 +2403,7 @@ var AI = function () {
         alpha = standPatVal;
       }
 
-      var inCheck = position.inCheck(position.turn);
-      var moves = position.generatePseudoMoves(inCheck);
+      var moves = position.generatePseudoMoves(position.inCheck(position.turn));
       this.sortMoves(moves);
       var moveIdx = void 0;
       var score = void 0;

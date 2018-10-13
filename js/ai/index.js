@@ -165,8 +165,7 @@ class AI {
       alpha = standPatVal;
     }
 
-    let inCheck = position.inCheck(position.turn);
-    const moves = position.generatePseudoMoves(inCheck);
+    const moves = position.generatePseudoMoves(position.inCheck(position.turn));
     this.sortMoves(moves);
     let moveIdx;
     let score;

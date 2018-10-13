@@ -1,4 +1,4 @@
-const { BitBoard } = require('../../bitboard');
+const { BitBoard, BBMasks } = require('../../bitboard');
 const { SLIDE_MOVES } = require('./masks.js');
 const Dirs = require('./dir_constants.js');
 
