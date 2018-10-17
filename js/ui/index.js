@@ -118,12 +118,13 @@ class UI {
       moveToFroms[moveData.to].push(moveData.from);
     });
 
+    this.activateDraggablePieces(moveFromTos);
+    this.activateDroppableSquares(moveFromTos, moveToFroms);
+  }
+
+  activateDraggablePieces(moveFromTos) {
     let fromFileRank;
-    let toFileRank;
-    let droppedPieceSource;
-    let selectedMoves;
     let pieceEl;
-    let destSq;
 
     Object.keys(moveFromTos).forEach((fromPos) => {
       fromFileRank = Util.fileRankFromPos(fromPos);
@@ -144,18 +145,20 @@ class UI {
         $('.square').removeClass('can-move-to');
       });
     });
+  }
 
+  activateDroppableSquares(moveFromTos, moveToFroms) {
+    let destSq;
     let originSquare;
     let originPos;
     let selectedMove;
+
     Object.keys(moveToFroms).forEach((toPos) => {
       destSq = $(`#${Util.fileRankFromPos(toPos)}`);
       destSq.droppable({
         accept: (draggable) => {
           originSquare = $(draggable).parent().attr('id');
-          if (!originSquare) {
-            return false;
-          }
+          if (!originSquare) { return false; }
           originPos = Util.posFromFileRank(originSquare);
           return moveFromTos[originPos] && moveFromTos[originPos].includes(parseInt(toPos));
         },

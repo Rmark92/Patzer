@@ -852,8 +852,6 @@ var UI = function () {
   }, {
     key: 'setupPlayerMove',
     value: function setupPlayerMove() {
-      var _this3 = this;
-
       var movesData = this.currMoves.map(function (move) {
         return move.getData();
       });
@@ -868,12 +866,14 @@ var UI = function () {
         moveToFroms[moveData.to].push(moveData.from);
       });
 
+      this.activateDraggablePieces(moveFromTos);
+      this.activateDroppableSquares(moveFromTos, moveToFroms);
+    }
+  }, {
+    key: 'activateDraggablePieces',
+    value: function activateDraggablePieces(moveFromTos) {
       var fromFileRank = void 0;
-      var toFileRank = void 0;
-      var droppedPieceSource = void 0;
-      var selectedMoves = void 0;
       var pieceEl = void 0;
-      var destSq = void 0;
 
       Object.keys(moveFromTos).forEach(function (fromPos) {
         fromFileRank = Util.fileRankFromPos(fromPos);
@@ -894,10 +894,17 @@ var UI = function () {
           $('.square').removeClass('can-move-to');
         });
       });
+    }
+  }, {
+    key: 'activateDroppableSquares',
+    value: function activateDroppableSquares(moveFromTos, moveToFroms) {
+      var _this3 = this;
 
+      var destSq = void 0;
       var originSquare = void 0;
       var originPos = void 0;
       var selectedMove = void 0;
+
       Object.keys(moveToFroms).forEach(function (toPos) {
         destSq = $('#' + Util.fileRankFromPos(toPos));
         destSq.droppable({
