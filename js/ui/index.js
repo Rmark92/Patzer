@@ -119,7 +119,7 @@ class UI {
     });
 
     this.activateDraggablePieces(moveFromTos);
-    this.activateDroppableSquares(moveFromTos, moveToFroms);
+    this.activateDroppableSquares(moveToFroms);
   }
 
   activateDraggablePieces(moveFromTos) {
@@ -147,7 +147,7 @@ class UI {
     });
   }
 
-  activateDroppableSquares(moveFromTos, moveToFroms) {
+  activateDroppableSquares(moveToFroms) {
     let destSq;
     let originSquare;
     let originPos;
@@ -160,11 +160,10 @@ class UI {
           originSquare = $(draggable).parent().attr('id');
           if (!originSquare) { return false; }
           originPos = Util.posFromFileRank(originSquare);
-          return moveFromTos[originPos] && moveFromTos[originPos].includes(parseInt(toPos));
+          return moveToFroms[toPos].includes(originPos);
         },
         drop: (event, ui) => {
           originSquare = $(ui.draggable).parent().attr('id');
-          if (!originSquare) { console.log('drop undefined'); }
           originPos = Util.posFromFileRank(originSquare);
           selectedMove = this.currMoves.filter((move) => {
             return move.getFrom() === originPos &&

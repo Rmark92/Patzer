@@ -867,7 +867,7 @@ var UI = function () {
       });
 
       this.activateDraggablePieces(moveFromTos);
-      this.activateDroppableSquares(moveFromTos, moveToFroms);
+      this.activateDroppableSquares(moveToFroms);
     }
   }, {
     key: 'activateDraggablePieces',
@@ -897,7 +897,7 @@ var UI = function () {
     }
   }, {
     key: 'activateDroppableSquares',
-    value: function activateDroppableSquares(moveFromTos, moveToFroms) {
+    value: function activateDroppableSquares(moveToFroms) {
       var _this3 = this;
 
       var destSq = void 0;
@@ -914,13 +914,10 @@ var UI = function () {
               return false;
             }
             originPos = Util.posFromFileRank(originSquare);
-            return moveFromTos[originPos] && moveFromTos[originPos].includes(parseInt(toPos));
+            return moveToFroms[toPos].includes(originPos);
           },
           drop: function drop(event, ui) {
             originSquare = $(ui.draggable).parent().attr('id');
-            if (!originSquare) {
-              console.log('drop undefined');
-            }
             originPos = Util.posFromFileRank(originSquare);
             selectedMove = _this3.currMoves.filter(function (move) {
               return move.getFrom() === originPos && move.getTo() === parseInt(toPos);
