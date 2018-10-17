@@ -159,6 +159,17 @@ class BitBoard {
     return new BitBoard(this.low, this.high);
   }
 
+  static fromNumber(num) {
+    if (num < 0) {
+      return new BitBoard();
+    }
+
+    num %= Math.pow(2, 64);
+    const lowBits = num % Math.pow(2, 32);
+    const highBits = Math.floor(num / Math.pow(2, 32));
+    return new BitBoard(lowBits, highBits);
+  }
+
   static fromPos(pos) {
     const res = new BitBoard();
     res.setBit(pos);
