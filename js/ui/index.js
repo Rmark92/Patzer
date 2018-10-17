@@ -12,7 +12,6 @@ class UI {
     this.playerColor = Colors.WHITE;
     this.ai = new AI();
     this.currMoves = this.position.generateLegalMoves();
-    this.makePlayerMove = this.makePlayerMove.bind(this);
   }
 
   run() {
@@ -138,7 +137,10 @@ class UI {
 
     Object.keys(moveFromTos).forEach((fromPos) => {
       fromFileRank = Util.fileRankFromPos(fromPos);
-      $(`#${fromFileRank} .piece`).draggable();
+      $(`#${fromFileRank} .piece`).draggable({
+        containment: $('table')
+      });
+
       $(`#${fromFileRank} .piece`).mouseenter(() => {
         moveFromTos[fromPos].forEach( (toPos) => {
           $(`#${Util.fileRankFromPos(toPos)}`).addClass('can-move-to');
@@ -150,15 +152,13 @@ class UI {
           $(`#${Util.fileRankFromPos(toPos)}`).removeClass('can-move-to');
         });
       });
+    });
 
-      moveFromTos[fromPos].forEach( (toPos) => {
-        $(`#${Util.fileRankFromPos(toPos)}`).droppable({
-          drop: (event, ui) => {
-            droppedPieceSource = $(ui.draggable).parent().attr('id');
-            this.makePlayerMove(Util.posFromFileRank(droppedPieceSource), toPos);
-          }
-        });
-      });
+    $('.square').droppable({
+      drop: (event, ui) => {
+        droppedPieceSource = $(ui.draggable).parent().attr('id');
+        this.makePlayerMove(Util.posFromFileRank(droppedPieceSource), Util.posFromFileRank($(event.target).attr('id')));
+      }
     });
   }
 }

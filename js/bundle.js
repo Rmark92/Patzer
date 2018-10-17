@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 10);
+/******/ 	return __webpack_require__(__webpack_require__.s = 9);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -70,7 +70,7 @@
 "use strict";
 
 
-var BitBoard = __webpack_require__(7);
+var BitBoard = __webpack_require__(6);
 var Masks = __webpack_require__(13);
 
 module.exports = {
@@ -80,41 +80,6 @@ module.exports = {
 
 /***/ }),
 /* 1 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _PUtils;
-
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
-// const { WhitePawns, BlackPawns } = require('./pawns.js');
-var Constants = __webpack_require__(2);
-var Pawns = __webpack_require__(16);
-var Knight = __webpack_require__(17);
-var Bishop = __webpack_require__(18);
-var Rook = __webpack_require__(19);
-var Queen = __webpack_require__(20);
-var King = __webpack_require__(21);
-var PieceConv = __webpack_require__(22);
-var eachPieceType = __webpack_require__(30);
-var Dirs = __webpack_require__(3);
-
-var PUtils = (_PUtils = {}, _defineProperty(_PUtils, Constants.Types.PAWNS, Pawns), _defineProperty(_PUtils, Constants.Types.KNIGHTS, Knight), _defineProperty(_PUtils, Constants.Types.BISHOPS, Bishop), _defineProperty(_PUtils, Constants.Types.ROOKS, Rook), _defineProperty(_PUtils, Constants.Types.QUEENS, Queen), _defineProperty(_PUtils, Constants.Types.KINGS, King), _PUtils);
-
-module.exports = {
-  PTypes: Constants.Types,
-  Colors: Constants.Colors,
-  PieceTypeHTML: Constants.PieceTypeHTML,
-  PUtils: PUtils,
-  eachPieceType: eachPieceType,
-  Dirs: Dirs,
-  PieceConv: PieceConv
-};
-
-/***/ }),
-/* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -143,6 +108,41 @@ var PieceTypeLetters = (_PieceTypeLetters = {}, _defineProperty(_PieceTypeLetter
 var PieceTypeHTML = (_PieceTypeHTML = {}, _defineProperty(_PieceTypeHTML, Types.PAWNS, '&#9823;'), _defineProperty(_PieceTypeHTML, Types.KNIGHTS, '&#9822;'), _defineProperty(_PieceTypeHTML, Types.BISHOPS, '&#9821;'), _defineProperty(_PieceTypeHTML, Types.ROOKS, '&#9820;'), _defineProperty(_PieceTypeHTML, Types.QUEENS, '&#9819;'), _defineProperty(_PieceTypeHTML, Types.KINGS, '&#9818;'), _PieceTypeHTML);
 
 module.exports = { Types: Types, Colors: Colors, PieceTypeLetters: PieceTypeLetters, PieceTypeHTML: PieceTypeHTML };
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _PUtils;
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+// const { WhitePawns, BlackPawns } = require('./pawns.js');
+var Constants = __webpack_require__(1);
+var Pawns = __webpack_require__(16);
+var Knight = __webpack_require__(17);
+var Bishop = __webpack_require__(18);
+var Rook = __webpack_require__(19);
+var Queen = __webpack_require__(20);
+var King = __webpack_require__(21);
+var PieceConv = __webpack_require__(22);
+var eachPieceType = __webpack_require__(23);
+var Dirs = __webpack_require__(3);
+
+var PUtils = (_PUtils = {}, _defineProperty(_PUtils, Constants.Types.PAWNS, Pawns), _defineProperty(_PUtils, Constants.Types.KNIGHTS, Knight), _defineProperty(_PUtils, Constants.Types.BISHOPS, Bishop), _defineProperty(_PUtils, Constants.Types.ROOKS, Rook), _defineProperty(_PUtils, Constants.Types.QUEENS, Queen), _defineProperty(_PUtils, Constants.Types.KINGS, King), _PUtils);
+
+module.exports = {
+  PTypes: Constants.Types,
+  Colors: Constants.Colors,
+  PieceTypeHTML: Constants.PieceTypeHTML,
+  PUtils: PUtils,
+  eachPieceType: eachPieceType,
+  Dirs: Dirs,
+  PieceConv: PieceConv
+};
 
 /***/ }),
 /* 3 */
@@ -176,7 +176,7 @@ var _require = __webpack_require__(0),
     BBMasks = _require.BBMasks;
 
 var Dirs = __webpack_require__(3);
-var stepMove = __webpack_require__(8);
+var stepMove = __webpack_require__(7);
 
 function generateStepBitBoards(dirs) {
   var res = [];
@@ -316,6 +316,619 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var Utils = __webpack_require__(12);
+// A standard 8x8 chess board can be represented by a 64bit integer (bitboard),
+// in which a 1 means the position is occupied, a 0 means it's empty
+
+// We use several of these bitboards to represent a chess position
+// for example, the current set of pieces is represented by a bitboard
+// for each piece type and color
+
+// Since Javascript doesn't support bitwise operations for 64bit integers,
+// we implement most of those operations here, separating the 64bit int
+// into its low 32bit and high 32bit components
+
+//56 57 58 59 60 61 62 63
+//48 49 50 51 52 53 54 55  ^
+//40 41 42 43 44 45 46 47  |
+//32 33 34 35 36 37 38 39 HIGH
+//24 25 26 27 28 29 30 31 LOW
+//16 17 18 19 20 21 22 23  |
+// 8  9 10 11 12 13 14 15  v
+// 0  1  2  3  4  5  6  7
+
+var BitBoard = function () {
+  function BitBoard(low, high) {
+    _classCallCheck(this, BitBoard);
+
+    this.low = (low || 0) >>> 0;
+    this.high = (high || 0) >>> 0;
+  }
+
+  _createClass(BitBoard, [{
+    key: 'and',
+    value: function and(other) {
+      return new BitBoard(this.low & other.low, this.high & other.high);
+    }
+  }, {
+    key: 'or',
+    value: function or(other) {
+      return new BitBoard(this.low | other.low, this.high | other.high);
+    }
+  }, {
+    key: 'xor',
+    value: function xor(other) {
+      return new BitBoard(this.low ^ other.low, this.high ^ other.high);
+    }
+  }, {
+    key: 'not',
+    value: function not() {
+      return new BitBoard(~this.low, ~this.high);
+    }
+  }, {
+    key: 'equals',
+    value: function equals(other) {
+      return this.low === other.low && this.high === other.high;
+    }
+  }, {
+    key: 'greaterThan',
+    value: function greaterThan(other) {
+      return this.high > other.high || this.low > other.low;
+    }
+  }, {
+    key: 'lessThan',
+    value: function lessThan(other) {
+      return this.high < other.high || this.low < other.low;
+    }
+  }, {
+    key: 'isZero',
+    value: function isZero() {
+      return this.high === 0 && this.low === 0;
+    }
+  }, {
+    key: 'shiftRight',
+    value: function shiftRight(numBits) {
+      var newLowBits = void 0,
+          newHighBits = void 0;
+
+      if (numBits <= 0) {
+        return new BitBoard(this.low, this.high);
+      } else if (numBits > 63) {
+        return new BitBoard();
+      } else if (numBits >= 32) {
+        newLowBits = this.high >>> numBits - 32;
+        newHighBits = 0;
+      } else {
+        newLowBits = this.low >>> numBits | this.high << 32 - numBits;
+        newHighBits = this.high >>> numBits;
+      }
+
+      return new BitBoard(newLowBits, newHighBits);
+    }
+  }, {
+    key: 'shiftLeft',
+    value: function shiftLeft(numBits) {
+      var newLowBits = void 0,
+          newHighBits = void 0;
+
+      if (numBits <= 0) {
+        return new BitBoard(this.low, this.high);
+      } else if (numBits > 63) {
+        return new BitBoard();
+      } else if (numBits >= 32) {
+        newLowBits = 0;
+        newHighBits = this.low << numBits - 32 >>> 0;
+      } else {
+        newLowBits = this.low << numBits >>> 0;
+        newHighBits = (this.low >>> 32 - numBits | this.high << numBits) >>> 0;
+      }
+
+      return new BitBoard(newLowBits, newHighBits);
+    }
+  }, {
+    key: 'popCount',
+    value: function popCount() {
+      return [this.low, this.high].reduce(function (count, int32) {
+        return count + Utils.popCount32(int32);
+      }, 0);
+    }
+  }, {
+    key: 'setBit',
+    value: function setBit(pos) {
+      if (pos >= 32 && pos < 64) {
+        this.high = (this.high | 1 << pos - 32) >>> 0;
+      } else if (pos >= 0 && pos < 32) {
+        this.low = (this.low | 1 << pos) >>> 0;
+      }
+    }
+  }, {
+    key: 'clearBit',
+    value: function clearBit(pos) {
+      if (pos >= 32) {
+        this.high = (this.high & ~(1 << pos - 32)) >>> 0;
+      } else {
+        this.low = (this.low & ~(1 << pos)) >>> 0;
+      }
+    }
+  }, {
+    key: 'bitScanForward',
+    value: function bitScanForward() {
+      if (this.low) {
+        return Utils.bitScanForward32(this.low);
+      } else if (this.high) {
+        return Utils.bitScanForward32(this.high) + 32;
+      } else {
+        return null;
+      }
+    }
+  }, {
+    key: 'hasSetBit',
+    value: function hasSetBit(pos) {
+      if (pos < 32) {
+        return Boolean(this.low & 1 << pos);
+      } else {
+        return Boolean(this.high & 1 << pos - 32);
+      }
+    }
+  }, {
+    key: 'bitScanReverse',
+    value: function bitScanReverse() {
+      if (this.high) {
+        return Utils.bitScanReverse32(this.high) + 32;
+      } else if (this.low) {
+        return Utils.bitScanReverse32(this.low);
+      } else {
+        return null;
+      }
+    }
+  }, {
+    key: 'pop1Bits',
+    value: function pop1Bits(cb) {
+      while (this.low) {
+        cb(Utils.bitScanForward32(this.low));
+        this.low = Utils.clearLeastSigBit32(this.low);
+      }
+
+      while (this.high) {
+        cb(Utils.bitScanForward32(this.high) + 32);
+        this.high = Utils.clearLeastSigBit32(this.high);
+      }
+    }
+  }, {
+    key: 'dup',
+    value: function dup() {
+      return new BitBoard(this.low, this.high);
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var row = '';
+      var pow = 63;
+      var posVal = void 0;
+      console.log('------');
+      while (pow >= 32) {
+        posVal = (Math.pow(2, pow - 32) & this.high) === 0 ? '0' : '1';
+        row = posVal + row;
+        if (row.length === 8) {
+          console.log(row);
+          row = '';
+        }
+        pow--;
+      }
+
+      while (pow >= 0) {
+        posVal = (Math.pow(2, pow) & this.low) === 0 ? '0' : '1';
+        row = posVal + row;
+        if (row.length === 8) {
+          console.log(row);
+          row = '';
+        }
+        pow--;
+      }
+      console.log('------');
+    }
+  }], [{
+    key: 'fromPos',
+    value: function fromPos(pos) {
+      var res = new BitBoard();
+      res.setBit(pos);
+
+      return res;
+    }
+  }, {
+    key: 'fromPositions',
+    value: function fromPositions(positions) {
+      var res = new BitBoard();
+
+      positions.forEach(function (pos) {
+        res.setBit(pos);
+      });
+
+      return res;
+    }
+  }, {
+    key: 'fromCol',
+    value: function fromCol(colNum) {
+      var res = new BitBoard();
+      if (colNum < 0 || colNum > 7) {
+        return res;
+      }
+      var pos = colNum;
+
+      while (pos < 64) {
+        res.setBit(pos);
+        pos += 8;
+      }
+
+      return res;
+    }
+  }, {
+    key: 'fromRow',
+    value: function fromRow(rowNum) {
+      var res = new BitBoard();
+      if (rowNum < 0 || rowNum > 7) {
+        return res;
+      }
+
+      var pos = rowNum * 8;
+      var posMax = pos + 7;
+
+      while (pos <= posMax) {
+        res.setBit(pos);
+        pos++;
+      }
+
+      return res;
+    }
+  }, {
+    key: 'upperRightDiag',
+    value: function upperRightDiag(startPos) {
+      var res = BitBoard.fromPos(startPos);
+      if (startPos < 0 || startPos > 63) {
+        return res;
+      }
+      var pos = startPos + 9;
+
+      while (pos < 64 && pos % 8 !== 0) {
+        res.setBit(pos);
+        pos += 9;
+      }
+
+      return res;
+    }
+  }, {
+    key: 'upperLeftDiag',
+    value: function upperLeftDiag(startPos) {
+      var res = new BitBoard();
+      if (startPos < 0 || startPos > 63) {
+        return res;
+      }
+      var pos = startPos;
+
+      while (pos < 64 && pos % 8 !== 0) {
+        res.setBit(pos);
+        pos += 7;
+      }
+
+      if (pos < 64) {
+        res.setBit(pos);
+      }
+
+      return res;
+    }
+  }]);
+
+  return BitBoard;
+}();
+
+module.exports = BitBoard;
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _require = __webpack_require__(0),
+    BitBoard = _require.BitBoard,
+    BBMasks = _require.BBMasks;
+
+function stepMove(initial, noSo, eaWe) {
+  var positions = initial;
+
+  if (noSo > 0) {
+    positions = positions.shiftLeft(noSo * 8);
+  } else if (noSo < 0) {
+    positions = positions.shiftRight(noSo * -8);
+  }
+
+  if (eaWe > 0) {
+    positions = positions.shiftLeft(eaWe).and(BBMasks.EAST_OF_COL[eaWe - 1]);
+  } else if (eaWe < 0) {
+    positions = positions.shiftRight(-eaWe).and(BBMasks.WEST_OF_COL[eaWe + 8]);
+  }
+
+  return positions;
+}
+
+module.exports = stepMove;
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var ColsFiles = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+
+var FilesCols = function () {
+  return ColsFiles.reduce(function (res, file, col) {
+    res[file] = col;
+    return res;
+  }, {});
+}();
+
+var RowsRanks = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+var RanksRows = function () {
+  return RowsRanks.reduce(function (res, rank, row) {
+    res[rank] = row;
+    return res;
+  }, {});
+}();
+
+var Selectors = {
+  BOARD_ID: "#board",
+  PIECE_CLASS: 'piece',
+  SQUARE_CLASS: 'square',
+  RANK_CLASS: 'rank',
+  FILE_CLASS: 'file'
+};
+
+// const PieceCharsToHTML = []{
+//   'k': '&#9812;',
+//   'q':
+//
+// };
+
+module.exports = { ColsFiles: ColsFiles, FilesCols: FilesCols, RowsRanks: RowsRanks, RanksRows: RanksRows, Selectors: Selectors };
+
+/***/ }),
+/* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var UI = __webpack_require__(10);
+
+$(document).ready(function () {
+  var ui = new UI();
+  ui.run();
+});
+
+/***/ }),
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Position = __webpack_require__(11);
+var AI = __webpack_require__(25);
+
+var _require = __webpack_require__(2),
+    PTypes = _require.PTypes,
+    Colors = _require.Colors,
+    PieceTypeHTML = _require.PieceTypeHTML;
+
+var Util = __webpack_require__(26);
+
+var _require2 = __webpack_require__(8),
+    ColsFiles = _require2.ColsFiles,
+    FilesCols = _require2.FilesCols,
+    RowsRanks = _require2.RowsRanks,
+    RanksRows = _require2.RanksRows,
+    Selectors = _require2.Selectors;
+
+var UI = function () {
+  function UI() {
+    _classCallCheck(this, UI);
+
+    this.position = new Position();
+    this.playerColor = Colors.WHITE;
+    this.ai = new AI();
+    this.currMoves = this.position.generateLegalMoves();
+  }
+
+  _createClass(UI, [{
+    key: 'run',
+    value: function run() {
+      this.drawBoard();
+      this.playNextTurn();
+    }
+  }, {
+    key: 'playNextTurn',
+    value: function playNextTurn() {
+      var _this = this;
+
+      this.updatePieces();
+      this.currMoves = this.position.generateLegalMoves();
+      if (this.currMoves.length === 0) {
+        return;
+      }
+
+      if (this.position.turn === this.playerColor) {
+        this.setupPlayerMove();
+      } else {
+        setTimeout(function () {
+          return _this.aiMove();
+        }, 0);
+      }
+    }
+  }, {
+    key: 'reset',
+    value: function reset() {}
+  }, {
+    key: 'generateFileHeader',
+    value: function generateFileHeader() {
+      var newRow = $('<tr></tr>');
+      newRow.append('<th>');
+      ColsFiles.forEach(function (file) {
+        newRow.append('<th class="file">' + file + '</th>');
+      });
+      newRow.append('<th>');
+
+      return newRow;
+    }
+  }, {
+    key: 'generateSquare',
+    value: function generateSquare(file, rank) {
+      var fileRank = file + rank;
+
+      var newSquare = $('<td id="' + fileRank + '"></td>');
+
+      var squareColor = Util.isDarkSquare(fileRank) ? 'dark' : 'light';
+      newSquare.addClass(squareColor + " square");
+
+      return newSquare;
+    }
+  }, {
+    key: 'drawBoard',
+    value: function drawBoard() {
+      var _this2 = this;
+
+      var table = $('<table>');
+
+      var newRankRow = void 0;
+      RowsRanks.forEach(function (rank) {
+        newRankRow = $('<tr>');
+        newRankRow.append('<th class="rank">' + rank + '</th>');
+        ColsFiles.forEach(function (file) {
+          newRankRow.append(_this2.generateSquare(file, rank));
+        });
+        newRankRow.append('<th class="rank">' + rank + '</th>');
+        table.prepend(newRankRow);
+      });
+
+      table.prepend(this.generateFileHeader());
+      table.append(this.generateFileHeader());
+      $('#board').append(table);
+    }
+  }, {
+    key: 'updatePieces',
+    value: function updatePieces() {
+      $('.piece').remove();
+      $('.square').removeClass('ui-droppable ui-draggable can-move-to');
+      var pieceTypes = Object.values(PTypes);
+      var pieces = this.position.pieces;
+      var fileRank = void 0;
+      var newPiece = void 0;
+
+      pieceTypes.forEach(function (pieceType) {
+        pieces[pieceType].dup().pop1Bits(function (pos) {
+          newPiece = $('<div class="piece">' + PieceTypeHTML[pieceType] + '<div>');
+          if (pieces[Colors.WHITE].hasSetBit(pos)) {
+            newPiece.addClass('white');
+          } else {
+            newPiece.addClass('black');
+          }
+          fileRank = Util.fileRankFromPos(pos);
+          $('#' + fileRank).append(newPiece);
+        });
+      });
+    }
+  }, {
+    key: 'aiMove',
+    value: function aiMove() {
+      this.ai.makeMove(this.position, this.currMoves);
+      this.playNextTurn();
+    }
+  }, {
+    key: 'makePlayerMove',
+    value: function makePlayerMove(fromPos, toPos) {
+      var selectedMove = this.currMoves.filter(function (move) {
+        return move.getFrom() === fromPos && move.getTo() === toPos;
+      })[0];
+      if (selectedMove) {
+        this.position.makeMove(selectedMove);
+        this.playNextTurn();
+      } else {
+        this.updatePieces();
+        this.setupPlayerMove();
+      }
+    }
+  }, {
+    key: 'setupPlayerMove',
+    value: function setupPlayerMove() {
+      var _this3 = this;
+
+      var moves = this.position.generateLegalMoves();
+      var movesData = moves.map(function (move) {
+        return move.getData();
+      });
+      var moveFromTos = {};
+
+      movesData.forEach(function (moveData) {
+        moveFromTos[moveData.from] = moveFromTos[moveData.from] || [];
+        moveFromTos[moveData.from].push(moveData.to);
+      });
+
+      var fromFileRank = void 0;
+      var toFileRank = void 0;
+      var droppedPieceSource = void 0;
+      var selectedMoves = void 0;
+
+      Object.keys(moveFromTos).forEach(function (fromPos) {
+        fromFileRank = Util.fileRankFromPos(fromPos);
+        $('#' + fromFileRank + ' .piece').draggable({
+          containment: $('table')
+        });
+
+        $('#' + fromFileRank + ' .piece').mouseenter(function () {
+          moveFromTos[fromPos].forEach(function (toPos) {
+            $('#' + Util.fileRankFromPos(toPos)).addClass('can-move-to');
+          });
+        });
+
+        $('#' + fromFileRank + ' .piece').mouseleave(function () {
+          moveFromTos[fromPos].forEach(function (toPos) {
+            $('#' + Util.fileRankFromPos(toPos)).removeClass('can-move-to');
+          });
+        });
+      });
+
+      $('.square').droppable({
+        drop: function drop(event, ui) {
+          droppedPieceSource = $(ui.draggable).parent().attr('id');
+          _this3.makePlayerMove(Util.posFromFileRank(droppedPieceSource), Util.posFromFileRank($(event.target).attr('id')));
+        }
+      });
+    }
+  }]);
+
+  return UI;
+}();
+
+module.exports = UI;
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 var _require = __webpack_require__(0),
     BitBoard = _require.BitBoard,
     BBMasks = _require.BBMasks;
@@ -324,13 +937,13 @@ var _require2 = __webpack_require__(14),
     Move = _require2.Move,
     MoveTypes = _require2.MoveTypes;
 
-var _require3 = __webpack_require__(1),
+var _require3 = __webpack_require__(2),
     PUtils = _require3.PUtils,
     PTypes = _require3.PTypes,
     Colors = _require3.Colors,
     Dirs = _require3.Dirs;
 
-var _require4 = __webpack_require__(23),
+var _require4 = __webpack_require__(24),
     pieceSetsToArray = _require4.pieceSetsToArray,
     pieceSetsFromArray = _require4.pieceSetsFromArray;
 
@@ -1004,619 +1617,6 @@ var Position = function () {
 module.exports = Position;
 
 /***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Utils = __webpack_require__(12);
-// A standard 8x8 chess board can be represented by a 64bit integer (bitboard),
-// in which a 1 means the position is occupied, a 0 means it's empty
-
-// We use several of these bitboards to represent a chess position
-// for example, the current set of pieces is represented by a bitboard
-// for each piece type and color
-
-// Since Javascript doesn't support bitwise operations for 64bit integers,
-// we implement most of those operations here, separating the 64bit int
-// into its low 32bit and high 32bit components
-
-//56 57 58 59 60 61 62 63
-//48 49 50 51 52 53 54 55  ^
-//40 41 42 43 44 45 46 47  |
-//32 33 34 35 36 37 38 39 HIGH
-//24 25 26 27 28 29 30 31 LOW
-//16 17 18 19 20 21 22 23  |
-// 8  9 10 11 12 13 14 15  v
-// 0  1  2  3  4  5  6  7
-
-var BitBoard = function () {
-  function BitBoard(low, high) {
-    _classCallCheck(this, BitBoard);
-
-    this.low = (low || 0) >>> 0;
-    this.high = (high || 0) >>> 0;
-  }
-
-  _createClass(BitBoard, [{
-    key: 'and',
-    value: function and(other) {
-      return new BitBoard(this.low & other.low, this.high & other.high);
-    }
-  }, {
-    key: 'or',
-    value: function or(other) {
-      return new BitBoard(this.low | other.low, this.high | other.high);
-    }
-  }, {
-    key: 'xor',
-    value: function xor(other) {
-      return new BitBoard(this.low ^ other.low, this.high ^ other.high);
-    }
-  }, {
-    key: 'not',
-    value: function not() {
-      return new BitBoard(~this.low, ~this.high);
-    }
-  }, {
-    key: 'equals',
-    value: function equals(other) {
-      return this.low === other.low && this.high === other.high;
-    }
-  }, {
-    key: 'greaterThan',
-    value: function greaterThan(other) {
-      return this.high > other.high || this.low > other.low;
-    }
-  }, {
-    key: 'lessThan',
-    value: function lessThan(other) {
-      return this.high < other.high || this.low < other.low;
-    }
-  }, {
-    key: 'isZero',
-    value: function isZero() {
-      return this.high === 0 && this.low === 0;
-    }
-  }, {
-    key: 'shiftRight',
-    value: function shiftRight(numBits) {
-      var newLowBits = void 0,
-          newHighBits = void 0;
-
-      if (numBits <= 0) {
-        return new BitBoard(this.low, this.high);
-      } else if (numBits > 63) {
-        return new BitBoard();
-      } else if (numBits >= 32) {
-        newLowBits = this.high >>> numBits - 32;
-        newHighBits = 0;
-      } else {
-        newLowBits = this.low >>> numBits | this.high << 32 - numBits;
-        newHighBits = this.high >>> numBits;
-      }
-
-      return new BitBoard(newLowBits, newHighBits);
-    }
-  }, {
-    key: 'shiftLeft',
-    value: function shiftLeft(numBits) {
-      var newLowBits = void 0,
-          newHighBits = void 0;
-
-      if (numBits <= 0) {
-        return new BitBoard(this.low, this.high);
-      } else if (numBits > 63) {
-        return new BitBoard();
-      } else if (numBits >= 32) {
-        newLowBits = 0;
-        newHighBits = this.low << numBits - 32 >>> 0;
-      } else {
-        newLowBits = this.low << numBits >>> 0;
-        newHighBits = (this.low >>> 32 - numBits | this.high << numBits) >>> 0;
-      }
-
-      return new BitBoard(newLowBits, newHighBits);
-    }
-  }, {
-    key: 'popCount',
-    value: function popCount() {
-      return [this.low, this.high].reduce(function (count, int32) {
-        return count + Utils.popCount32(int32);
-      }, 0);
-    }
-  }, {
-    key: 'setBit',
-    value: function setBit(pos) {
-      if (pos >= 32 && pos < 64) {
-        this.high = (this.high | 1 << pos - 32) >>> 0;
-      } else if (pos >= 0 && pos < 32) {
-        this.low = (this.low | 1 << pos) >>> 0;
-      }
-    }
-  }, {
-    key: 'clearBit',
-    value: function clearBit(pos) {
-      if (pos >= 32) {
-        this.high = (this.high & ~(1 << pos - 32)) >>> 0;
-      } else {
-        this.low = (this.low & ~(1 << pos)) >>> 0;
-      }
-    }
-  }, {
-    key: 'bitScanForward',
-    value: function bitScanForward() {
-      if (this.low) {
-        return Utils.bitScanForward32(this.low);
-      } else if (this.high) {
-        return Utils.bitScanForward32(this.high) + 32;
-      } else {
-        return null;
-      }
-    }
-  }, {
-    key: 'hasSetBit',
-    value: function hasSetBit(pos) {
-      if (pos < 32) {
-        return Boolean(this.low & 1 << pos);
-      } else {
-        return Boolean(this.high & 1 << pos - 32);
-      }
-    }
-  }, {
-    key: 'bitScanReverse',
-    value: function bitScanReverse() {
-      if (this.high) {
-        return Utils.bitScanReverse32(this.high) + 32;
-      } else if (this.low) {
-        return Utils.bitScanReverse32(this.low);
-      } else {
-        return null;
-      }
-    }
-  }, {
-    key: 'pop1Bits',
-    value: function pop1Bits(cb) {
-      while (this.low) {
-        cb(Utils.bitScanForward32(this.low));
-        this.low = Utils.clearLeastSigBit32(this.low);
-      }
-
-      while (this.high) {
-        cb(Utils.bitScanForward32(this.high) + 32);
-        this.high = Utils.clearLeastSigBit32(this.high);
-      }
-    }
-  }, {
-    key: 'dup',
-    value: function dup() {
-      return new BitBoard(this.low, this.high);
-    }
-  }, {
-    key: 'render',
-    value: function render() {
-      var row = '';
-      var pow = 63;
-      var posVal = void 0;
-      console.log('------');
-      while (pow >= 32) {
-        posVal = (Math.pow(2, pow - 32) & this.high) === 0 ? '0' : '1';
-        row = posVal + row;
-        if (row.length === 8) {
-          console.log(row);
-          row = '';
-        }
-        pow--;
-      }
-
-      while (pow >= 0) {
-        posVal = (Math.pow(2, pow) & this.low) === 0 ? '0' : '1';
-        row = posVal + row;
-        if (row.length === 8) {
-          console.log(row);
-          row = '';
-        }
-        pow--;
-      }
-      console.log('------');
-    }
-  }], [{
-    key: 'fromPos',
-    value: function fromPos(pos) {
-      var res = new BitBoard();
-      res.setBit(pos);
-
-      return res;
-    }
-  }, {
-    key: 'fromPositions',
-    value: function fromPositions(positions) {
-      var res = new BitBoard();
-
-      positions.forEach(function (pos) {
-        res.setBit(pos);
-      });
-
-      return res;
-    }
-  }, {
-    key: 'fromCol',
-    value: function fromCol(colNum) {
-      var res = new BitBoard();
-      if (colNum < 0 || colNum > 7) {
-        return res;
-      }
-      var pos = colNum;
-
-      while (pos < 64) {
-        res.setBit(pos);
-        pos += 8;
-      }
-
-      return res;
-    }
-  }, {
-    key: 'fromRow',
-    value: function fromRow(rowNum) {
-      var res = new BitBoard();
-      if (rowNum < 0 || rowNum > 7) {
-        return res;
-      }
-
-      var pos = rowNum * 8;
-      var posMax = pos + 7;
-
-      while (pos <= posMax) {
-        res.setBit(pos);
-        pos++;
-      }
-
-      return res;
-    }
-  }, {
-    key: 'upperRightDiag',
-    value: function upperRightDiag(startPos) {
-      var res = BitBoard.fromPos(startPos);
-      if (startPos < 0 || startPos > 63) {
-        return res;
-      }
-      var pos = startPos + 9;
-
-      while (pos < 64 && pos % 8 !== 0) {
-        res.setBit(pos);
-        pos += 9;
-      }
-
-      return res;
-    }
-  }, {
-    key: 'upperLeftDiag',
-    value: function upperLeftDiag(startPos) {
-      var res = new BitBoard();
-      if (startPos < 0 || startPos > 63) {
-        return res;
-      }
-      var pos = startPos;
-
-      while (pos < 64 && pos % 8 !== 0) {
-        res.setBit(pos);
-        pos += 7;
-      }
-
-      if (pos < 64) {
-        res.setBit(pos);
-      }
-
-      return res;
-    }
-  }]);
-
-  return BitBoard;
-}();
-
-module.exports = BitBoard;
-
-/***/ }),
-/* 8 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _require = __webpack_require__(0),
-    BitBoard = _require.BitBoard,
-    BBMasks = _require.BBMasks;
-
-function stepMove(initial, noSo, eaWe) {
-  var positions = initial;
-
-  if (noSo > 0) {
-    positions = positions.shiftLeft(noSo * 8);
-  } else if (noSo < 0) {
-    positions = positions.shiftRight(noSo * -8);
-  }
-
-  if (eaWe > 0) {
-    positions = positions.shiftLeft(eaWe).and(BBMasks.EAST_OF_COL[eaWe - 1]);
-  } else if (eaWe < 0) {
-    positions = positions.shiftRight(-eaWe).and(BBMasks.WEST_OF_COL[eaWe + 8]);
-  }
-
-  return positions;
-}
-
-module.exports = stepMove;
-
-/***/ }),
-/* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var ColsFiles = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-
-var FilesCols = function () {
-  return ColsFiles.reduce(function (res, file, col) {
-    res[file] = col;
-    return res;
-  }, {});
-}();
-
-var RowsRanks = ['1', '2', '3', '4', '5', '6', '7', '8'];
-
-var RanksRows = function () {
-  return RowsRanks.reduce(function (res, rank, row) {
-    res[rank] = row;
-    return res;
-  }, {});
-}();
-
-var Selectors = {
-  BOARD_ID: "#board",
-  PIECE_CLASS: 'piece',
-  SQUARE_CLASS: 'square',
-  RANK_CLASS: 'rank',
-  FILE_CLASS: 'file'
-};
-
-// const PieceCharsToHTML = []{
-//   'k': '&#9812;',
-//   'q':
-//
-// };
-
-module.exports = { ColsFiles: ColsFiles, FilesCols: FilesCols, RowsRanks: RowsRanks, RanksRows: RanksRows, Selectors: Selectors };
-
-/***/ }),
-/* 10 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var UI = __webpack_require__(11);
-
-$(document).ready(function () {
-  var ui = new UI();
-  ui.run();
-});
-
-/***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Position = __webpack_require__(6);
-var AI = __webpack_require__(24);
-
-var _require = __webpack_require__(1),
-    PTypes = _require.PTypes,
-    Colors = _require.Colors,
-    PieceTypeHTML = _require.PieceTypeHTML;
-
-var Util = __webpack_require__(26);
-
-var _require2 = __webpack_require__(9),
-    ColsFiles = _require2.ColsFiles,
-    FilesCols = _require2.FilesCols,
-    RowsRanks = _require2.RowsRanks,
-    RanksRows = _require2.RanksRows,
-    Selectors = _require2.Selectors;
-
-var UI = function () {
-  function UI() {
-    _classCallCheck(this, UI);
-
-    this.position = new Position();
-    this.playerColor = Colors.WHITE;
-    this.ai = new AI();
-    this.currMoves = this.position.generateLegalMoves();
-    this.makePlayerMove = this.makePlayerMove.bind(this);
-  }
-
-  _createClass(UI, [{
-    key: 'run',
-    value: function run() {
-      this.drawBoard();
-      this.playNextTurn();
-    }
-  }, {
-    key: 'playNextTurn',
-    value: function playNextTurn() {
-      var _this = this;
-
-      this.updatePieces();
-      this.currMoves = this.position.generateLegalMoves();
-      if (this.currMoves.length === 0) {
-        return;
-      }
-
-      if (this.position.turn === this.playerColor) {
-        this.setupPlayerMove();
-      } else {
-        setTimeout(function () {
-          return _this.aiMove();
-        }, 0);
-      }
-    }
-  }, {
-    key: 'reset',
-    value: function reset() {}
-  }, {
-    key: 'generateFileHeader',
-    value: function generateFileHeader() {
-      var newRow = $('<tr></tr>');
-      newRow.append('<th>');
-      ColsFiles.forEach(function (file) {
-        newRow.append('<th class="file">' + file + '</th>');
-      });
-      newRow.append('<th>');
-
-      return newRow;
-    }
-  }, {
-    key: 'generateSquare',
-    value: function generateSquare(file, rank) {
-      var fileRank = file + rank;
-
-      var newSquare = $('<td id="' + fileRank + '"></td>');
-
-      var squareColor = Util.isDarkSquare(fileRank) ? 'dark' : 'light';
-      newSquare.addClass(squareColor + " square");
-
-      return newSquare;
-    }
-  }, {
-    key: 'drawBoard',
-    value: function drawBoard() {
-      var _this2 = this;
-
-      var table = $('<table>');
-
-      var newRankRow = void 0;
-      RowsRanks.forEach(function (rank) {
-        newRankRow = $('<tr>');
-        newRankRow.append('<th class="rank">' + rank + '</th>');
-        ColsFiles.forEach(function (file) {
-          newRankRow.append(_this2.generateSquare(file, rank));
-        });
-        newRankRow.append('<th class="rank">' + rank + '</th>');
-        table.prepend(newRankRow);
-      });
-
-      table.prepend(this.generateFileHeader());
-      table.append(this.generateFileHeader());
-      $('#board').append(table);
-    }
-  }, {
-    key: 'updatePieces',
-    value: function updatePieces() {
-      $('.piece').remove();
-      $('.square').removeClass('ui-droppable ui-draggable can-move-to');
-      var pieceTypes = Object.values(PTypes);
-      var pieces = this.position.pieces;
-      var fileRank = void 0;
-      var newPiece = void 0;
-
-      pieceTypes.forEach(function (pieceType) {
-        pieces[pieceType].dup().pop1Bits(function (pos) {
-          newPiece = $('<div class="piece">' + PieceTypeHTML[pieceType] + '<div>');
-          if (pieces[Colors.WHITE].hasSetBit(pos)) {
-            newPiece.addClass('white');
-          } else {
-            newPiece.addClass('black');
-          }
-          fileRank = Util.fileRankFromPos(pos);
-          $('#' + fileRank).append(newPiece);
-        });
-      });
-    }
-  }, {
-    key: 'aiMove',
-    value: function aiMove() {
-      this.ai.makeMove(this.position, this.currMoves);
-      this.playNextTurn();
-    }
-  }, {
-    key: 'makePlayerMove',
-    value: function makePlayerMove(fromPos, toPos) {
-      var selectedMove = this.currMoves.filter(function (move) {
-        return move.getFrom() === fromPos && move.getTo() === toPos;
-      })[0];
-      if (selectedMove) {
-        this.position.makeMove(selectedMove);
-        this.playNextTurn();
-      } else {
-        this.updatePieces();
-        this.setupPlayerMove();
-      }
-    }
-  }, {
-    key: 'setupPlayerMove',
-    value: function setupPlayerMove() {
-      var _this3 = this;
-
-      var moves = this.position.generateLegalMoves();
-      var movesData = moves.map(function (move) {
-        return move.getData();
-      });
-      var moveFromTos = {};
-
-      movesData.forEach(function (moveData) {
-        moveFromTos[moveData.from] = moveFromTos[moveData.from] || [];
-        moveFromTos[moveData.from].push(moveData.to);
-      });
-
-      var fromFileRank = void 0;
-      var toFileRank = void 0;
-      var droppedPieceSource = void 0;
-      var selectedMoves = void 0;
-
-      Object.keys(moveFromTos).forEach(function (fromPos) {
-        fromFileRank = Util.fileRankFromPos(fromPos);
-        $('#' + fromFileRank + ' .piece').draggable();
-        $('#' + fromFileRank + ' .piece').mouseenter(function () {
-          moveFromTos[fromPos].forEach(function (toPos) {
-            $('#' + Util.fileRankFromPos(toPos)).addClass('can-move-to');
-          });
-        });
-
-        $('#' + fromFileRank + ' .piece').mouseleave(function () {
-          moveFromTos[fromPos].forEach(function (toPos) {
-            $('#' + Util.fileRankFromPos(toPos)).removeClass('can-move-to');
-          });
-        });
-
-        moveFromTos[fromPos].forEach(function (toPos) {
-          $('#' + Util.fileRankFromPos(toPos)).droppable({
-            drop: function drop(event, ui) {
-              droppedPieceSource = $(ui.draggable).parent().attr('id');
-              _this3.makePlayerMove(Util.posFromFileRank(droppedPieceSource), toPos);
-            }
-          });
-        });
-      });
-    }
-  }]);
-
-  return UI;
-}();
-
-module.exports = UI;
-
-/***/ }),
 /* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1678,7 +1678,7 @@ module.exports = {
 "use strict";
 
 
-var BitBoard = __webpack_require__(7);
+var BitBoard = __webpack_require__(6);
 
 // this file includes static sets of bitboards that
 // are commonly used throughout the program
@@ -1928,12 +1928,12 @@ var _DIRS, _INIT_MASKS, _PROMO_MASKS;
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var stepMove = __webpack_require__(8);
+var stepMove = __webpack_require__(7);
 
 var _require = __webpack_require__(0),
     BBMasks = _require.BBMasks;
 
-var _require2 = __webpack_require__(2),
+var _require2 = __webpack_require__(1),
     Colors = _require2.Colors;
 
 var DIRS = (_DIRS = {}, _defineProperty(_DIRS, Colors.WHITE, 1), _defineProperty(_DIRS, Colors.BLACK, -1), _DIRS);
@@ -2063,7 +2063,7 @@ var _require2 = __webpack_require__(4),
     KING_MOVES = _require2.KING_MOVES,
     SLIDE_MOVES = _require2.SLIDE_MOVES;
 
-var _require3 = __webpack_require__(2),
+var _require3 = __webpack_require__(1),
     Colors = _require3.Colors;
 
 var INIT_POS = (_INIT_POS = {}, _defineProperty(_INIT_POS, Colors.BLACK, 60), _defineProperty(_INIT_POS, Colors.WHITE, 4), _INIT_POS);
@@ -2094,7 +2094,7 @@ module.exports = King;
 "use strict";
 
 
-var _require = __webpack_require__(2),
+var _require = __webpack_require__(1),
     Types = _require.Types,
     Colors = _require.Colors,
     PieceTypeLetters = _require.PieceTypeLetters;
@@ -2138,6 +2138,25 @@ module.exports = { pieceToLetter: pieceToLetter, letterToColor: letterToColor, l
 
 
 var _require = __webpack_require__(1),
+    Types = _require.Types;
+
+function eachPieceType(cb) {
+  var type = void 0;
+  for (type = Types.PAWNS; type <= Types.KINGS; type++) {
+    cb(type);
+  }
+}
+
+module.exports = eachPieceType;
+
+/***/ }),
+/* 24 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _require = __webpack_require__(2),
     PieceConv = _require.PieceConv,
     PTypes = _require.PTypes,
     Colors = _require.Colors;
@@ -2223,7 +2242,7 @@ function pieceSetsFromArray() {
 module.exports = { pieceSetsToArray: pieceSetsToArray, pieceSetsFromArray: pieceSetsFromArray };
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2233,7 +2252,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var _require = __webpack_require__(1),
+var _require = __webpack_require__(2),
     PTypes = _require.PTypes,
     PUtils = _require.PUtils,
     Colors = _require.Colors,
@@ -2284,9 +2303,12 @@ var AI = function () {
       // const moves = position.generateLegalMoves();
       // const move = moves[Math.floor(Math.random() * moves.length)];
       // position.makeMove(move);
+      var startTime = new Date();
       this.maxDepth = 4;
       this.movesMade = position.prevMoves.length;
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
+      console.log('RUN TIME:');
+      console.log(new Date() - startTime);
       position.makeMove(this.bestMove);
     }
   }, {
@@ -2304,7 +2326,9 @@ var AI = function () {
         alpha = standPatVal;
       }
 
-      var moves = this.sortMoves(position.generatePseudoMoves(position.inCheck(position.turn)));
+      var inCheck = position.inCheck(position.turn);
+      // include quiet moves (ie non captures) only if the king is in check;
+      var moves = this.sortMoves(position.generatePseudoMoves(inCheck));
       var moveIdx = void 0;
       var score = void 0;
 
@@ -2389,7 +2413,6 @@ var AI = function () {
 module.exports = AI;
 
 /***/ }),
-/* 25 */,
 /* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2398,7 +2421,7 @@ module.exports = AI;
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
-var _require = __webpack_require__(9),
+var _require = __webpack_require__(8),
     ColsFiles = _require.ColsFiles,
     FilesCols = _require.FilesCols,
     RowsRanks = _require.RowsRanks,
@@ -2434,28 +2457,6 @@ module.exports = {
   fileRankFromPos: fileRankFromPos,
   isDarkSquare: isDarkSquare
 };
-
-/***/ }),
-/* 27 */,
-/* 28 */,
-/* 29 */,
-/* 30 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _require = __webpack_require__(2),
-    Types = _require.Types;
-
-function eachPieceType(cb) {
-  var type = void 0;
-  for (type = Types.PAWNS; type <= Types.KINGS; type++) {
-    cb(type);
-  }
-}
-
-module.exports = eachPieceType;
 
 /***/ })
 /******/ ]);

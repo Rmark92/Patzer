@@ -44,9 +44,12 @@ class AI {
     // const moves = position.generateLegalMoves();
     // const move = moves[Math.floor(Math.random() * moves.length)];
     // position.makeMove(move);
+    let startTime = new Date();
     this.maxDepth = 4;
     this.movesMade = position.prevMoves.length;
     this.negaMax(position, this.maxDepth, -Infinity, Infinity);
+    console.log('RUN TIME:');
+    console.log(new Date() - startTime);
     position.makeMove(this.bestMove);
   }
 
@@ -63,7 +66,9 @@ class AI {
       alpha = standPatVal;
     }
 
-    const moves = this.sortMoves(position.generatePseudoMoves(position.inCheck(position.turn)));
+    let inCheck = position.inCheck(position.turn);
+    // include quiet moves (ie non captures) only if the king is in check;
+    const moves = this.sortMoves(position.generatePseudoMoves(inCheck));
     let moveIdx;
     let score;
 
