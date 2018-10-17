@@ -1,6 +1,6 @@
 const Position = require('../position');
 const AI = require('../ai');
-const { PieceTypes, Colors, PieceTypeHTML } = require('../pieces');
+const { PTypes, Colors, PieceTypeHTML } = require('../pieces');
 const Util = require('./util.js');
 const { ColsFiles, FilesCols,
         RowsRanks, RanksRows,
@@ -83,7 +83,7 @@ class UI {
   updatePieces() {
     $('.piece').remove();
     $('.square').removeClass('ui-droppable ui-draggable can-move-to');
-    const pieceTypes = Object.values(PieceTypes);
+    const pieceTypes = Object.values(PTypes);
     const pieces = this.position.pieces;
     let fileRank;
     let newPiece;

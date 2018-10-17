@@ -1,12 +1,7 @@
 function popCount32(int) {
-  let count = 0;
-
-  while (int) {
-    count++;
-    int &= (int - 1);
-  }
-
-  return count;
+	int -= (int >>> 1) & 0x55555555;
+	int = (int & 0x33333333) + ((int >>> 2) & 0x33333333);
+	return ((int + (int >>> 4) & 0xF0F0F0F) * 0x1010101) >>> 24;
 }
 
 function bitScanForward32(int) {

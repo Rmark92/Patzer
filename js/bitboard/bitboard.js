@@ -101,17 +101,17 @@ class BitBoard {
 
   setBit(pos) {
     if (pos >= 32 && pos < 64) {
-      this.high = (this.high | Math.pow(2, pos - 32)) >>> 0;
+      this.high = (this.high | (1 << (pos - 32))) >>> 0;
     } else if (pos >= 0 && pos < 32) {
-      this.low = (this.low | Math.pow(2, pos)) >>> 0;
+      this.low = (this.low | (1 << pos)) >>> 0;
     }
   }
 
   clearBit(pos) {
-    if (pos >= 32 && pos < 64) {
-      this.high = (this.high & (~Math.pow(2, pos - 32))) >>> 0;
-    } else if (pos >= 0 && pos < 32) {
-      this.low = (this.low & (~Math.pow(2, pos))) >>> 0;
+    if (pos >= 32) {
+      this.high = (this.high & ~(1 << (pos - 32))) >>> 0;
+    } else {
+      this.low = (this.low & ~(1 << pos)) >>> 0;
     }
   }
 
@@ -127,9 +127,9 @@ class BitBoard {
 
   hasSetBit(pos) {
     if (pos < 32) {
-      return Boolean(this.low & Math.pow(2, pos));
+      return Boolean(this.low & (1 << pos));
     } else {
-      return Boolean(this.high & Math.pow(2, pos - 32));
+      return Boolean(this.high & (1 << (pos - 32)));
     }
   }
 

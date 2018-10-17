@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 9);
+/******/ 	return __webpack_require__(__webpack_require__.s = 10);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -70,7 +70,7 @@
 "use strict";
 
 
-var BitBoard = __webpack_require__(6);
+var BitBoard = __webpack_require__(7);
 var Masks = __webpack_require__(13);
 
 module.exports = {
@@ -85,6 +85,10 @@ module.exports = {
 "use strict";
 
 
+var _PUtils;
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 // const { WhitePawns, BlackPawns } = require('./pawns.js');
 var Constants = __webpack_require__(2);
 var Pawns = __webpack_require__(16);
@@ -94,19 +98,18 @@ var Rook = __webpack_require__(19);
 var Queen = __webpack_require__(20);
 var King = __webpack_require__(21);
 var PieceConv = __webpack_require__(22);
+var eachPieceType = __webpack_require__(30);
 var Dirs = __webpack_require__(3);
 
+var PUtils = (_PUtils = {}, _defineProperty(_PUtils, Constants.Types.PAWNS, Pawns), _defineProperty(_PUtils, Constants.Types.KNIGHTS, Knight), _defineProperty(_PUtils, Constants.Types.BISHOPS, Bishop), _defineProperty(_PUtils, Constants.Types.ROOKS, Rook), _defineProperty(_PUtils, Constants.Types.QUEENS, Queen), _defineProperty(_PUtils, Constants.Types.KINGS, King), _PUtils);
+
 module.exports = {
-  PieceTypes: Constants.Types,
+  PTypes: Constants.Types,
   Colors: Constants.Colors,
   PieceTypeHTML: Constants.PieceTypeHTML,
+  PUtils: PUtils,
+  eachPieceType: eachPieceType,
   Dirs: Dirs,
-  Pawns: Pawns,
-  Knight: Knight,
-  Bishop: Bishop,
-  Rook: Rook,
-  Queen: Queen,
-  King: King,
   PieceConv: PieceConv
 };
 
@@ -173,7 +176,7 @@ var _require = __webpack_require__(0),
     BBMasks = _require.BBMasks;
 
 var Dirs = __webpack_require__(3);
-var stepMove = __webpack_require__(7);
+var stepMove = __webpack_require__(8);
 
 function generateStepBitBoards(dirs) {
   var res = [];
@@ -313,6 +316,704 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var _require = __webpack_require__(0),
+    BitBoard = _require.BitBoard,
+    BBMasks = _require.BBMasks;
+
+var _require2 = __webpack_require__(14),
+    Move = _require2.Move,
+    MoveTypes = _require2.MoveTypes;
+
+var _require3 = __webpack_require__(1),
+    PUtils = _require3.PUtils,
+    PTypes = _require3.PTypes,
+    Colors = _require3.Colors,
+    Dirs = _require3.Dirs;
+
+var _require4 = __webpack_require__(23),
+    pieceSetsToArray = _require4.pieceSetsToArray,
+    pieceSetsFromArray = _require4.pieceSetsFromArray;
+
+var Position = function () {
+  function Position() {
+    var pieces = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : pieceSetsFromArray();
+    var turn = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : Colors.WHITE;
+    var prevMoves = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+
+    _classCallCheck(this, Position);
+
+    this.pieces = pieces;
+    this.prevMoves = prevMoves;
+
+    // castling rights represented by 4bit int
+    // in the following order (left bit to right):
+    // bKing bQueen wKing wQueen
+    this.castleRights = 0xf;
+
+    // the en passant BB will either be empty
+    // or have one position marked that indicates
+    // the destination of an en passant attack
+    this.epBB = new BitBoard();
+
+    // holds previous state info (castling rights, en passant)
+    // for move reversal purposes
+    this.prevStates = [];
+
+    this.pTypesLocations = this.createPTypesLocations();
+
+    this.setTurn(turn, this.getOtherColor(turn));
+  }
+
+  _createClass(Position, [{
+    key: 'createPTypesLocations',
+    value: function createPTypesLocations() {
+      var pos = void 0;
+      var res = [];
+
+      for (pos = 0; pos < 64; pos++) {
+        res[pos] = this.getPieceAt(pos);
+      }
+
+      return res;
+    }
+  }, {
+    key: 'setTurn',
+    value: function setTurn(turn, opp) {
+      this.turn = turn;
+      this.opp = opp;
+    }
+  }, {
+    key: 'swapTurn',
+    value: function swapTurn() {
+      this.setTurn(this.opp, this.turn);
+    }
+  }, {
+    key: 'getOtherColor',
+    value: function getOtherColor(color) {
+      return color ^ Colors.BLACK;
+    }
+
+    // generates all pseudo legal moves, ie moves that may put the king
+    // in check but are otherwise legal
+    // why do this: our ai move search generates all moves for a position
+    // and then considers each move individually. some of those moves
+    // will not be considered due to pruning cutoffs, so it's more efficient
+    // to only check for full legality of moves that we actually consider
+
+  }, {
+    key: 'generatePseudoMoves',
+    value: function generatePseudoMoves() {
+      var includeQuiet = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
+
+      var moves = [];
+      this.addPawnMoves(moves, includeQuiet);
+      this.addNormalMoves(moves, includeQuiet);
+      this.addKingMoves(moves, includeQuiet);
+
+      return moves;
+    }
+
+    // generates moves with a filter for whether the move puts the king in check
+    // mainly used to determine checkmate or stalemate
+
+  }, {
+    key: 'generateLegalMoves',
+    value: function generateLegalMoves() {
+      var _this = this;
+
+      var pseudoMoves = this.generatePseudoMoves();
+      var moveData = void 0;
+      var isLegal = void 0;
+
+      var legals = [];
+      return pseudoMoves.filter(function (pseudoMove) {
+        moveData = pseudoMove.getData();
+
+        _this.testMove(moveData, function (testsLegal) {
+          isLegal = testsLegal;
+          return true;
+        });
+
+        return isLegal;
+      });
+    }
+
+    // inserts pawn moves into the moves array
+
+  }, {
+    key: 'addPawnMoves',
+    value: function addPawnMoves(moves, includeQuiet) {
+      var pawnsPos = this.getColorPieceSet(this.turn, PTypes.PAWNS);
+
+      if (includeQuiet) {
+        var notOccupied = this.getOccupied().not();
+
+        var pawnSinglePushes = PUtils[PTypes.PAWNS].singlePush(this.turn, pawnsPos, notOccupied);
+        this.addPawnMoveSet(pawnSinglePushes, 8 * PUtils[PTypes.PAWNS].DIRS[this.turn], moves);
+
+        var pawnDoublePushes = PUtils[PTypes.PAWNS].doublePush(this.turn, pawnsPos, notOccupied);
+        this.addPawnMoveSet(pawnDoublePushes, 16 * PUtils[PTypes.PAWNS].DIRS[this.turn], moves, false, true);
+      }
+
+      var oppPositions = this.pieces[this.opp].or(this.epBB);
+
+      var pawnLeftAttacks = PUtils[PTypes.PAWNS].attacksLeft(this.turn, pawnsPos, oppPositions);
+      this.addPawnMoveSet(pawnLeftAttacks, 7 * PUtils[PTypes.PAWNS].DIRS[this.turn], moves, true);
+
+      var pawnRightAttacks = PUtils[PTypes.PAWNS].attacksRight(this.turn, pawnsPos, oppPositions);
+      this.addPawnMoveSet(pawnRightAttacks, 9 * PUtils[PTypes.PAWNS].DIRS[this.turn], moves, true);
+    }
+
+    // takes a new position set for pawns and adds each corresponding move
+    // to the moves array, with special handling for en passants, promotions and double pushes
+
+    // note: unlike other pieces, we map pawn movements from the set of all existing pawns
+    // rather than each pawn individually, so the function takes a shift amount to determine
+    // the location of the individual pawn that moved to a new position
+
+  }, {
+    key: 'addPawnMoveSet',
+    value: function addPawnMoveSet(newPositions, shiftAmt, moves, isCapture, isDblPush) {
+      var _this2 = this;
+
+      var from = void 0;
+      var captured = null;
+
+      newPositions.pop1Bits(function (pos) {
+        from = pos - shiftAmt;
+        if (isDblPush) {
+          moves.push(new Move(from, pos, MoveTypes.DBL_PPUSH, PTypes.PAWNS));
+        } else if (isCapture && _this2.epBB.hasSetBit(pos)) {
+          moves.push(new Move(from, pos, MoveTypes.EP_CAPT, PTypes.PAWNS));
+        } else {
+          if (isCapture) {
+            captured = _this2.pTypesLocations[pos];
+          }
+
+          if (PUtils[PTypes.PAWNS].PROMO_MASKS[_this2.turn].hasSetBit(pos)) {
+            _this2.addPromos(from, pos, moves, captured);
+          } else {
+            moves.push(new Move(from, pos, MoveTypes.NORMAL, PTypes.PAWNS, captured));
+          }
+        }
+      });
+    }
+
+    // adds a move to the moves array for each possible promotion type
+
+    // side note: I was curious about why you'd ever promote to rook or bishop
+    // and the reason is if promoting to a queen results in stalemate
+
+  }, {
+    key: 'addPromos',
+    value: function addPromos(from, to, moves, captured) {
+      [MoveTypes.NPROMO, MoveTypes.BPROMO, MoveTypes.RPROMO, MoveTypes.QPROMO].forEach(function (promoType) {
+        moves.push(new Move(from, to, promoType, PTypes.PAWNS, captured));
+      });
+    }
+
+    // adds moves to the moves array for all pieces that don't
+    // have 'special' moves, ie not pawns or kings
+
+  }, {
+    key: 'addNormalMoves',
+    value: function addNormalMoves(moves, includeQuiet) {
+      var _this3 = this;
+
+      var occupied = this.getOccupied();
+      var notOwnPieces = this.getNotOccupiedBy(this.turn);
+
+      var knightsPos = this.getColorPieceSet(this.turn, PTypes.KNIGHTS);
+      var knightMoves = void 0;
+      knightsPos.dup().pop1Bits(function (pos) {
+        knightMoves = PUtils[PTypes.KNIGHTS].moves(pos, notOwnPieces);
+        _this3.addNormalMoveSet(knightMoves, pos, PTypes.KNIGHTS, moves, includeQuiet);
+      });
+
+      var bishopsPos = this.getColorPieceSet(this.turn, PTypes.BISHOPS);
+      var bishopMoves = void 0;
+      bishopsPos.dup().pop1Bits(function (pos) {
+        bishopMoves = PUtils[PTypes.BISHOPS].moves(pos, occupied, notOwnPieces);
+        _this3.addNormalMoveSet(bishopMoves, pos, PTypes.BISHOPS, moves, includeQuiet);
+      });
+
+      var rooksPos = this.getColorPieceSet(this.turn, PTypes.ROOKS);
+      var rookMoves = void 0;
+      rooksPos.dup().pop1Bits(function (pos) {
+        rookMoves = PUtils[PTypes.ROOKS].moves(pos, occupied, notOwnPieces);
+        _this3.addNormalMoveSet(rookMoves, pos, PTypes.ROOKS, moves, includeQuiet);
+      });
+
+      var queenPos = this.getColorPieceSet(this.turn, PTypes.QUEENS).bitScanForward();
+      if (queenPos !== null) {
+        var queenMoves = PUtils[PTypes.QUEENS].moves(queenPos, occupied, notOwnPieces);
+        this.addNormalMoveSet(queenMoves, queenPos, PTypes.QUEENS, moves, includeQuiet);
+      }
+    }
+
+    // adds available king moves to the moves array
+
+  }, {
+    key: 'addKingMoves',
+    value: function addKingMoves(moves, includeQuiet) {
+      var notOwnPieces = this.getNotOccupiedBy(this.turn);
+      var kingPos = this.getColorPieceSet(this.turn, PTypes.KINGS).bitScanForward();
+
+      // for testing purposes...
+      if (kingPos === null) {
+        return;
+      }
+
+      var normalMoves = PUtils[PTypes.KINGS].moves(kingPos, notOwnPieces);
+      this.addNormalMoveSet(normalMoves, kingPos, PTypes.KINGS, moves, includeQuiet);
+
+      if (includeQuiet) {
+        this.addCastleMoves(moves);
+      }
+    }
+
+    // takes a BB of possible new positions for a single
+    // piece and adds each corresponding move to the moves array
+
+  }, {
+    key: 'addNormalMoveSet',
+    value: function addNormalMoveSet(newPositions, startPos, pieceType, moves, includeQuiet) {
+      var _this4 = this;
+
+      var newPos = void 0;
+      var newMove = void 0;
+      var captType = void 0;
+
+      newPositions.pop1Bits(function (pos) {
+        captType = _this4.pieces[_this4.opp].hasSetBit(pos) ? _this4.pTypesLocations[pos] : null;
+        if (includeQuiet || captType) {
+          moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));
+        }
+      });
+    }
+
+    // adds available castling moves to the moves array
+
+  }, {
+    key: 'addCastleMoves',
+    value: function addCastleMoves(moves) {
+      var turnCastleRights = this.getCastleRights(this.turn);
+      var startPos = PUtils[PTypes.KINGS].INIT_POS[this.turn];
+      var notOccupied = this.getOccupied().not();
+
+      if (turnCastleRights & 1 && PUtils[PTypes.KINGS].canCastle(this.turn, Dirs.WEST, notOccupied)) {
+        moves.push(new Move(startPos, startPos - 2, MoveTypes.CSTL_QUEEN, PTypes.KINGS));
+      }
+
+      if (turnCastleRights & 2 && PUtils[PTypes.KINGS].canCastle(this.turn, Dirs.EAST, notOccupied)) {
+        moves.push(new Move(startPos, startPos + 2, MoveTypes.CSTL_KING, PTypes.KINGS));
+      }
+    }
+
+    // returns 2bit value for the color's castling rights
+    // left bit => king-side rights
+    // right bit => queen-side rights
+
+  }, {
+    key: 'getCastleRights',
+    value: function getCastleRights(color) {
+      return color === Colors.WHITE ? this.castleRights & 3 : this.castleRights >>> 2;
+    }
+
+    // returns a BB with occupied positions for a given color and piece type
+
+  }, {
+    key: 'getColorPieceSet',
+    value: function getColorPieceSet(color, pieceType) {
+      return this.pieces[color].and(this.pieces[pieceType]);
+    }
+
+    // returns a BB of all occupied positions
+
+  }, {
+    key: 'getOccupied',
+    value: function getOccupied() {
+      return this.pieces[Colors.WHITE].or(this.pieces[Colors.BLACK]);
+    }
+
+    // returns a BB of all positions that this color does not occupy
+
+  }, {
+    key: 'getNotOccupiedBy',
+    value: function getNotOccupiedBy(color) {
+      return this.pieces[color].not();
+    }
+
+    // returns the piece type that occupies the given position
+    // if no piece is found, returns null
+
+  }, {
+    key: 'getPieceAt',
+    value: function getPieceAt(pos) {
+      var types = Object.values(PTypes);
+
+      var idx = void 0;
+      var type = void 0;
+
+      for (idx = 0; idx < types.length; idx++) {
+        type = types[idx];
+        if (this.pieces[type].hasSetBit(pos)) {
+          return type;
+        }
+      }
+
+      return null;
+    }
+
+    // makes a specified move if it's legal, updating the current position
+    // returns true if the move is made, false otherwise
+
+  }, {
+    key: 'makeMove',
+    value: function makeMove(move) {
+      var moveData = move.getData();
+
+      var isLegal = void 0;
+      this.testMove(moveData, function (testsLegal) {
+        isLegal = testsLegal;
+        return !isLegal;
+      });
+
+      if (!isLegal) {
+        return false;
+      }
+
+      this.addPrevState();
+
+      this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
+      this.epBB = new BitBoard();
+
+      this.execMoveType(moveData.from, moveData.to, moveData.type);
+
+      this.prevMoves.push(move);
+      this.swapTurn();
+
+      return true;
+    }
+
+    // makes the piece movements needed to determine
+    // if the move is legal, sends a boolean for the legality
+    // to the callback and undoes the piece movements if the callback
+    // returns true
+
+  }, {
+    key: 'testMove',
+    value: function testMove(moveData, cb) {
+      if (moveData.captPieceType) {
+        this.clearPieceAt(moveData.to, this.opp, moveData.captPieceType);
+      }
+
+      if (moveData.isPromo) {
+        this.clearPieceAt(moveData.from, this.turn, PTypes.PAWNS);
+      } else {
+        this.movePiece(moveData.from, moveData.to, this.turn, moveData.pieceType);
+      }
+
+      var undo = cb(this.testsLegal(moveData));
+      if (!undo) {
+        return;
+      }
+
+      if (moveData.isPromo) {
+        this.setPieceAt(moveData.from, this.turn, PTypes.PAWNS);
+      } else {
+        this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+      }
+
+      if (moveData.captPieceType) {
+        this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
+      }
+    }
+
+    // returns boolean for whether or not move is legal
+    // based on the current position
+
+  }, {
+    key: 'testsLegal',
+    value: function testsLegal(moveData) {
+      if (moveData.isCastle) {
+        return this.isLegalCastle(moveData.from, moveData.type);
+      } else {
+        return !this.inCheck(this.turn);
+      }
+    }
+  }, {
+    key: 'isLegalCastle',
+    value: function isLegalCastle(pos, castleType) {
+      var dir = castleType === MoveTypes.CSTL_KING ? 1 : -1;
+      var count = 0;
+
+      while (count <= 2) {
+        if (this.isAttacked(pos, this.turn)) {
+          return false;
+        }
+        count++;
+        pos += dir;
+      }
+
+      return true;
+    }
+
+    // returns boolean for whether the provided color's king is in check
+
+  }, {
+    key: 'inCheck',
+    value: function inCheck(color) {
+      var kingPos = this.getColorPieceSet(color, PTypes.KINGS).bitScanForward();
+      // for testing purposes...
+      if (kingPos === null) {
+        console.log('NO KING');
+        console.log(this.prevMoves.map(function (move) {
+          return move.val;
+        }));
+      }
+      return this.isAttacked(kingPos, color);
+    }
+
+    // returns boolean for whether any opponent color piece is attacking the provided position
+
+  }, {
+    key: 'isAttacked',
+    value: function isAttacked(pos, color) {
+      var posBB = BitBoard.fromPos(pos);
+      var occupied = this.getOccupied();
+      var oppColor = this.getOtherColor(color);
+      var pawns = this.getColorPieceSet(oppColor, PTypes.PAWNS);
+
+      var queenBB = this.getColorPieceSet(oppColor, PTypes.QUEENS);
+      return !PUtils[PTypes.PAWNS].attacksLeft(oppColor, pawns, posBB).isZero() || !PUtils[PTypes.PAWNS].attacksRight(oppColor, pawns, posBB).isZero() || !PUtils[PTypes.KNIGHTS].moves(pos, this.getColorPieceSet(oppColor, PTypes.KNIGHTS)).isZero() || !PUtils[PTypes.BISHOPS].moves(pos, occupied, this.getColorPieceSet(oppColor, PTypes.BISHOPS).or(queenBB)).isZero() || !PUtils[PTypes.ROOKS].moves(pos, occupied, this.getColorPieceSet(oppColor, PTypes.ROOKS).or(queenBB)).isZero() || !PUtils[PTypes.KINGS].moves(pos, this.getColorPieceSet(oppColor, PTypes.KINGS)).isZero();
+    }
+
+    // unmakes the previous move, updating the current position
+
+  }, {
+    key: 'unmakePrevMove',
+    value: function unmakePrevMove() {
+      var prevMove = this.prevMoves.pop();
+      if (!prevMove) {
+        return false;
+      }
+      this.swapTurn();
+      var moveData = prevMove.getData();
+
+      this.reverseMoveType(moveData.from, moveData.to, moveData.type);
+
+      var prevState = this.prevStates.pop();
+      this.epBB = prevState.epBB;
+      this.castleRights = prevState.castleRights;
+
+      this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+
+      if (moveData.captPieceType) {
+        this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
+      }
+
+      return true;
+    }
+
+    // makes adjustments to the castling rights
+    // if a rook or king is moved
+
+  }, {
+    key: 'adjustCastleRights',
+    value: function adjustCastleRights(pieceType, from, captPieceType, to) {
+      var clearCastlePos = void 0;
+      if (pieceType === PTypes.KINGS) {
+        var clearCastleRightsMask = this.turn === Colors.WHITE ? 12 : 3;
+        this.castleRights &= clearCastleRightsMask;
+      } else if (pieceType === PTypes.ROOKS) {
+        clearCastlePos = 0;
+        if (from > PUtils[PTypes.KINGS].INIT_POS[this.turn]) {
+          clearCastlePos++;
+        }
+        if (this.turn === Colors.BLACK) {
+          clearCastlePos += 2;
+        }
+        this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
+      }
+
+      if (captPieceType === PTypes.ROOKS) {
+        clearCastlePos = 0;
+        if (to > PUtils[PTypes.KINGS].INIT_POS[this.opp]) {
+          clearCastlePos++;
+        }
+        if (this.opp === Colors.BLACK) {
+          clearCastlePos += 2;
+        }
+        this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
+      }
+    }
+
+    // adds the current state values to the prevStates array
+    // used for move unmaking purposes
+
+  }, {
+    key: 'addPrevState',
+    value: function addPrevState() {
+      var state = { epBB: this.epBB, castleRights: this.castleRights };
+      this.prevStates.push(state);
+    }
+
+    // makes special adjustments to the position based on the move type
+
+  }, {
+    key: 'execMoveType',
+    value: function execMoveType(from, to, type) {
+      switch (type) {
+        case MoveTypes.NORMAL:
+          return;
+        case MoveTypes.DBL_PPUSH:
+          var epPos = to + -PUtils[PTypes.PAWNS].DIRS[this.turn] * 8;
+          this.epBB = BitBoard.fromPos(epPos);
+          break;
+        case MoveTypes.CSTL_KING:
+          this.movePiece(from + 3, from + 1, this.turn, PTypes.ROOKS);
+          break;
+        case MoveTypes.CSTL_QUEEN:
+          this.movePiece(from - 4, from - 1, this.turn, PTypes.ROOKS);
+          break;
+        case MoveTypes.EP_CAPT:
+          var capturedPos = to - PUtils[PTypes.PAWNS].DIRS[this.turn] * 8;
+          this.clearPieceAt(capturedPos, this.opp, PTypes.PAWNS);
+          break;
+        case MoveTypes.NPROMO:
+          this.setPieceAt(to, this.turn, PTypes.KNIGHTS);
+          break;
+        case MoveTypes.BPROMO:
+          this.setPieceAt(to, this.turn, PTypes.BISHOPS);
+          break;
+        case MoveTypes.RPROMO:
+          this.setPieceAt(to, this.turn, PTypes.ROOKS);
+          break;
+        case MoveTypes.QPROMO:
+          this.setPieceAt(to, this.turn, PTypes.QUEENS);
+          break;
+      }
+    }
+
+    // unmakes special adjustments to the position based on the move type
+
+  }, {
+    key: 'reverseMoveType',
+    value: function reverseMoveType(from, to, type) {
+      switch (type) {
+        case MoveTypes.NORMAL:
+        case MoveTypes.DBL_PPUSH:
+          return;
+        case MoveTypes.CSTL_KING:
+          this.movePiece(from + 1, from + 3, this.turn, PTypes.ROOKS);
+          break;
+        case MoveTypes.CSTL_QUEEN:
+          this.movePiece(from - 1, from - 4, this.turn, PTypes.ROOKS);
+          break;
+        case MoveTypes.EP_CAPT:
+          var capturedPos = to - PUtils[PTypes.PAWNS].DIRS[this.turn] * 8;
+          this.setPieceAt(capturedPos, this.opp, PTypes.PAWNS);
+          break;
+        case MoveTypes.NPROMO:
+          this.clearPieceAt(to, this.turn, PTypes.KNIGHTS);
+          break;
+        case MoveTypes.BPROMO:
+          this.clearPieceAt(to, this.turn, PTypes.BISHOPS);
+          break;
+        case MoveTypes.RPROMO:
+          this.clearPieceAt(to, this.turn, PTypes.ROOKS);
+          break;
+        case MoveTypes.QPROMO:
+          this.clearPieceAt(to, this.turn, PTypes.QUEENS);
+          break;
+      }
+    }
+
+    // moves piece from one position to another
+
+  }, {
+    key: 'movePiece',
+    value: function movePiece(from, to, color, pieceType) {
+      this.clearPieceAt(from, color, pieceType);
+      this.setPieceAt(to, color, pieceType);
+    }
+
+    // marks the given color and pieceType BBs as occupied at the specified position
+
+  }, {
+    key: 'setPieceAt',
+    value: function setPieceAt(pos, color, pieceType) {
+      this.pieces[color].setBit(pos);
+      this.pieces[pieceType].setBit(pos);
+      this.pTypesLocations[pos] = pieceType;
+    }
+
+    // marks the given color and pieceType BBs as unoccupied at the specified position
+
+  }, {
+    key: 'clearPieceAt',
+    value: function clearPieceAt(pos, color, pieceType) {
+      this.pieces[color].clearBit(pos);
+      this.pieces[pieceType].clearBit(pos);
+      this.pTypesLocations[pos] = null;
+    }
+
+    // renders BBs for all piece sets
+
+  }, {
+    key: 'renderPieceSets',
+    value: function renderPieceSets() {
+      var _this5 = this;
+
+      Object.keys(this.pieces).forEach(function (boardType) {
+        console.log(boardType);
+        _this5.pieces[boardType].render();
+      });
+    }
+  }, {
+    key: 'getBoardArr',
+    value: function getBoardArr() {
+      return pieceSetsToArray(this.pieces);
+    }
+
+    // renders the board for the current position
+
+  }, {
+    key: 'renderBoardArr',
+    value: function renderBoardArr() {
+      var boardArr = pieceSetsToArray(this.pieces);
+
+      var pos = void 0;
+      var rowStr = '';
+      console.log("\n");
+      for (pos = 63; pos >= 0; pos--) {
+        rowStr = boardArr[pos] + rowStr;
+        if (pos % 8 === 0) {
+          console.log(rowStr);
+          rowStr = '';
+        }
+      }
+      console.log("\n");
+    }
+  }]);
+
+  return Position;
+}();
+
+module.exports = Position;
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 var Utils = __webpack_require__(12);
 // A standard 8x8 chess board can be represented by a 64bit integer (bitboard),
 // in which a 1 means the position is occupied, a 0 means it's empty
@@ -433,18 +1134,18 @@ var BitBoard = function () {
     key: 'setBit',
     value: function setBit(pos) {
       if (pos >= 32 && pos < 64) {
-        this.high = (this.high | Math.pow(2, pos - 32)) >>> 0;
+        this.high = (this.high | 1 << pos - 32) >>> 0;
       } else if (pos >= 0 && pos < 32) {
-        this.low = (this.low | Math.pow(2, pos)) >>> 0;
+        this.low = (this.low | 1 << pos) >>> 0;
       }
     }
   }, {
     key: 'clearBit',
     value: function clearBit(pos) {
-      if (pos >= 32 && pos < 64) {
-        this.high = (this.high & ~Math.pow(2, pos - 32)) >>> 0;
-      } else if (pos >= 0 && pos < 32) {
-        this.low = (this.low & ~Math.pow(2, pos)) >>> 0;
+      if (pos >= 32) {
+        this.high = (this.high & ~(1 << pos - 32)) >>> 0;
+      } else {
+        this.low = (this.low & ~(1 << pos)) >>> 0;
       }
     }
   }, {
@@ -462,9 +1163,9 @@ var BitBoard = function () {
     key: 'hasSetBit',
     value: function hasSetBit(pos) {
       if (pos < 32) {
-        return Boolean(this.low & Math.pow(2, pos));
+        return Boolean(this.low & 1 << pos);
       } else {
-        return Boolean(this.high & Math.pow(2, pos - 32));
+        return Boolean(this.high & 1 << pos - 32);
       }
     }
   }, {
@@ -621,7 +1322,7 @@ var BitBoard = function () {
 module.exports = BitBoard;
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -652,7 +1353,7 @@ function stepMove(initial, noSo, eaWe) {
 module.exports = stepMove;
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -693,13 +1394,13 @@ var Selectors = {
 module.exports = { ColsFiles: ColsFiles, FilesCols: FilesCols, RowsRanks: RowsRanks, RanksRows: RanksRows, Selectors: Selectors };
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var UI = __webpack_require__(10);
+var UI = __webpack_require__(11);
 
 $(document).ready(function () {
   var ui = new UI();
@@ -707,7 +1408,7 @@ $(document).ready(function () {
 });
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -717,17 +1418,17 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Position = __webpack_require__(11);
+var Position = __webpack_require__(6);
 var AI = __webpack_require__(24);
 
 var _require = __webpack_require__(1),
-    PieceTypes = _require.PieceTypes,
+    PTypes = _require.PTypes,
     Colors = _require.Colors,
     PieceTypeHTML = _require.PieceTypeHTML;
 
-var Util = __webpack_require__(25);
+var Util = __webpack_require__(26);
 
-var _require2 = __webpack_require__(8),
+var _require2 = __webpack_require__(9),
     ColsFiles = _require2.ColsFiles,
     FilesCols = _require2.FilesCols,
     RowsRanks = _require2.RowsRanks,
@@ -824,7 +1525,7 @@ var UI = function () {
     value: function updatePieces() {
       $('.piece').remove();
       $('.square').removeClass('ui-droppable ui-draggable can-move-to');
-      var pieceTypes = Object.values(PieceTypes);
+      var pieceTypes = Object.values(PTypes);
       var pieces = this.position.pieces;
       var fileRank = void 0;
       var newPiece = void 0;
@@ -916,689 +1617,6 @@ var UI = function () {
 module.exports = UI;
 
 /***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var _require = __webpack_require__(0),
-    BitBoard = _require.BitBoard,
-    BBMasks = _require.BBMasks;
-
-var _require2 = __webpack_require__(14),
-    Move = _require2.Move,
-    MoveTypes = _require2.MoveTypes;
-
-var _require3 = __webpack_require__(1),
-    Pawns = _require3.Pawns,
-    Knight = _require3.Knight,
-    Bishop = _require3.Bishop,
-    Rook = _require3.Rook,
-    King = _require3.King,
-    Queen = _require3.Queen,
-    PieceTypes = _require3.PieceTypes,
-    Colors = _require3.Colors,
-    Dirs = _require3.Dirs;
-
-var _require4 = __webpack_require__(23),
-    pieceSetsToArray = _require4.pieceSetsToArray,
-    pieceSetsFromArray = _require4.pieceSetsFromArray;
-
-var Position = function () {
-  function Position() {
-    var pieces = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : pieceSetsFromArray();
-    var turn = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : Colors.WHITE;
-    var prevMoves = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
-
-    _classCallCheck(this, Position);
-
-    this.pieces = pieces;
-    this.prevMoves = prevMoves;
-
-    // castling rights represented by 4bit int
-    // in the following order (left bit to right):
-    // bKing bQueen wKing wQueen
-    this.castleRights = 0xf;
-
-    // the en passant BB will either be empty
-    // or have one position marked that indicates
-    // the destination of an en passant attack
-    this.epBB = new BitBoard();
-
-    // holds previous state info (castling rights, en passant)
-    // for move reversal purposes
-    this.prevStates = [];
-
-    this.setTurn(turn);
-  }
-
-  _createClass(Position, [{
-    key: 'setTurn',
-    value: function setTurn(turn, opp) {
-      this.turn = turn;
-      this.opp = opp || this.getOtherColor(turn);
-    }
-  }, {
-    key: 'swapTurn',
-    value: function swapTurn() {
-      this.setTurn(this.opp, this.turn);
-    }
-  }, {
-    key: 'getOtherColor',
-    value: function getOtherColor(color) {
-      return color ^ Colors.BLACK;
-    }
-
-    // generates all pseudo legal moves, ie moves that may put the king
-    // in check but are otherwise legal
-    // why do this: our ai move search generates all moves for a position
-    // and then considers each move individually. some of those moves
-    // will not be considered due to pruning cutoffs, so it's more efficient
-    // to only check for full legality of moves that we actually consider
-
-  }, {
-    key: 'generatePseudoMoves',
-    value: function generatePseudoMoves() {
-      var includeQuiet = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
-
-      var moves = [];
-      this.addPawnMoves(moves, includeQuiet);
-      this.addNormalMoves(moves, includeQuiet);
-      this.addKingMoves(moves, includeQuiet);
-
-      return moves;
-    }
-
-    // generates moves with a filter for whether the move puts the king in check
-    // mainly used to determine checkmate or stalemate
-
-  }, {
-    key: 'generateLegalMoves',
-    value: function generateLegalMoves() {
-      var _this = this;
-
-      var pseudoMoves = this.generatePseudoMoves();
-      var moveData = void 0;
-      var isLegal = void 0;
-
-      var legals = [];
-      return pseudoMoves.filter(function (pseudoMove) {
-        moveData = pseudoMove.getData();
-
-        _this.testMove(moveData, function (testsLegal) {
-          isLegal = testsLegal;
-          return true;
-        });
-
-        return isLegal;
-      });
-    }
-
-    // inserts pawn moves into the moves array
-
-  }, {
-    key: 'addPawnMoves',
-    value: function addPawnMoves(moves, includeQuiet) {
-      var pawnsPos = this.getColorPieceSet(this.turn, PieceTypes.PAWNS);
-
-      if (includeQuiet) {
-        var notOccupied = this.getOccupied().not();
-
-        var pawnSinglePushes = Pawns.singlePush(this.turn, pawnsPos, notOccupied);
-        this.addPawnMoveSet(pawnSinglePushes, 8 * Pawns.DIRS[this.turn], moves);
-
-        var pawnDoublePushes = Pawns.doublePush(this.turn, pawnsPos, notOccupied);
-        this.addPawnMoveSet(pawnDoublePushes, 16 * Pawns.DIRS[this.turn], moves, false, true);
-      }
-
-      var oppPositions = this.pieces[this.opp].or(this.epBB);
-
-      var pawnLeftAttacks = Pawns.attacksLeft(this.turn, pawnsPos, oppPositions);
-      this.addPawnMoveSet(pawnLeftAttacks, 7 * Pawns.DIRS[this.turn], moves, true);
-
-      var pawnRightAttacks = Pawns.attacksRight(this.turn, pawnsPos, oppPositions);
-      this.addPawnMoveSet(pawnRightAttacks, 9 * Pawns.DIRS[this.turn], moves, true);
-    }
-
-    // takes a new position set for pawns and adds each corresponding move
-    // to the moves array, with special handling for en passants, promotions and double pushes
-
-    // note: unlike other pieces, we map pawn movements from the set of all existing pawns
-    // rather than each pawn individually, so the function takes a shift amount to determine
-    // the location of the individual pawn that moved to a new position
-
-  }, {
-    key: 'addPawnMoveSet',
-    value: function addPawnMoveSet(newPositions, shiftAmt, moves, isCapture, isDblPush) {
-      var _this2 = this;
-
-      var from = void 0;
-      var captured = null;
-
-      newPositions.pop1Bits(function (pos) {
-        from = pos - shiftAmt;
-        if (isDblPush) {
-          moves.push(new Move(from, pos, MoveTypes.DBL_PPUSH, PieceTypes.PAWNS));
-        } else if (isCapture && _this2.epBB.hasSetBit(pos)) {
-          moves.push(new Move(from, pos, MoveTypes.EP_CAPT, PieceTypes.PAWNS));
-        } else {
-          if (isCapture) {
-            captured = _this2.getPieceAt(pos);
-          }
-
-          if (Pawns.PROMO_MASKS[_this2.turn].hasSetBit(pos)) {
-            _this2.addPromos(from, pos, moves, captured);
-          } else {
-            moves.push(new Move(from, pos, MoveTypes.NORMAL, PieceTypes.PAWNS, captured));
-          }
-        }
-      });
-    }
-
-    // adds a move to the moves array for each possible promotion type
-
-    // side note: I was curious about why you'd ever promote to rook or bishop
-    // and the reason is if promoting to a queen results in stalemate
-
-  }, {
-    key: 'addPromos',
-    value: function addPromos(from, to, moves, captured) {
-      [MoveTypes.NPROMO, MoveTypes.BPROMO, MoveTypes.RPROMO, MoveTypes.QPROMO].forEach(function (promoType) {
-        moves.push(new Move(from, to, promoType, PieceTypes.PAWNS, captured));
-      });
-    }
-
-    // adds moves to the moves array for all pieces that don't
-    // have 'special' moves, ie not pawns or kings
-
-  }, {
-    key: 'addNormalMoves',
-    value: function addNormalMoves(moves, includeQuiet) {
-      var _this3 = this;
-
-      var occupied = this.getOccupied();
-      var notOwnPieces = this.getNotOccupiedBy(this.turn);
-
-      var knightsPos = this.getColorPieceSet(this.turn, PieceTypes.KNIGHTS);
-      var knightMoves = void 0;
-      knightsPos.dup().pop1Bits(function (pos) {
-        knightMoves = Knight.moves(pos, notOwnPieces);
-        _this3.addNormalMoveSet(knightMoves, pos, PieceTypes.KNIGHTS, moves, includeQuiet);
-      });
-
-      var bishopsPos = this.getColorPieceSet(this.turn, PieceTypes.BISHOPS);
-      var bishopMoves = void 0;
-      bishopsPos.dup().pop1Bits(function (pos) {
-        bishopMoves = Bishop.moves(pos, occupied, notOwnPieces);
-        _this3.addNormalMoveSet(bishopMoves, pos, PieceTypes.BISHOPS, moves, includeQuiet);
-      });
-
-      var rooksPos = this.getColorPieceSet(this.turn, PieceTypes.ROOKS);
-      var rookMoves = void 0;
-      rooksPos.dup().pop1Bits(function (pos) {
-        rookMoves = Rook.moves(pos, occupied, notOwnPieces);
-        _this3.addNormalMoveSet(rookMoves, pos, PieceTypes.ROOKS, moves, includeQuiet);
-      });
-
-      var queenPos = this.getColorPieceSet(this.turn, PieceTypes.QUEENS).bitScanForward();
-      if (queenPos !== null) {
-        var queenMoves = Queen.moves(queenPos, occupied, notOwnPieces);
-        this.addNormalMoveSet(queenMoves, queenPos, PieceTypes.QUEENS, moves, includeQuiet);
-      }
-    }
-
-    // adds available king moves to the moves array
-
-  }, {
-    key: 'addKingMoves',
-    value: function addKingMoves(moves, includeQuiet) {
-      var notOwnPieces = this.getNotOccupiedBy(this.turn);
-      var kingPos = this.getColorPieceSet(this.turn, PieceTypes.KINGS).bitScanForward();
-
-      // for testing purposes...
-      if (kingPos === null) {
-        return;
-      }
-
-      var normalMoves = King.moves(kingPos, notOwnPieces);
-      this.addNormalMoveSet(normalMoves, kingPos, PieceTypes.KINGS, moves, includeQuiet);
-
-      if (includeQuiet) {
-        this.addCastleMoves(moves);
-      }
-    }
-
-    // takes a BB of possible new positions for a single
-    // piece and adds each corresponding move to the moves array
-
-  }, {
-    key: 'addNormalMoveSet',
-    value: function addNormalMoveSet(newPositions, startPos, pieceType, moves, includeQuiet) {
-      var _this4 = this;
-
-      var newPos = void 0;
-      var newMove = void 0;
-      var captType = void 0;
-
-      newPositions.pop1Bits(function (pos) {
-        captType = _this4.pieces[_this4.opp].hasSetBit(pos) ? _this4.getPieceAt(pos) : null;
-        if (includeQuiet || captType) {
-          moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));
-        }
-      });
-    }
-
-    // adds available castling moves to the moves array
-
-  }, {
-    key: 'addCastleMoves',
-    value: function addCastleMoves(moves) {
-      var turnCastleRights = this.getCastleRights(this.turn);
-      var startPos = King.INIT_POS[this.turn];
-      var notOccupied = this.getOccupied().not();
-
-      if (turnCastleRights & 1 && King.canCastle(this.turn, Dirs.WEST, notOccupied)) {
-        moves.push(new Move(startPos, startPos - 2, MoveTypes.CSTL_QUEEN, PieceTypes.KINGS));
-      }
-
-      if (turnCastleRights & 2 && King.canCastle(this.turn, Dirs.EAST, notOccupied)) {
-        moves.push(new Move(startPos, startPos + 2, MoveTypes.CSTL_KING, PieceTypes.KINGS));
-      }
-    }
-
-    // returns 2bit value for the color's castling rights
-    // left bit => king-side rights
-    // right bit => queen-side rights
-
-  }, {
-    key: 'getCastleRights',
-    value: function getCastleRights(color) {
-      return color === Colors.WHITE ? this.castleRights & 3 : this.castleRights >>> 2;
-    }
-
-    // returns a BB with occupied positions for a given color and piece type
-
-  }, {
-    key: 'getColorPieceSet',
-    value: function getColorPieceSet(color, pieceType) {
-      return this.pieces[color].and(this.pieces[pieceType]);
-    }
-
-    // returns a BB of all occupied positions
-
-  }, {
-    key: 'getOccupied',
-    value: function getOccupied() {
-      return this.pieces[Colors.WHITE].or(this.pieces[Colors.BLACK]);
-    }
-
-    // returns a BB of all positions that this color does not occupy
-
-  }, {
-    key: 'getNotOccupiedBy',
-    value: function getNotOccupiedBy(color) {
-      return this.pieces[color].not();
-    }
-
-    // returns the piece type that occupies the given position
-    // if no piece is found, returns null
-
-  }, {
-    key: 'getPieceAt',
-    value: function getPieceAt(pos) {
-      var types = Object.values(PieceTypes);
-
-      var idx = void 0;
-      var type = void 0;
-
-      for (idx = 0; idx < types.length; idx++) {
-        type = types[idx];
-        if (this.pieces[type].hasSetBit(pos)) {
-          return type;
-        }
-      }
-
-      return null;
-    }
-
-    // makes a specified move if it's legal, updating the current position
-    // returns true if the move is made, false otherwise
-
-  }, {
-    key: 'makeMove',
-    value: function makeMove(move) {
-      var moveData = move.getData();
-
-      var isLegal = void 0;
-      this.testMove(moveData, function (testsLegal) {
-        isLegal = testsLegal;
-        return !isLegal;
-      });
-
-      if (!isLegal) {
-        return false;
-      }
-
-      this.addPrevState();
-
-      this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
-      this.epBB = new BitBoard();
-
-      this.execMoveType(moveData.from, moveData.to, moveData.type);
-
-      this.prevMoves.push(move);
-      this.swapTurn();
-
-      return true;
-    }
-
-    // makes the piece movements needed to determine
-    // if the move is legal, sends a boolean for the legality
-    // to the callback and undoes the piece movements if the callback
-    // returns true
-
-  }, {
-    key: 'testMove',
-    value: function testMove(moveData, cb) {
-      if (moveData.captPieceType) {
-        this.clearPieceAt(moveData.to, this.opp, moveData.captPieceType);
-      }
-
-      if (moveData.isPromo) {
-        this.clearPieceAt(moveData.from, this.turn, PieceTypes.PAWNS);
-      } else {
-        this.movePiece(moveData.from, moveData.to, this.turn, moveData.pieceType);
-      }
-
-      var undo = cb(this.testsLegal(moveData));
-      if (!undo) {
-        return;
-      }
-
-      if (moveData.isPromo) {
-        this.setPieceAt(moveData.from, this.turn, PieceTypes.PAWNS);
-      } else {
-        this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
-      }
-
-      if (moveData.captPieceType) {
-        this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
-      }
-    }
-
-    // returns boolean for whether or not move is legal
-    // based on the current position
-
-  }, {
-    key: 'testsLegal',
-    value: function testsLegal(moveData) {
-      if (moveData.isCastle) {
-        return this.isLegalCastle(moveData.from, moveData.type);
-      } else {
-        return !this.inCheck(this.turn);
-      }
-    }
-  }, {
-    key: 'isLegalCastle',
-    value: function isLegalCastle(pos, castleType) {
-      var dir = castleType === MoveTypes.CSTL_KING ? 1 : -1;
-      var count = 0;
-
-      while (count <= 2) {
-        if (this.isAttacked(pos, this.turn)) {
-          return false;
-        }
-        count++;
-        pos += dir;
-      }
-
-      return true;
-    }
-
-    // returns boolean for whether the provided color's king is in check
-
-  }, {
-    key: 'inCheck',
-    value: function inCheck(color) {
-      var kingPos = this.getColorPieceSet(color, PieceTypes.KINGS).bitScanForward();
-      if (kingPos === null) {
-        console.log('NO KING');
-      }
-      return this.isAttacked(kingPos, color);
-    }
-
-    // returns boolean for whether any opponent color piece is attacking the provided position
-
-  }, {
-    key: 'isAttacked',
-    value: function isAttacked(pos, color) {
-      var posBB = BitBoard.fromPos(pos);
-      var occupied = this.getOccupied();
-      var oppColor = this.getOtherColor(color);
-      var pawns = this.getColorPieceSet(oppColor, PieceTypes.PAWNS);
-
-      var queenBB = this.getColorPieceSet(oppColor, PieceTypes.QUEENS);
-      return !Pawns.attacksLeft(oppColor, pawns, posBB).isZero() || !Pawns.attacksRight(oppColor, pawns, posBB).isZero() || !Knight.moves(pos, this.getColorPieceSet(oppColor, PieceTypes.KNIGHTS)).isZero() || !Bishop.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.BISHOPS).or(queenBB)).isZero() || !Rook.moves(pos, occupied, this.getColorPieceSet(oppColor, PieceTypes.ROOKS).or(queenBB)).isZero();
-    }
-
-    // unmakes the previous move, updating the current position
-
-  }, {
-    key: 'unmakePrevMove',
-    value: function unmakePrevMove() {
-      var prevMove = this.prevMoves.pop();
-      if (!prevMove) {
-        return false;
-      }
-      this.swapTurn();
-      var moveData = prevMove.getData();
-
-      this.reverseMoveType(moveData.from, moveData.to, moveData.type);
-
-      var prevState = this.prevStates.pop();
-      this.epBB = prevState.epBB;
-      this.castleRights = prevState.castleRights;
-
-      this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
-
-      if (moveData.captPieceType) {
-        this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
-      }
-
-      return true;
-    }
-
-    // makes adjustments to the castling rights
-    // if a rook or king is moved
-
-  }, {
-    key: 'adjustCastleRights',
-    value: function adjustCastleRights(pieceType, from, captPieceType, to) {
-      var clearCastlePos = void 0;
-      if (pieceType === PieceTypes.KINGS) {
-        var clearCastleRightsMask = this.turn === Colors.WHITE ? 12 : 3;
-        this.castleRights &= clearCastleRightsMask;
-      } else if (pieceType === PieceTypes.ROOKS) {
-        clearCastlePos = 0;
-        if (from > King.INIT_POS[this.turn]) {
-          clearCastlePos++;
-        }
-        if (this.turn === Colors.BLACK) {
-          clearCastlePos += 2;
-        }
-        this.castleRights &= ~Math.pow(2, clearCastlePos);
-      }
-
-      if (captPieceType === PieceTypes.ROOKS) {
-        clearCastlePos = 0;
-        if (to > King.INIT_POS[this.opp]) {
-          clearCastlePos++;
-        }
-        if (this.opp === Colors.BLACK) {
-          clearCastlePos += 2;
-        }
-        this.castleRights &= ~Math.pow(2, clearCastlePos);
-      }
-    }
-
-    // adds the current state values to the prevStates array
-    // used for move unmaking purposes
-
-  }, {
-    key: 'addPrevState',
-    value: function addPrevState() {
-      var state = { epBB: this.epBB, castleRights: this.castleRights };
-      this.prevStates.push(state);
-    }
-
-    // makes special adjustments to the position based on the move type
-
-  }, {
-    key: 'execMoveType',
-    value: function execMoveType(from, to, type) {
-      switch (type) {
-        case MoveTypes.NORMAL:
-          return;
-        case MoveTypes.DBL_PPUSH:
-          var epPos = to + -Pawns.DIRS[this.turn] * 8;
-          this.epBB = BitBoard.fromPos(epPos);
-          break;
-        case MoveTypes.CSTL_KING:
-          this.movePiece(from + 3, from + 1, this.turn, PieceTypes.ROOKS);
-          break;
-        case MoveTypes.CSTL_QUEEN:
-          this.movePiece(from - 4, from - 1, this.turn, PieceTypes.ROOKS);
-          break;
-        case MoveTypes.EP_CAPT:
-          var capturedPos = to - Pawns.DIRS[this.turn] * 8;
-          this.clearPieceAt(capturedPos, this.opp, PieceTypes.PAWNS);
-          break;
-        case MoveTypes.NPROMO:
-          this.setPieceAt(to, this.turn, PieceTypes.KNIGHTS);
-          break;
-        case MoveTypes.BPROMO:
-          this.setPieceAt(to, this.turn, PieceTypes.BISHOPS);
-          break;
-        case MoveTypes.RPROMO:
-          this.setPieceAt(to, this.turn, PieceTypes.ROOKS);
-          break;
-        case MoveTypes.QPROMO:
-          this.setPieceAt(to, this.turn, PieceTypes.QUEENS);
-          break;
-      }
-    }
-
-    // unmakes special adjustments to the position based on the move type
-
-  }, {
-    key: 'reverseMoveType',
-    value: function reverseMoveType(from, to, type) {
-      switch (type) {
-        case MoveTypes.NORMAL:
-        case MoveTypes.DBL_PPUSH:
-          return;
-        case MoveTypes.CSTL_KING:
-          this.movePiece(from + 1, from + 3, this.turn, PieceTypes.ROOKS);
-          break;
-        case MoveTypes.CSTL_QUEEN:
-          this.movePiece(from - 1, from - 4, this.turn, PieceTypes.ROOKS);
-          break;
-        case MoveTypes.EP_CAPT:
-          var capturedPos = to - Pawns.DIRS[this.turn] * 8;
-          this.setPieceAt(capturedPos, this.opp, PieceTypes.PAWNS);
-          break;
-        case MoveTypes.NPROMO:
-          this.clearPieceAt(to, this.turn, PieceTypes.KNIGHTS);
-          break;
-        case MoveTypes.BPROMO:
-          this.clearPieceAt(to, this.turn, PieceTypes.BISHOPS);
-          break;
-        case MoveTypes.RPROMO:
-          this.clearPieceAt(to, this.turn, PieceTypes.ROOKS);
-          break;
-        case MoveTypes.QPROMO:
-          this.clearPieceAt(to, this.turn, PieceTypes.QUEENS);
-          break;
-      }
-    }
-
-    // moves piece from one position to another
-
-  }, {
-    key: 'movePiece',
-    value: function movePiece(from, to, color, pieceType) {
-      this.clearPieceAt(from, color, pieceType);
-      this.setPieceAt(to, color, pieceType);
-    }
-
-    // marks the given color and pieceType BBs as occupied at the specified position
-
-  }, {
-    key: 'setPieceAt',
-    value: function setPieceAt(pos, color, pieceType) {
-      this.pieces[color].setBit(pos);
-      this.pieces[pieceType].setBit(pos);
-    }
-
-    // marks the given color and pieceType BBs as unoccupied at the specified position
-
-  }, {
-    key: 'clearPieceAt',
-    value: function clearPieceAt(pos, color, pieceType) {
-      this.pieces[color].clearBit(pos);
-      this.pieces[pieceType].clearBit(pos);
-    }
-
-    // renders BBs for all piece sets
-
-  }, {
-    key: 'renderPieceSets',
-    value: function renderPieceSets() {
-      var _this5 = this;
-
-      Object.keys(this.pieces).forEach(function (boardType) {
-        console.log(boardType);
-        _this5.pieces[boardType].render();
-      });
-    }
-  }, {
-    key: 'getBoardArr',
-    value: function getBoardArr() {
-      return pieceSetsToArray(this.pieces);
-    }
-
-    // renders the board for the current position
-
-  }, {
-    key: 'renderBoardArr',
-    value: function renderBoardArr() {
-      var boardArr = pieceSetsToArray(this.pieces);
-
-      var pos = void 0;
-      var rowStr = '';
-      console.log("\n");
-      for (pos = 63; pos >= 0; pos--) {
-        rowStr = boardArr[pos] + rowStr;
-        if (pos % 8 === 0) {
-          console.log(rowStr);
-          rowStr = '';
-        }
-      }
-      console.log("\n");
-    }
-  }]);
-
-  return Position;
-}();
-
-module.exports = Position;
-
-/***/ }),
 /* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1606,14 +1624,9 @@ module.exports = Position;
 
 
 function popCount32(int) {
-  var count = 0;
-
-  while (int) {
-    count++;
-    int &= int - 1;
-  }
-
-  return count;
+  int -= int >>> 1 & 0x55555555;
+  int = (int & 0x33333333) + (int >>> 2 & 0x33333333);
+  return (int + (int >>> 4) & 0xF0F0F0F) * 0x1010101 >>> 24;
 }
 
 function bitScanForward32(int) {
@@ -1665,7 +1678,7 @@ module.exports = {
 "use strict";
 
 
-var BitBoard = __webpack_require__(6);
+var BitBoard = __webpack_require__(7);
 
 // this file includes static sets of bitboards that
 // are commonly used throughout the program
@@ -1915,7 +1928,7 @@ var _DIRS, _INIT_MASKS, _PROMO_MASKS;
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var stepMove = __webpack_require__(7);
+var stepMove = __webpack_require__(8);
 
 var _require = __webpack_require__(0),
     BBMasks = _require.BBMasks;
@@ -2126,7 +2139,7 @@ module.exports = { pieceToLetter: pieceToLetter, letterToColor: letterToColor, l
 
 var _require = __webpack_require__(1),
     PieceConv = _require.PieceConv,
-    PieceTypes = _require.PieceTypes,
+    PTypes = _require.PTypes,
     Colors = _require.Colors;
 
 var _require2 = __webpack_require__(0),
@@ -2134,19 +2147,19 @@ var _require2 = __webpack_require__(0),
 
 var xx = "_";
 
-var WP = PieceConv.pieceToLetter(PieceTypes.PAWNS, Colors.WHITE);
-var WN = PieceConv.pieceToLetter(PieceTypes.KNIGHTS, Colors.WHITE);
-var WB = PieceConv.pieceToLetter(PieceTypes.BISHOPS, Colors.WHITE);
-var WR = PieceConv.pieceToLetter(PieceTypes.ROOKS, Colors.WHITE);
-var WQ = PieceConv.pieceToLetter(PieceTypes.QUEENS, Colors.WHITE);
-var WK = PieceConv.pieceToLetter(PieceTypes.KINGS, Colors.WHITE);
+var WP = PieceConv.pieceToLetter(PTypes.PAWNS, Colors.WHITE);
+var WN = PieceConv.pieceToLetter(PTypes.KNIGHTS, Colors.WHITE);
+var WB = PieceConv.pieceToLetter(PTypes.BISHOPS, Colors.WHITE);
+var WR = PieceConv.pieceToLetter(PTypes.ROOKS, Colors.WHITE);
+var WQ = PieceConv.pieceToLetter(PTypes.QUEENS, Colors.WHITE);
+var WK = PieceConv.pieceToLetter(PTypes.KINGS, Colors.WHITE);
 
-var BP = PieceConv.pieceToLetter(PieceTypes.PAWNS, Colors.BLACK);
-var BN = PieceConv.pieceToLetter(PieceTypes.KNIGHTS, Colors.BLACK);
-var BB = PieceConv.pieceToLetter(PieceTypes.BISHOPS, Colors.BLACK);
-var BR = PieceConv.pieceToLetter(PieceTypes.ROOKS, Colors.BLACK);
-var BQ = PieceConv.pieceToLetter(PieceTypes.QUEENS, Colors.BLACK);
-var BK = PieceConv.pieceToLetter(PieceTypes.KINGS, Colors.BLACK);
+var BP = PieceConv.pieceToLetter(PTypes.PAWNS, Colors.BLACK);
+var BN = PieceConv.pieceToLetter(PTypes.KNIGHTS, Colors.BLACK);
+var BB = PieceConv.pieceToLetter(PTypes.BISHOPS, Colors.BLACK);
+var BR = PieceConv.pieceToLetter(PTypes.ROOKS, Colors.BLACK);
+var BQ = PieceConv.pieceToLetter(PTypes.QUEENS, Colors.BLACK);
+var BK = PieceConv.pieceToLetter(PTypes.KINGS, Colors.BLACK);
 
 var defaultBoardArr = [WR, WN, WB, WQ, WK, WB, WN, WR, WP, WP, WP, WP, WP, WP, WP, WP, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, BP, BP, BP, BP, BP, BP, BP, BP, BR, BN, BB, BQ, BK, BB, BN, BR];
 
@@ -2165,7 +2178,7 @@ function createEmptyBoardArr() {
 function pieceSetsToArray(pieces) {
   var res = createEmptyBoardArr();
 
-  var pieceTypes = Object.values(PieceTypes);
+  var pieceTypes = Object.values(PTypes);
   pieceTypes.forEach(function (type) {
     pieces[type].dup().pop1Bits(function (pos) {
       if (pieces[Colors.WHITE].hasSetBit(pos)) {
@@ -2184,7 +2197,7 @@ function pieceSetsFromArray() {
 
   var pieces = {};
 
-  Object.values(PieceTypes).forEach(function (type) {
+  Object.values(PTypes).forEach(function (type) {
     pieces[type] = new BitBoard();
   });
 
@@ -2221,167 +2234,50 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var _require = __webpack_require__(1),
-    Pawns = _require.Pawns,
-    Knight = _require.Knight,
-    Bishop = _require.Bishop,
-    Rook = _require.Rook,
-    King = _require.King,
-    Queen = _require.Queen,
-    PieceTypes = _require.PieceTypes,
+    PTypes = _require.PTypes,
+    PUtils = _require.PUtils,
     Colors = _require.Colors,
-    Dirs = _require.Dirs;
+    Dirs = _require.Dirs,
+    eachPieceType = _require.eachPieceType;
 
 var AI = function () {
   function AI() {
     _classCallCheck(this, AI);
   }
 
-  // sumPawnScore(position, color, notOccupied, oppPositions) {
-  //   let sum = 0;
-  //
-  //   const pawnsPos = position.getColorPieceSet(color, PieceTypes.PAWNS);
-  //
-  //   pawnsPos.dup().pop1Bits((pos) => {
-  //     sum += Pawns.value;
-  //     sum += Pawns.positionValues[color ? (pos ^ 56) : pos];
-  //   });
-  //
-  //   sum += Pawns.singlePush(color, pawnsPos, notOccupied).popCount();
-  //   sum += Pawns.doublePush(color, pawnsPos, notOccupied).popCount();
-  //   sum += Pawns.attacksLeft(color, pawnsPos, oppPositions).popCount();
-  //   sum += Pawns.attacksRight(color, pawnsPos, oppPositions).popCount();
-  //
-  //   return sum;
-  // }
-  //
-  // sumSteppingPieceScore(position, color, pieceType, pieceConstant, notOwnPieces) {
-  //   let sum = 0;
-  //
-  //   const pieces = position.getColorPieceSet(color, pieceType);
-  //
-  //   pieces.dup().pop1Bits((pos) => {
-  //     sum += pieceConstant.value;
-  //     sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
-  //     sum += pieceConstant.moves(pos, notOwnPieces).popCount();
-  //   });
-  //
-  //   return sum;
-  // }
-  //
-  // sumSlidingPieceScore(position, color, pieceType, pieceConstant, occupied, notOwnPieces) {
-  //   let sum = 0;
-  //
-  //   const pieces = position.getColorPieceSet(color, pieceType);
-  //
-  //   pieces.dup().pop1Bits((pos) => {
-  //     sum += pieceConstant.value;
-  //     sum += pieceConstant.positionValues[color ? (pos ^ 56) : pos];
-  //     sum += pieceConstant.moves(pos, occupied, notOwnPieces).popCount();
-  //   });
-  //
-  //   return sum;
-  // }
-  //
-
-
   _createClass(AI, [{
-    key: 'sumPieceSetScore',
-    value: function sumPieceSetScore(piecePositions, pieceConstant, color) {
-      var sum = 0;
-      piecePositions.dup().pop1Bits(function (pos) {
-        sum += pieceConstant.value;
-        sum += pieceConstant.positionValues[color ? pos ^ 56 : pos];
+    key: 'scoreMaterial',
+    value: function scoreMaterial(position, color) {
+      var score = 0;
+      eachPieceType(function (pieceType) {
+        score += position.getColorPieceSet(color, pieceType).popCount() * PUtils[pieceType].value;
       });
 
-      return sum;
+      return score;
     }
   }, {
-    key: 'sumPieceScore',
-    value: function sumPieceScore(pos, pieceConstant, color) {
-      var sum = 0;
+    key: 'scorePiecePositions',
+    value: function scorePiecePositions(position, color) {
+      var score = 0;
+      var piecePositions = void 0;
+      eachPieceType(function (pieceType) {
+        piecePositions = position.getColorPieceSet(color, pieceType);
+        piecePositions.dup().pop1Bits(function (pos) {
+          score += PUtils[pieceType].positionValues[color ? pos : 56 ^ pos];
+        });
+      });
 
-      if (pos !== null) {
-        sum += pieceConstant.value;
-        sum += pieceConstant.positionValues[color ? pos ^ 56 : pos];
-      }
-
-      return sum;
+      return score;
     }
   }, {
     key: 'evaluate',
     value: function evaluate(position) {
-      var sum = 0;
+      var materialScore = this.scoreMaterial(position, position.turn) - this.scoreMaterial(position, position.opp);
 
-      var turnPawns = position.getColorPieceSet(position.turn, PieceTypes.PAWNS);
-      sum += this.sumPieceSetScore(turnPawns, Pawns, position.turn);
+      var piecePositionScore = this.scorePiecePositions(position, position.turn) - this.scorePiecePositions(position, position.opp);
 
-      var turnKnights = position.getColorPieceSet(position.turn, PieceTypes.KNIGHTS);
-      sum += this.sumPieceSetScore(turnKnights, Knight, position.turn);
-
-      var turnBishops = position.getColorPieceSet(position.turn, PieceTypes.BISHOPS);
-      sum += this.sumPieceSetScore(turnBishops, Bishop, position.turn);
-
-      var turnRooks = position.getColorPieceSet(position.turn, PieceTypes.ROOKS);
-      sum += this.sumPieceSetScore(turnRooks, Rook, position.turn);
-
-      var turnQueenPos = position.getColorPieceSet(position.turn, PieceTypes.QUEENS).bitScanForward();
-      sum += this.sumPieceScore(turnQueenPos, Queen, position.turn);
-
-      var turnKingPos = position.getColorPieceSet(position.turn, PieceTypes.KINGS).bitScanForward();
-      sum += this.sumPieceScore(turnKingPos, King, position.turn);
-
-      var oppPawns = position.getColorPieceSet(position.opp, PieceTypes.PAWNS);
-      sum -= this.sumPieceSetScore(oppPawns, Pawns, position.opp);
-
-      var oppKnights = position.getColorPieceSet(position.opp, PieceTypes.KNIGHTS);
-      sum -= this.sumPieceSetScore(oppKnights, Knight, position.opp);
-
-      var oppBishops = position.getColorPieceSet(position.opp, PieceTypes.BISHOPS);
-      sum -= this.sumPieceSetScore(oppBishops, Bishop, position.opp);
-
-      var oppRooks = position.getColorPieceSet(position.opp, PieceTypes.ROOKS);
-      sum -= this.sumPieceSetScore(oppRooks, Rook, position.opp);
-
-      var oppQueenPos = position.getColorPieceSet(position.opp, PieceTypes.QUEENS).bitScanForward();
-      sum -= this.sumPieceScore(oppQueenPos, Queen, position.turn);
-
-      var oppKingPos = position.getColorPieceSet(position.opp, PieceTypes.KINGS).bitScanForward();
-      sum -= this.sumPieceScore(oppKingPos, King, position.opp);
-
-      return sum;
+      return materialScore + piecePositionScore;
     }
-
-    // evaluate(position) {
-    //   let sum = 0;
-    //
-    //   const turnPieces = position.pieces[position.turn];
-    //   const oppPieces = position.pieces[position.opp];
-    //   const notTurnPieces = position.getNotOccupiedBy(position.turn);
-    //   const notOppPieces = position.getNotOccupiedBy(position.opp);
-    //   const occupied = position.getOccupied();
-    //   const notOccupied = occupied.not();
-    //
-    //   sum += this.sumPawnScore(position, position.turn, notOccupied, oppPieces);
-    //   sum -= this.sumPawnScore(position, position.opp, notOccupied, turnPieces);
-    //
-    //   sum += this.sumSteppingPieceScore(position, position.turn, PieceTypes.KNIGHTS, Knight, notTurnPieces);
-    //   sum -= this.sumSteppingPieceScore(position, position.opp, PieceTypes.KNIGHTS, Knight, notOppPieces);
-    //
-    //   sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.BISHOPS, Bishop, occupied, notTurnPieces);
-    //   sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.BISHOPS, Bishop, occupied, notOppPieces);
-    //
-    //   sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.ROOKS, Rook, occupied, notTurnPieces);
-    //   sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.ROOKS, Rook, occupied, notOppPieces);
-    //
-    //   sum += this.sumSlidingPieceScore(position, position.turn, PieceTypes.QUEENS, Queen, occupied, notTurnPieces);
-    //   sum -= this.sumSlidingPieceScore(position, position.opp, PieceTypes.QUEENS, Queen, occupied, notOppPieces);
-    //
-    //   sum += this.sumSteppingPieceScore(position, position.turn, PieceTypes.KINGS, King, notTurnPieces);
-    //   sum -= this.sumSteppingPieceScore(position, position.opp, PieceTypes.KINGS, King, notOppPieces);
-    //
-    //   return sum;
-    // }
-
   }, {
     key: 'makeMove',
     value: function makeMove(position) {
@@ -2389,26 +2285,29 @@ var AI = function () {
       // const move = moves[Math.floor(Math.random() * moves.length)];
       // position.makeMove(move);
       this.maxDepth = 4;
+      this.movesMade = position.prevMoves.length;
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       position.makeMove(this.bestMove);
     }
   }, {
     key: 'quiescenceSearch',
     value: function quiescenceSearch(position, alpha, beta) {
+      // for testing purposes...
+      if (position.prevMoves.length - this.movesMade > 20) {
+        console.log('over 20 moves deep!');
+      }
       var standPatVal = this.evaluate(position);
 
       if (standPatVal >= beta) {
         return beta;
-      } else if (alpha < standPatVal) {
+      } else if (standPatVal > alpha) {
         alpha = standPatVal;
       }
 
-      var moves = position.generatePseudoMoves(position.inCheck(position.turn));
-      this.sortMoves(moves);
+      var moves = this.sortMoves(position.generatePseudoMoves(position.inCheck(position.turn)));
       var moveIdx = void 0;
       var score = void 0;
 
-      // if (inCheck) { position.renderBoardArr(); }
       for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
         if (position.makeMove(moves[moveIdx])) {
           score = -this.quiescenceSearch(position, -beta, -alpha);
@@ -2429,27 +2328,21 @@ var AI = function () {
     key: 'negaMax',
     value: function negaMax(position, depth, alpha, beta) {
       if (depth === 0) {
-        // return this.evaluate(position);
         return this.quiescenceSearch(position, alpha, beta);
       }
 
-      var moves = position.generatePseudoMoves();
-      this.sortMoves(moves);
+      var moves = this.sortMoves(position.generatePseudoMoves());
       var moveIdx = void 0;
       var canMove = false;
       var score = void 0;
-      var bestScore = -Infinity;
 
       for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
         if (position.makeMove(moves[moveIdx])) {
           canMove = true;
           score = -this.negaMax(position, depth - 1, -beta, -alpha);
           position.unmakePrevMove();
-          if (score > bestScore) {
-            bestScore = score;
-            if (bestScore > alpha) {
-              alpha = bestScore;
-            }
+          if (score > alpha) {
+            alpha = score;
             if (depth === this.maxDepth) {
               this.bestMove = moves[moveIdx];
             }
@@ -2462,26 +2355,31 @@ var AI = function () {
 
       if (!canMove) {
         if (position.inCheck(position.turn)) {
-          return -King.value;
+          return -PUtils[PTypes.KINGS].value;
         } else {
           return 0;
         }
       } else {
-        return bestScore;
+        return alpha;
       }
     }
   }, {
     key: 'sortMoves',
     value: function sortMoves(moves) {
       function calculateScore(move) {
-        var score = move.getCaptPiece();
-        score = score * 10 + move.getPiece();
-        score = score * 10 + move.getType();
+        var score = move.getCaptPiece() ? (1 + move.getCaptPiece()) / (1 + move.getPiece()) : 0;
+        score = score * 6 + move.getPiece();
+        score = score * 16 + move.getType();
+        score = score * 64 + move.getTo();
+        score = score * 64 + move.getFrom();
+
+        return score;
       }
 
       moves.sort(function (moveA, moveB) {
-        return calculateScore(moveA) > calculateScore(moveB) ? -1 : 1;
+        return calculateScore(moveB) - calculateScore(moveA);
       });
+      return moves;
     }
   }]);
 
@@ -2491,7 +2389,8 @@ var AI = function () {
 module.exports = AI;
 
 /***/ }),
-/* 25 */
+/* 25 */,
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2499,7 +2398,7 @@ module.exports = AI;
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
-var _require = __webpack_require__(8),
+var _require = __webpack_require__(9),
     ColsFiles = _require.ColsFiles,
     FilesCols = _require.FilesCols,
     RowsRanks = _require.RowsRanks,
@@ -2535,6 +2434,28 @@ module.exports = {
   fileRankFromPos: fileRankFromPos,
   isDarkSquare: isDarkSquare
 };
+
+/***/ }),
+/* 27 */,
+/* 28 */,
+/* 29 */,
+/* 30 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _require = __webpack_require__(2),
+    Types = _require.Types;
+
+function eachPieceType(cb) {
+  var type = void 0;
+  for (type = Types.PAWNS; type <= Types.KINGS; type++) {
+    cb(type);
+  }
+}
+
+module.exports = eachPieceType;
 
 /***/ })
 /******/ ]);

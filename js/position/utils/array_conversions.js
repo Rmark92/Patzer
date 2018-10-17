@@ -1,21 +1,21 @@
-const { PieceConv, PieceTypes, Colors } = require('../../pieces');
+const { PieceConv, PTypes, Colors } = require('../../pieces');
 const { BitBoard } = require('../../bitboard');
 
 const xx = "_";
 
-const WP = PieceConv.pieceToLetter(PieceTypes.PAWNS, Colors.WHITE);
-const WN = PieceConv.pieceToLetter(PieceTypes.KNIGHTS, Colors.WHITE);
-const WB = PieceConv.pieceToLetter(PieceTypes.BISHOPS, Colors.WHITE);
-const WR = PieceConv.pieceToLetter(PieceTypes.ROOKS, Colors.WHITE);
-const WQ = PieceConv.pieceToLetter(PieceTypes.QUEENS, Colors.WHITE);
-const WK = PieceConv.pieceToLetter(PieceTypes.KINGS, Colors.WHITE);
+const WP = PieceConv.pieceToLetter(PTypes.PAWNS, Colors.WHITE);
+const WN = PieceConv.pieceToLetter(PTypes.KNIGHTS, Colors.WHITE);
+const WB = PieceConv.pieceToLetter(PTypes.BISHOPS, Colors.WHITE);
+const WR = PieceConv.pieceToLetter(PTypes.ROOKS, Colors.WHITE);
+const WQ = PieceConv.pieceToLetter(PTypes.QUEENS, Colors.WHITE);
+const WK = PieceConv.pieceToLetter(PTypes.KINGS, Colors.WHITE);
 
-const BP = PieceConv.pieceToLetter(PieceTypes.PAWNS, Colors.BLACK);
-const BN = PieceConv.pieceToLetter(PieceTypes.KNIGHTS, Colors.BLACK);
-const BB = PieceConv.pieceToLetter(PieceTypes.BISHOPS, Colors.BLACK);
-const BR = PieceConv.pieceToLetter(PieceTypes.ROOKS, Colors.BLACK);
-const BQ = PieceConv.pieceToLetter(PieceTypes.QUEENS, Colors.BLACK);
-const BK = PieceConv.pieceToLetter(PieceTypes.KINGS, Colors.BLACK);
+const BP = PieceConv.pieceToLetter(PTypes.PAWNS, Colors.BLACK);
+const BN = PieceConv.pieceToLetter(PTypes.KNIGHTS, Colors.BLACK);
+const BB = PieceConv.pieceToLetter(PTypes.BISHOPS, Colors.BLACK);
+const BR = PieceConv.pieceToLetter(PTypes.ROOKS, Colors.BLACK);
+const BQ = PieceConv.pieceToLetter(PTypes.QUEENS, Colors.BLACK);
+const BK = PieceConv.pieceToLetter(PTypes.KINGS, Colors.BLACK);
 
 const defaultBoardArr = [
 WR, WN, WB, WQ, WK, WB, WN, WR,
@@ -43,7 +43,7 @@ function createEmptyBoardArr() {
 function pieceSetsToArray(pieces) {
   const res = createEmptyBoardArr();
 
-  const pieceTypes = Object.values(PieceTypes);
+  const pieceTypes = Object.values(PTypes);
   pieceTypes.forEach((type) => {
     pieces[type].dup().pop1Bits((pos) => {
       if (pieces[Colors.WHITE].hasSetBit(pos)) {
@@ -60,7 +60,7 @@ function pieceSetsToArray(pieces) {
 function pieceSetsFromArray(array = defaultBoardArr) {
   const pieces = {};
 
-  Object.values(PieceTypes).forEach((type) => {
+  Object.values(PTypes).forEach((type) => {
     pieces[type] = new BitBoard();
   });
 
