@@ -846,8 +846,49 @@ var UI = function () {
   }, {
     key: 'aiMove',
     value: function aiMove() {
-      this.ai.makeMove(this.position, this.currMoves);
-      this.playNextTurn();
+      var _this3 = this;
+
+      var move = this.ai.chooseMove(this.position);
+      this.animateMove(move, function () {
+        _this3.position.makeMove(move);
+        _this3.playNextTurn();
+      });
+    }
+  }, {
+    key: 'animateMove',
+    value: function animateMove(move, cb) {
+      var pieceEl = $('#' + Util.fileRankFromPos(move.getFrom()) + ' .piece');
+      var newSquare = $('#' + Util.fileRankFromPos(move.getTo()));
+
+      if (move.getCaptPiece()) {
+        var captPiece = $('#' + Util.fileRankFromPos(move.getTo()) + ' .piece');
+        var captOffset = captPiece.offset();
+        captPiece.css({
+          'position': 'absolute',
+          'left': captOffset.left,
+          'top': captOffset.top
+        });
+        captPiece.fadeOut('slow');
+      }
+
+      var oldOffset = pieceEl.offset();
+      pieceEl.appendTo(newSquare);
+      var newOffset = pieceEl.offset();
+
+      var animPiece = pieceEl.clone().appendTo('body');
+      animPiece.css({
+        'position': 'absolute',
+        'left': oldOffset.left,
+        'top': oldOffset.top,
+        'z-index': 1000
+      });
+      pieceEl.hide();
+
+      animPiece.animate({ 'top': newOffset.top, 'left': newOffset.left }, 'slow', function () {
+        pieceEl.show();
+        animPiece.remove();
+        cb();
+      });
     }
   }, {
     key: 'setupPlayerMove',
@@ -898,7 +939,7 @@ var UI = function () {
   }, {
     key: 'activateDroppableSquares',
     value: function activateDroppableSquares(moveToFroms) {
-      var _this3 = this;
+      var _this4 = this;
 
       var destSq = void 0;
       var originSquare = void 0;
@@ -919,11 +960,11 @@ var UI = function () {
           drop: function drop(event, ui) {
             originSquare = $(ui.draggable).parent().attr('id');
             originPos = Util.posFromFileRank(originSquare);
-            selectedMove = _this3.currMoves.filter(function (move) {
+            selectedMove = _this4.currMoves.filter(function (move) {
               return move.getFrom() === originPos && move.getTo() === parseInt(toPos);
             })[0];
-            _this3.position.makeMove(selectedMove);
-            _this3.playNextTurn();
+            _this4.position.makeMove(selectedMove);
+            _this4.playNextTurn();
           }
         });
       });
@@ -2315,8 +2356,8 @@ var AI = function () {
       return materialScore + piecePositionScore;
     }
   }, {
-    key: 'makeMove',
-    value: function makeMove(position) {
+    key: 'chooseMove',
+    value: function chooseMove(position) {
       // const moves = position.generateLegalMoves();
       // const move = moves[Math.floor(Math.random() * moves.length)];
       // position.makeMove(move);
@@ -2326,7 +2367,8 @@ var AI = function () {
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       console.log('RUN TIME:');
       console.log(new Date() - startTime);
-      position.makeMove(this.bestMove);
+      return this.bestMove;
+      // position.makeMove(this.bestMove);
     }
   }, {
     key: 'quiescenceSearch',

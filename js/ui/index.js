@@ -101,8 +101,46 @@ class UI {
   }
 
   aiMove() {
-    this.ai.makeMove(this.position, this.currMoves);
-    this.playNextTurn();
+    const move = this.ai.chooseMove(this.position);
+    this.animateMove(move, () => {
+      this.position.makeMove(move);
+      this.playNextTurn();
+    });
+  }
+
+  animateMove(move, cb) {
+    const pieceEl = $(`#${Util.fileRankFromPos(move.getFrom())} .piece`);
+    const newSquare = $(`#${Util.fileRankFromPos(move.getTo())}`);
+
+    if (move.getCaptPiece()) {
+      const captPiece = $(`#${Util.fileRankFromPos(move.getTo())} .piece`);
+      const captOffset = captPiece.offset();
+      captPiece.css({
+        'position': 'absolute',
+        'left': captOffset.left,
+        'top': captOffset.top
+      });
+      captPiece.fadeOut('slow');
+    }
+
+    const oldOffset = pieceEl.offset();
+    pieceEl.appendTo(newSquare);
+    const newOffset = pieceEl.offset();
+
+    const animPiece = pieceEl.clone().appendTo('body');
+    animPiece.css({
+      'position': 'absolute',
+      'left': oldOffset.left,
+      'top': oldOffset.top,
+      'z-index': 1000
+    });
+    pieceEl.hide();
+
+    animPiece.animate({'top': newOffset.top, 'left': newOffset.left}, 'slow', function(){
+      pieceEl.show();
+      animPiece.remove();
+      cb();
+    });
   }
 
   setupPlayerMove() {

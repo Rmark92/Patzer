@@ -40,7 +40,7 @@ class AI {
     return materialScore + piecePositionScore;
   }
 
-  makeMove(position) {
+  chooseMove(position) {
     // const moves = position.generateLegalMoves();
     // const move = moves[Math.floor(Math.random() * moves.length)];
     // position.makeMove(move);
@@ -50,7 +50,8 @@ class AI {
     this.negaMax(position, this.maxDepth, -Infinity, Infinity);
     console.log('RUN TIME:');
     console.log(new Date() - startTime);
-    position.makeMove(this.bestMove);
+    return this.bestMove;
+    // position.makeMove(this.bestMove);
   }
 
   quiescenceSearch(position, alpha, beta) {
