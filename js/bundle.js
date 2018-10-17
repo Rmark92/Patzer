@@ -804,7 +804,7 @@ var UI = function () {
     value: function drawBoard() {
       var _this2 = this;
 
-      var table = $('<table>');
+      var board = $('#board');
 
       var newRankRow = void 0;
       RowsRanks.forEach(function (rank) {
@@ -814,12 +814,11 @@ var UI = function () {
           newRankRow.append(_this2.generateSquare(file, rank));
         });
         newRankRow.append('<th class="rank">' + rank + '</th>');
-        table.prepend(newRankRow);
+        board.prepend(newRankRow);
       });
 
-      table.prepend(this.generateFileHeader());
-      table.append(this.generateFileHeader());
-      $('#board').append(table);
+      board.prepend(this.generateFileHeader());
+      board.append(this.generateFileHeader());
     }
   }, {
     key: 'updatePieces',
@@ -888,7 +887,7 @@ var UI = function () {
       Object.keys(moveFromTos).forEach(function (fromPos) {
         fromFileRank = Util.fileRankFromPos(fromPos);
         $('#' + fromFileRank + ' .piece').draggable({
-          containment: $('table')
+          containment: $('#board')
         });
 
         $('#' + fromFileRank + ' .piece').mouseenter(function () {

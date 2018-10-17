@@ -61,7 +61,7 @@ class UI {
   }
 
   drawBoard() {
-    const table = $('<table>');
+    const board = $('#board');
 
     let newRankRow;
     RowsRanks.forEach((rank) => {
@@ -71,12 +71,11 @@ class UI {
         newRankRow.append(this.generateSquare(file, rank));
       });
       newRankRow.append(`<th class="rank">${rank}</th>`);
-      table.prepend(newRankRow);
+      board.prepend(newRankRow);
     });
 
-    table.prepend(this.generateFileHeader());
-    table.append(this.generateFileHeader());
-    $('#board').append(table);
+    board.prepend(this.generateFileHeader());
+    board.append(this.generateFileHeader());
   }
 
   updatePieces() {
@@ -138,7 +137,7 @@ class UI {
     Object.keys(moveFromTos).forEach((fromPos) => {
       fromFileRank = Util.fileRankFromPos(fromPos);
       $(`#${fromFileRank} .piece`).draggable({
-        containment: $('table')
+        containment: $('#board')
       });
 
       $(`#${fromFileRank} .piece`).mouseenter(() => {
