@@ -41,6 +41,11 @@ tr {
   color: black;
 }
 
+
 .can-move-to {
   box-shadow: inset 0 0 40px #f0f712;
+}
+
+.square.ui-droppable-hover {
+  box-shadow: inset 0 0 80px #f0f712;
 }

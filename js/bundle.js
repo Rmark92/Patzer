@@ -850,64 +850,78 @@ var UI = function () {
       this.playNextTurn();
     }
   }, {
-    key: 'makePlayerMove',
-    value: function makePlayerMove(fromPos, toPos) {
-      var selectedMove = this.currMoves.filter(function (move) {
-        return move.getFrom() === fromPos && move.getTo() === toPos;
-      })[0];
-      if (selectedMove) {
-        this.position.makeMove(selectedMove);
-        this.playNextTurn();
-      } else {
-        this.updatePieces();
-        this.setupPlayerMove();
-      }
-    }
-  }, {
     key: 'setupPlayerMove',
     value: function setupPlayerMove() {
       var _this3 = this;
 
-      var moves = this.position.generateLegalMoves();
-      var movesData = moves.map(function (move) {
+      var movesData = this.currMoves.map(function (move) {
         return move.getData();
       });
       var moveFromTos = {};
+      var moveToFroms = {};
 
       movesData.forEach(function (moveData) {
         moveFromTos[moveData.from] = moveFromTos[moveData.from] || [];
         moveFromTos[moveData.from].push(moveData.to);
+
+        moveToFroms[moveData.to] = moveToFroms[moveData.to] || [];
+        moveToFroms[moveData.to].push(moveData.from);
       });
 
       var fromFileRank = void 0;
       var toFileRank = void 0;
       var droppedPieceSource = void 0;
       var selectedMoves = void 0;
+      var pieceEl = void 0;
+      var destSq = void 0;
 
       Object.keys(moveFromTos).forEach(function (fromPos) {
         fromFileRank = Util.fileRankFromPos(fromPos);
-        $('#' + fromFileRank + ' .piece').draggable({
-          containment: $('#board')
+        pieceEl = $('#' + fromFileRank + ' .piece');
+        pieceEl.draggable({
+          containment: $('#board'),
+          revert: 'invalid',
+          revertDuration: 300
         });
 
-        $('#' + fromFileRank + ' .piece').mouseenter(function () {
+        pieceEl.mouseenter(function () {
           moveFromTos[fromPos].forEach(function (toPos) {
             $('#' + Util.fileRankFromPos(toPos)).addClass('can-move-to');
           });
         });
 
-        $('#' + fromFileRank + ' .piece').mouseleave(function () {
-          moveFromTos[fromPos].forEach(function (toPos) {
-            $('#' + Util.fileRankFromPos(toPos)).removeClass('can-move-to');
-          });
+        pieceEl.mouseleave(function () {
+          $('.square').removeClass('can-move-to');
         });
       });
 
-      $('.square').droppable({
-        drop: function drop(event, ui) {
-          droppedPieceSource = $(ui.draggable).parent().attr('id');
-          _this3.makePlayerMove(Util.posFromFileRank(droppedPieceSource), Util.posFromFileRank($(event.target).attr('id')));
-        }
+      var originSquare = void 0;
+      var originPos = void 0;
+      var selectedMove = void 0;
+      Object.keys(moveToFroms).forEach(function (toPos) {
+        destSq = $('#' + Util.fileRankFromPos(toPos));
+        destSq.droppable({
+          accept: function accept(draggable) {
+            originSquare = $(draggable).parent().attr('id');
+            if (!originSquare) {
+              return false;
+            }
+            originPos = Util.posFromFileRank(originSquare);
+            return moveFromTos[originPos] && moveFromTos[originPos].includes(parseInt(toPos));
+          },
+          drop: function drop(event, ui) {
+            originSquare = $(ui.draggable).parent().attr('id');
+            if (!originSquare) {
+              console.log('drop undefined');
+            }
+            originPos = Util.posFromFileRank(originSquare);
+            selectedMove = _this3.currMoves.filter(function (move) {
+              return move.getFrom() === originPos && move.getTo() === parseInt(toPos);
+            })[0];
+            _this3.position.makeMove(selectedMove);
+            _this3.playNextTurn();
+          }
+        });
       });
     }
   }]);

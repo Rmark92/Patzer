@@ -105,59 +105,72 @@ class UI {
     this.playNextTurn();
   }
 
-  makePlayerMove(fromPos, toPos) {
-    const selectedMove = this.currMoves.filter((move) => {
-      return move.getFrom() === fromPos &&
-             move.getTo() === toPos;
-    })[0];
-    if (selectedMove) {
-      this.position.makeMove(selectedMove);
-      this.playNextTurn();
-    } else {
-      this.updatePieces();
-      this.setupPlayerMove();
-    }
-  }
-
   setupPlayerMove() {
-    const moves = this.position.generateLegalMoves();
-    const movesData = moves.map((move) => move.getData());
+    const movesData = this.currMoves.map((move) => move.getData());
     const moveFromTos = {};
+    const moveToFroms = {};
 
     movesData.forEach((moveData) => {
       moveFromTos[moveData.from] = moveFromTos[moveData.from] || [];
       moveFromTos[moveData.from].push(moveData.to);
+
+      moveToFroms[moveData.to] = moveToFroms[moveData.to] || [];
+      moveToFroms[moveData.to].push(moveData.from);
     });
 
     let fromFileRank;
     let toFileRank;
     let droppedPieceSource;
     let selectedMoves;
+    let pieceEl;
+    let destSq;
 
     Object.keys(moveFromTos).forEach((fromPos) => {
       fromFileRank = Util.fileRankFromPos(fromPos);
-      $(`#${fromFileRank} .piece`).draggable({
-        containment: $('#board')
+      pieceEl = $(`#${fromFileRank} .piece`);
+      pieceEl.draggable({
+        containment: $('#board'),
+        revert: 'invalid',
+        revertDuration: 300
       });
 
-      $(`#${fromFileRank} .piece`).mouseenter(() => {
-        moveFromTos[fromPos].forEach( (toPos) => {
+      pieceEl.mouseenter(() => {
+        moveFromTos[fromPos].forEach((toPos) => {
           $(`#${Util.fileRankFromPos(toPos)}`).addClass('can-move-to');
         });
       });
 
-      $(`#${fromFileRank} .piece`).mouseleave(() => {
-        moveFromTos[fromPos].forEach( (toPos) => {
-          $(`#${Util.fileRankFromPos(toPos)}`).removeClass('can-move-to');
-        });
+      pieceEl.mouseleave(() => {
+        $('.square').removeClass('can-move-to');
       });
     });
 
-    $('.square').droppable({
-      drop: (event, ui) => {
-        droppedPieceSource = $(ui.draggable).parent().attr('id');
-        this.makePlayerMove(Util.posFromFileRank(droppedPieceSource), Util.posFromFileRank($(event.target).attr('id')));
-      }
+    let originSquare;
+    let originPos;
+    let selectedMove;
+    Object.keys(moveToFroms).forEach((toPos) => {
+      destSq = $(`#${Util.fileRankFromPos(toPos)}`);
+      destSq.droppable({
+        accept: (draggable) => {
+          originSquare = $(draggable).parent().attr('id');
+          if (!originSquare) {
+            return false;
+          }
+          originPos = Util.posFromFileRank(originSquare);
+          return moveFromTos[originPos] && moveFromTos[originPos].includes(parseInt(toPos));
+        },
+        drop: (event, ui) => {
+          originSquare = $(ui.draggable).parent().attr('id');
+          if (!originSquare) { console.log('drop undefined'); }
+          originPos = Util.posFromFileRank(originSquare);
+          selectedMove = this.currMoves.filter((move) => {
+            return move.getFrom() === originPos &&
+                   move.getTo() === parseInt(toPos);
+          })[0];
+          this.position.makeMove(selectedMove);
+          this.playNextTurn();
+        }
+      });
     });
   }
 }
