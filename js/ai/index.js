@@ -46,10 +46,13 @@ class AI {
     // position.makeMove(move);
     let startTime = new Date();
     this.maxDepth = 4;
+    this.exploredNodes = 0;
     this.movesMade = position.prevMoves.length;
     this.negaMax(position, this.maxDepth, -Infinity, Infinity);
     console.log('RUN TIME:');
     console.log(new Date() - startTime);
+    console.log('Explored Nodes:');
+    console.log(this.exploredNodes);
     return this.bestMove;
     // position.makeMove(this.bestMove);
   }
@@ -88,6 +91,7 @@ class AI {
 
   negaMax(position, depth, alpha, beta) {
     if (depth === 0) {
+      this.exploredNodes++;
       return this.quiescenceSearch(position, alpha, beta);
     }
 
