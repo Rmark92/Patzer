@@ -337,6 +337,8 @@ var Utils = __webpack_require__(12);
 // 8  9 10 11 12 13 14 15  v
 // 0  1  2  3  4  5  6  7
 
+var POW32 = Math.pow(2, 32);
+
 var BitBoard = function () {
   function BitBoard(low, high) {
     _classCallCheck(this, BitBoard);
@@ -388,7 +390,7 @@ var BitBoard = function () {
   }, {
     key: 'toNum',
     value: function toNum() {
-      return this.high * Math.pow(2, 32) + this.low;
+      return this.high * POW32 + this.low;
     }
   }, {
     key: 'shiftRight',
@@ -539,9 +541,8 @@ var BitBoard = function () {
         return new BitBoard();
       }
 
-      num %= Math.pow(2, 64);
-      var lowBits = num % Math.pow(2, 32);
-      var highBits = Math.floor(num / Math.pow(2, 32));
+      var lowBits = num % POW32;
+      var highBits = Math.floor(num / POW32);
       return new BitBoard(lowBits, highBits);
     }
   }, {
@@ -1556,7 +1557,11 @@ var Position = function () {
       this.castleRights = prevState.castleRights;
       this.stateHash = prevState.stateHash;
 
-      this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+      if (moveData.isPromo) {
+        this.setPieceAt(moveData.from, this.turn, PTypes.PAWNS);
+      } else {
+        this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+      }
 
       if (moveData.captPieceType) {
         this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
@@ -1588,31 +1593,19 @@ var Position = function () {
   }, {
     key: 'adjustCastleRights',
     value: function adjustCastleRights(pieceType, from, captPieceType, to) {
-      // let clearCastlePos;
       var turnCastleRights = this.getCastleRights(this.turn);
       var dir = void 0;
       if (pieceType === PTypes.KINGS && turnCastleRights) {
         this.clearCastleRights(this.turn, Dirs.EAST);
         this.clearCastleRights(this.turn, Dirs.WEST);
-        // let clearCastleRightsMask = this.turn === Colors.WHITE ? 0b1100 : 0b11;
-        // this.castleRights &= clearCastleRightsMask;
       } else if (pieceType === PTypes.ROOKS && turnCastleRights) {
         dir = from > PUtils[PTypes.KINGS].INIT_POS[this.turn] ? Dirs.EAST : Dirs.WEST;
         this.clearCastleRights(this.turn, dir);
-        // clearCastlePos = 0;
-        // if (from > PUtils[PTypes.KINGS].INIT_POS[this.turn]) { clearCastlePos++; }
-        // if (this.turn === Colors.BLACK) { clearCastlePos += 2; }
-        // this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
       }
 
       if (captPieceType === PTypes.ROOKS && this.getCastleRights(this.opp)) {
         dir = to > PUtils[PTypes.KINGS].INIT_POS[this.opp] ? Dirs.EAST : Dirs.WEST;
         this.clearCastleRights(this.opp, dir);
-        //
-        // clearCastlePos = 0;
-        // if (to > PUtils[PTypes.KINGS].INIT_POS[this.opp]) { clearCastlePos++; }
-        // if (this.opp === Colors.BLACK) { clearCastlePos += 2; }
-        // this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
       }
     }
 
@@ -2547,16 +2540,26 @@ var AI = function () {
       // const move = moves[Math.floor(Math.random() * moves.length)];
       // position.makeMove(move);
       var startTime = new Date();
+      // const currHash = position.getHash();
       this.transPosTable = {};
-      this.maxDepth = 4;
-      this.exploredNodes = 0;
+      this.quiescenceEvals = {};
+      this.maxDepth = 6;
+      // while (this.maxDepth <= 6) {
+      //   this.negaMax(position, this.maxDepth, -Infinity, Infinity);
+      //   this.maxDepth++;
+      // }
+      // this.exploredNodes = 0;
       this.movesMade = position.prevMoves.length;
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       console.log('RUN TIME:');
       console.log(new Date() - startTime);
-      console.log('Explored Nodes:');
-      console.log(this.exploredNodes);
-      return this.bestMove;
+      console.log('Transpos Size:');
+      console.log(Object.keys(this.transPosTable).length);
+      console.log(Object.keys(this.quiescenceEvals).length);
+      // console.log('Explored Nodes:');
+      // console.log(this.exploredNodes);
+      return this.transPosTable[position.getHash()].bestMove;
+      // return this.bestMove;
       // position.makeMove(this.bestMove);
     }
   }, {
@@ -2566,7 +2569,15 @@ var AI = function () {
       if (position.prevMoves.length - this.movesMade > 20) {
         console.log('over 20 moves deep!');
       }
-      var standPatVal = this.evaluate(position);
+      var currHash = position.getHash();
+      var entry = this.quiescenceEvals[currHash];
+      var standPatVal = void 0;
+      if (entry) {
+        standPatVal = entry;
+      } else {
+        standPatVal = this.evaluate(position);
+        this.quiescenceEvals[currHash] = standPatVal;
+      }
 
       if (standPatVal >= beta) {
         return beta;
@@ -2584,6 +2595,12 @@ var AI = function () {
         if (position.makeMove(moves[moveIdx])) {
           score = -this.quiescenceSearch(position, -beta, -alpha);
           position.unmakePrevMove();
+          // if (position.getHash() !== currHash) {
+          //   console.log(position.prevMoves.map((move) => move.val));
+          //   console.log(moves[moveIdx]);
+          //   fuck;
+          //   // console.log(moves[moveIdx].getType());
+          // }
 
           if (score >= beta) {
             return beta;
@@ -2621,24 +2638,36 @@ var AI = function () {
       }
 
       if (depth === 0) {
-        this.exploredNodes++;
+        // return this.evaluate(position);
+        // this.exploredNodes++;
         return this.quiescenceSearch(position, alpha, beta);
       }
 
-      var moves = this.sortMoves(position.generatePseudoMoves());
+      var prevBestMove = void 0;
+      if (entry && entry.bestMove) {
+        // console.log('best move found');
+        prevBestMove = entry.bestMove;
+      }
+
+      var moves = this.sortMoves(position.generatePseudoMoves(), prevBestMove);
       var moveIdx = void 0;
       var canMove = false;
-      var score = -Infinity;
+      var score = void 0;
+      var bestScore = -Infinity;
+      var bestMove = null;
 
       for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
         if (position.makeMove(moves[moveIdx])) {
           canMove = true;
-          score = Math.max(score, -this.negaMax(position, depth - 1, -beta, -alpha));
+          score = -this.negaMax(position, depth - 1, -beta, -alpha);
           position.unmakePrevMove();
-          if (score > alpha) {
-            alpha = score;
-            if (depth === this.maxDepth) {
-              this.bestMove = moves[moveIdx];
+          // if (position.getHash() !== currHash) { console.log(moves[moveIdx].getType()); }
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = moves[moveIdx];
+            if (score > alpha) {
+              alpha = score;
+              // if (depth === this.maxDepth) { this.bestMove = moves[moveIdx]; }
             }
           }
           if (alpha >= beta) {
@@ -2649,20 +2678,21 @@ var AI = function () {
 
       if (!canMove) {
         if (position.inCheck(position.turn)) {
-          score = -PUtils[PTypes.KINGS].value;
+          bestScore = -PUtils[PTypes.KINGS].value;
         } else {
-          score = 0;
+          bestScore = 0;
         }
       }
 
-      this.storeResult(score, prevAlpha, beta, depth, currHash);
-      return score;
+      this.storeResult(bestScore, bestMove, prevAlpha, beta, depth, currHash);
+      return bestScore;
     }
   }, {
     key: 'storeResult',
-    value: function storeResult(score, alpha, beta, depth, hash) {
+    value: function storeResult(score, bestMove, alpha, beta, depth, hash) {
       this.transPosTable[hash] = {
         score: score,
+        bestMove: bestMove,
         type: this.determineScoreType(score, alpha, beta),
         depth: depth,
         hash: hash
@@ -2681,8 +2711,11 @@ var AI = function () {
     }
   }, {
     key: 'sortMoves',
-    value: function sortMoves(moves) {
+    value: function sortMoves(moves, prevBestMove) {
       function calculateScore(move) {
+        if (prevBestMove && move.val === prevBestMove.val) {
+          return 10000000;
+        }
         var score = move.getCaptPiece() ? (1 + move.getCaptPiece()) / (1 + move.getPiece()) : 0;
         score = score * 6 + move.getPiece();
         score = score * 16 + move.getType();

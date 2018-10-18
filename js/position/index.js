@@ -447,7 +447,12 @@ class Position {
     this.castleRights = prevState.castleRights;
     this.stateHash = prevState.stateHash;
 
-    this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+    if (moveData.isPromo) {
+      this.setPieceAt(moveData.from, this.turn, PTypes.PAWNS);
+    } else {
+      this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+    }
+
 
     if (moveData.captPieceType) {
       this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
@@ -471,31 +476,19 @@ class Position {
   // makes adjustments to the castling rights
   // if a rook or king is moved
   adjustCastleRights(pieceType, from, captPieceType, to) {
-    // let clearCastlePos;
     const turnCastleRights = this.getCastleRights(this.turn);
     let dir;
     if (pieceType === PTypes.KINGS && turnCastleRights) {
       this.clearCastleRights(this.turn, Dirs.EAST);
       this.clearCastleRights(this.turn, Dirs.WEST);
-      // let clearCastleRightsMask = this.turn === Colors.WHITE ? 0b1100 : 0b11;
-      // this.castleRights &= clearCastleRightsMask;
     } else if (pieceType === PTypes.ROOKS && turnCastleRights) {
       dir = from > PUtils[PTypes.KINGS].INIT_POS[this.turn] ? Dirs.EAST : Dirs.WEST;
       this.clearCastleRights(this.turn, dir);
-      // clearCastlePos = 0;
-      // if (from > PUtils[PTypes.KINGS].INIT_POS[this.turn]) { clearCastlePos++; }
-      // if (this.turn === Colors.BLACK) { clearCastlePos += 2; }
-      // this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
     }
 
     if (captPieceType === PTypes.ROOKS && this.getCastleRights(this.opp)) {
       dir = to > PUtils[PTypes.KINGS].INIT_POS[this.opp] ? Dirs.EAST : Dirs.WEST;
       this.clearCastleRights(this.opp, dir);
-      //
-      // clearCastlePos = 0;
-      // if (to > PUtils[PTypes.KINGS].INIT_POS[this.opp]) { clearCastlePos++; }
-      // if (this.opp === Colors.BLACK) { clearCastlePos += 2; }
-      // this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
     }
   }
 

@@ -19,6 +19,8 @@ const Utils = require('./utils.js');
 // 8  9 10 11 12 13 14 15  v
 // 0  1  2  3  4  5  6  7
 
+const POW32 = Math.pow(2, 32);
+
 class BitBoard {
   constructor(low, high) {
     this.low = (low || 0) >>> 0;
@@ -58,7 +60,7 @@ class BitBoard {
   }
 
   toNum() {
-    return this.high * Math.pow(2, 32) + this.low;
+    return this.high * POW32 + this.low;
   }
 
   shiftRight(numBits) {
@@ -168,9 +170,8 @@ class BitBoard {
       return new BitBoard();
     }
 
-    num %= Math.pow(2, 64);
-    const lowBits = num % Math.pow(2, 32);
-    const highBits = Math.floor(num / Math.pow(2, 32));
+    const lowBits = num % POW32;
+    const highBits = Math.floor(num / POW32);
     return new BitBoard(lowBits, highBits);
   }
 
