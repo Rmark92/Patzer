@@ -45,11 +45,15 @@ class AI {
     // const move = moves[Math.floor(Math.random() * moves.length)];
     // position.makeMove(move);
     let startTime = new Date();
+    this.transPosTable = {};
     this.maxDepth = 4;
+    this.exploredNodes = 0;
     this.movesMade = position.prevMoves.length;
     this.negaMax(position, this.maxDepth, -Infinity, Infinity);
     console.log('RUN TIME:');
     console.log(new Date() - startTime);
+    console.log('Explored Nodes:');
+    console.log(this.exploredNodes);
     return this.bestMove;
     // position.makeMove(this.bestMove);
   }
@@ -87,19 +91,39 @@ class AI {
   }
 
   negaMax(position, depth, alpha, beta) {
+    const prevAlpha = alpha;
+    const currHash = position.getHash();
+    const entry = this.transPosTable[currHash];
+    if (entry && entry.depth >= depth) {
+      // console.log('found');
+      switch (entry.type) {
+        case 'exact':
+          return entry.score;
+        case 'lowerbound':
+          alpha = Math.max(alpha, entry.score);
+          break;
+        case 'upperbound':
+          beta = Math.min(beta, entry.score);
+          break;
+      }
+
+      if (alpha >= beta) { return entry.score; }
+    }
+
     if (depth === 0) {
+      this.exploredNodes++;
       return this.quiescenceSearch(position, alpha, beta);
     }
 
     const moves = this.sortMoves(position.generatePseudoMoves());
     let moveIdx;
     let canMove = false;
-    let score;
+    let score = -Infinity;
 
     for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
       if (position.makeMove(moves[moveIdx])) {
         canMove = true;
-        score = -this.negaMax(position, depth - 1, -beta, -alpha);
+        score = Math.max(score, -this.negaMax(position, depth - 1, -beta, -alpha));
         position.unmakePrevMove();
         if (score > alpha) {
           alpha = score;
@@ -111,12 +135,33 @@ class AI {
 
     if (!canMove) {
       if (position.inCheck(position.turn)) {
-        return -PUtils[PTypes.KINGS].value;
+        score = -PUtils[PTypes.KINGS].value;
       } else {
-        return 0;
+        score = 0;
       }
+    }
+
+
+    this.storeResult(score, prevAlpha, beta, depth, currHash);
+    return score;
+  }
+
+  storeResult(score, alpha, beta, depth, hash) {
+    this.transPosTable[hash] = {
+      score,
+      type: this.determineScoreType(score, alpha, beta),
+      depth,
+      hash
+    };
+  }
+
+  determineScoreType(score, alpha, beta) {
+    if (score <= alpha) {
+      return 'upperbound';
+    } else if (score >= beta) {
+      return 'lowerbound';
     } else {
-      return alpha;
+      return 'exact';
     }
   }
 

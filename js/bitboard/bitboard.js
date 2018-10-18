@@ -57,6 +57,10 @@ class BitBoard {
     return (this.high === 0 && this.low === 0);
   }
 
+  toNum() {
+    return this.high * Math.pow(2, 32) + this.low;
+  }
+
   shiftRight(numBits) {
     let newLowBits, newHighBits;
 

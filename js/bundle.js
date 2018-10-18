@@ -85,6 +85,41 @@ module.exports = {
 "use strict";
 
 
+var _PUtils;
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+// const { WhitePawns, BlackPawns } = require('./pawns.js');
+var Constants = __webpack_require__(2);
+var Pawns = __webpack_require__(16);
+var Knight = __webpack_require__(17);
+var Bishop = __webpack_require__(18);
+var Rook = __webpack_require__(19);
+var Queen = __webpack_require__(20);
+var King = __webpack_require__(21);
+var PieceConv = __webpack_require__(22);
+var eachPieceType = __webpack_require__(23);
+var Dirs = __webpack_require__(3);
+
+var PUtils = (_PUtils = {}, _defineProperty(_PUtils, Constants.Types.PAWNS, Pawns), _defineProperty(_PUtils, Constants.Types.KNIGHTS, Knight), _defineProperty(_PUtils, Constants.Types.BISHOPS, Bishop), _defineProperty(_PUtils, Constants.Types.ROOKS, Rook), _defineProperty(_PUtils, Constants.Types.QUEENS, Queen), _defineProperty(_PUtils, Constants.Types.KINGS, King), _PUtils);
+
+module.exports = {
+  PTypes: Constants.Types,
+  Colors: Constants.Colors,
+  PieceTypeHTML: Constants.PieceTypeHTML,
+  PUtils: PUtils,
+  eachPieceType: eachPieceType,
+  Dirs: Dirs,
+  PieceConv: PieceConv
+};
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
 var _PieceTypeLetters, _PieceTypeHTML;
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -108,41 +143,6 @@ var PieceTypeLetters = (_PieceTypeLetters = {}, _defineProperty(_PieceTypeLetter
 var PieceTypeHTML = (_PieceTypeHTML = {}, _defineProperty(_PieceTypeHTML, Types.PAWNS, '&#9823;'), _defineProperty(_PieceTypeHTML, Types.KNIGHTS, '&#9822;'), _defineProperty(_PieceTypeHTML, Types.BISHOPS, '&#9821;'), _defineProperty(_PieceTypeHTML, Types.ROOKS, '&#9820;'), _defineProperty(_PieceTypeHTML, Types.QUEENS, '&#9819;'), _defineProperty(_PieceTypeHTML, Types.KINGS, '&#9818;'), _PieceTypeHTML);
 
 module.exports = { Types: Types, Colors: Colors, PieceTypeLetters: PieceTypeLetters, PieceTypeHTML: PieceTypeHTML };
-
-/***/ }),
-/* 2 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _PUtils;
-
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
-// const { WhitePawns, BlackPawns } = require('./pawns.js');
-var Constants = __webpack_require__(1);
-var Pawns = __webpack_require__(16);
-var Knight = __webpack_require__(17);
-var Bishop = __webpack_require__(18);
-var Rook = __webpack_require__(19);
-var Queen = __webpack_require__(20);
-var King = __webpack_require__(21);
-var PieceConv = __webpack_require__(22);
-var eachPieceType = __webpack_require__(23);
-var Dirs = __webpack_require__(3);
-
-var PUtils = (_PUtils = {}, _defineProperty(_PUtils, Constants.Types.PAWNS, Pawns), _defineProperty(_PUtils, Constants.Types.KNIGHTS, Knight), _defineProperty(_PUtils, Constants.Types.BISHOPS, Bishop), _defineProperty(_PUtils, Constants.Types.ROOKS, Rook), _defineProperty(_PUtils, Constants.Types.QUEENS, Queen), _defineProperty(_PUtils, Constants.Types.KINGS, King), _PUtils);
-
-module.exports = {
-  PTypes: Constants.Types,
-  Colors: Constants.Colors,
-  PieceTypeHTML: Constants.PieceTypeHTML,
-  PUtils: PUtils,
-  eachPieceType: eachPieceType,
-  Dirs: Dirs,
-  PieceConv: PieceConv
-};
 
 /***/ }),
 /* 3 */
@@ -386,6 +386,11 @@ var BitBoard = function () {
       return this.high === 0 && this.low === 0;
     }
   }, {
+    key: 'toNum',
+    value: function toNum() {
+      return this.high * Math.pow(2, 32) + this.low;
+    }
+  }, {
     key: 'shiftRight',
     value: function shiftRight(numBits) {
       var newLowBits = void 0,
@@ -528,6 +533,18 @@ var BitBoard = function () {
       console.log('------');
     }
   }], [{
+    key: 'fromNumber',
+    value: function fromNumber(num) {
+      if (num < 0) {
+        return new BitBoard();
+      }
+
+      num %= Math.pow(2, 64);
+      var lowBits = num % Math.pow(2, 32);
+      var highBits = Math.floor(num / Math.pow(2, 32));
+      return new BitBoard(lowBits, highBits);
+    }
+  }, {
     key: 'fromPos',
     value: function fromPos(pos) {
       var res = new BitBoard();
@@ -721,14 +738,14 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Position = __webpack_require__(11);
-var AI = __webpack_require__(25);
+var AI = __webpack_require__(26);
 
-var _require = __webpack_require__(2),
+var _require = __webpack_require__(1),
     PTypes = _require.PTypes,
     Colors = _require.Colors,
     PieceTypeHTML = _require.PieceTypeHTML;
 
-var Util = __webpack_require__(26);
+var Util = __webpack_require__(27);
 
 var _require2 = __webpack_require__(8),
     ColsFiles = _require2.ColsFiles,
@@ -995,15 +1012,21 @@ var _require2 = __webpack_require__(14),
     Move = _require2.Move,
     MoveTypes = _require2.MoveTypes;
 
-var _require3 = __webpack_require__(2),
+var _require3 = __webpack_require__(1),
     PUtils = _require3.PUtils,
     PTypes = _require3.PTypes,
     Colors = _require3.Colors,
     Dirs = _require3.Dirs;
 
 var _require4 = __webpack_require__(24),
-    pieceSetsToArray = _require4.pieceSetsToArray,
-    pieceSetsFromArray = _require4.pieceSetsFromArray;
+    piecePosHashKeys = _require4.piecePosHashKeys,
+    epPosHashKeys = _require4.epPosHashKeys,
+    castleHashKeys = _require4.castleHashKeys,
+    turnHashKeys = _require4.turnHashKeys;
+
+var _require5 = __webpack_require__(25),
+    pieceSetsToArray = _require5.pieceSetsToArray,
+    pieceSetsFromArray = _require5.pieceSetsFromArray;
 
 var Position = function () {
   function Position() {
@@ -1032,6 +1055,12 @@ var Position = function () {
 
     this.pTypesLocations = this.createPTypesLocations();
 
+    // we separate our hashed values into piece position hashes
+    // and state hashes for simpler integration with our move making/unmaking process
+    // they are xor'd to represent the complete position
+    this.pPosHash = this.createPiecesPosHash();
+    this.stateHash = this.createStateHash();
+
     this.setTurn(turn, this.getOtherColor(turn));
   }
 
@@ -1046,6 +1075,50 @@ var Position = function () {
       }
 
       return res;
+    }
+  }, {
+    key: 'createPiecesPosHash',
+    value: function createPiecesPosHash() {
+      var _this = this;
+
+      var val = new BitBoard();
+
+      var pType = void 0;
+      var whitesPos = this.pieces[Colors.WHITE];
+      whitesPos.dup().pop1Bits(function (pos) {
+        pType = _this.pTypesLocations[pos];
+        val = val.xor(piecePosHashKeys[pos][pType][Colors.WHITE]);
+      });
+
+      var blacksPos = this.pieces[Colors.BLACK];
+      blacksPos.dup().pop1Bits(function (pos) {
+        pType = _this.pTypesLocations[pos];
+        val = val.xor(piecePosHashKeys[pos][pType][Colors.BLACK]);
+      });
+
+      return val;
+    }
+  }, {
+    key: 'createStateHash',
+    value: function createStateHash() {
+      var val = new BitBoard();
+      this.epBB.dup().pop1Bits(function (pos) {
+        val = val.xor(epPosHashKeys[pos]);
+      });
+
+      var castleRightsPos = void 0;
+      for (castleRightsPos = 0; castleRightsPos < 4; castleRightsPos++) {
+        if ((this.castleRights & 1 << castleRightsPos) >>> 0) {
+          val = val.xor(castleHashKeys[castleRightsPos]);
+        }
+      }
+
+      return val;
+    }
+  }, {
+    key: 'getHash',
+    value: function getHash() {
+      return this.pPosHash.xor(this.stateHash).xor(turnHashKeys[this.turn]).toNum();
     }
   }, {
     key: 'setTurn',
@@ -1090,7 +1163,7 @@ var Position = function () {
   }, {
     key: 'generateLegalMoves',
     value: function generateLegalMoves() {
-      var _this = this;
+      var _this2 = this;
 
       var pseudoMoves = this.generatePseudoMoves();
       var moveData = void 0;
@@ -1100,7 +1173,7 @@ var Position = function () {
       return pseudoMoves.filter(function (pseudoMove) {
         moveData = pseudoMove.getData();
 
-        _this.testMove(moveData, function (testsLegal) {
+        _this2.testMove(moveData, function (testsLegal) {
           isLegal = testsLegal;
           return true;
         });
@@ -1145,7 +1218,7 @@ var Position = function () {
   }, {
     key: 'addPawnMoveSet',
     value: function addPawnMoveSet(newPositions, shiftAmt, moves, isCapture, isDblPush) {
-      var _this2 = this;
+      var _this3 = this;
 
       var from = void 0;
       var captured = null;
@@ -1154,15 +1227,15 @@ var Position = function () {
         from = pos - shiftAmt;
         if (isDblPush) {
           moves.push(new Move(from, pos, MoveTypes.DBL_PPUSH, PTypes.PAWNS));
-        } else if (isCapture && _this2.epBB.hasSetBit(pos)) {
+        } else if (isCapture && _this3.epBB.hasSetBit(pos)) {
           moves.push(new Move(from, pos, MoveTypes.EP_CAPT, PTypes.PAWNS));
         } else {
           if (isCapture) {
-            captured = _this2.pTypesLocations[pos];
+            captured = _this3.pTypesLocations[pos];
           }
 
-          if (PUtils[PTypes.PAWNS].PROMO_MASKS[_this2.turn].hasSetBit(pos)) {
-            _this2.addPromos(from, pos, moves, captured);
+          if (PUtils[PTypes.PAWNS].PROMO_MASKS[_this3.turn].hasSetBit(pos)) {
+            _this3.addPromos(from, pos, moves, captured);
           } else {
             moves.push(new Move(from, pos, MoveTypes.NORMAL, PTypes.PAWNS, captured));
           }
@@ -1189,7 +1262,7 @@ var Position = function () {
   }, {
     key: 'addNormalMoves',
     value: function addNormalMoves(moves, includeQuiet) {
-      var _this3 = this;
+      var _this4 = this;
 
       var occupied = this.getOccupied();
       var notOwnPieces = this.getNotOccupiedBy(this.turn);
@@ -1198,21 +1271,21 @@ var Position = function () {
       var knightMoves = void 0;
       knightsPos.dup().pop1Bits(function (pos) {
         knightMoves = PUtils[PTypes.KNIGHTS].moves(pos, notOwnPieces);
-        _this3.addNormalMoveSet(knightMoves, pos, PTypes.KNIGHTS, moves, includeQuiet);
+        _this4.addNormalMoveSet(knightMoves, pos, PTypes.KNIGHTS, moves, includeQuiet);
       });
 
       var bishopsPos = this.getColorPieceSet(this.turn, PTypes.BISHOPS);
       var bishopMoves = void 0;
       bishopsPos.dup().pop1Bits(function (pos) {
         bishopMoves = PUtils[PTypes.BISHOPS].moves(pos, occupied, notOwnPieces);
-        _this3.addNormalMoveSet(bishopMoves, pos, PTypes.BISHOPS, moves, includeQuiet);
+        _this4.addNormalMoveSet(bishopMoves, pos, PTypes.BISHOPS, moves, includeQuiet);
       });
 
       var rooksPos = this.getColorPieceSet(this.turn, PTypes.ROOKS);
       var rookMoves = void 0;
       rooksPos.dup().pop1Bits(function (pos) {
         rookMoves = PUtils[PTypes.ROOKS].moves(pos, occupied, notOwnPieces);
-        _this3.addNormalMoveSet(rookMoves, pos, PTypes.ROOKS, moves, includeQuiet);
+        _this4.addNormalMoveSet(rookMoves, pos, PTypes.ROOKS, moves, includeQuiet);
       });
 
       var queenPos = this.getColorPieceSet(this.turn, PTypes.QUEENS).bitScanForward();
@@ -1249,14 +1322,14 @@ var Position = function () {
   }, {
     key: 'addNormalMoveSet',
     value: function addNormalMoveSet(newPositions, startPos, pieceType, moves, includeQuiet) {
-      var _this4 = this;
+      var _this5 = this;
 
       var newPos = void 0;
       var newMove = void 0;
       var captType = void 0;
 
       newPositions.pop1Bits(function (pos) {
-        captType = _this4.pieces[_this4.opp].hasSetBit(pos) ? _this4.pTypesLocations[pos] : null;
+        captType = _this5.pieces[_this5.opp].hasSetBit(pos) ? _this5.pTypesLocations[pos] : null;
         if (includeQuiet || captType) {
           moves.push(new Move(startPos, pos, MoveTypes.NORMAL, pieceType, captType));
         }
@@ -1357,6 +1430,10 @@ var Position = function () {
       this.addPrevState();
 
       this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
+      var epPos = this.epBB.bitScanForward();
+      if (epPos !== null) {
+        this.stateHash.xor(epPosHashKeys[epPos]);
+      }
       this.epBB = new BitBoard();
 
       this.execMoveType(moveData.from, moveData.to, moveData.type);
@@ -1477,6 +1554,7 @@ var Position = function () {
       var prevState = this.prevStates.pop();
       this.epBB = prevState.epBB;
       this.castleRights = prevState.castleRights;
+      this.stateHash = prevState.stateHash;
 
       this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
 
@@ -1486,6 +1564,23 @@ var Position = function () {
 
       return true;
     }
+  }, {
+    key: 'clearCastleRights',
+    value: function clearCastleRights(color, dir) {
+      var clearRightsPos = 0;
+      if (color === Colors.BLACK) {
+        clearRightsPos += 2;
+      }
+      if (dir === Dirs.EAST) {
+        clearRightsPos += 1;
+      }
+
+      var clearRightsMask = 1 << clearRightsPos;
+      if (clearRightsMask & this.castleRights) {
+        this.castleRights = (this.castleRights & ~clearRightsMask) >>> 0;
+        this.stateHash = this.stateHash.xor(castleHashKeys[clearRightsPos]);
+      }
+    }
 
     // makes adjustments to the castling rights
     // if a rook or king is moved
@@ -1493,30 +1588,31 @@ var Position = function () {
   }, {
     key: 'adjustCastleRights',
     value: function adjustCastleRights(pieceType, from, captPieceType, to) {
-      var clearCastlePos = void 0;
-      if (pieceType === PTypes.KINGS) {
-        var clearCastleRightsMask = this.turn === Colors.WHITE ? 12 : 3;
-        this.castleRights &= clearCastleRightsMask;
-      } else if (pieceType === PTypes.ROOKS) {
-        clearCastlePos = 0;
-        if (from > PUtils[PTypes.KINGS].INIT_POS[this.turn]) {
-          clearCastlePos++;
-        }
-        if (this.turn === Colors.BLACK) {
-          clearCastlePos += 2;
-        }
-        this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
+      // let clearCastlePos;
+      var turnCastleRights = this.getCastleRights(this.turn);
+      var dir = void 0;
+      if (pieceType === PTypes.KINGS && turnCastleRights) {
+        this.clearCastleRights(this.turn, Dirs.EAST);
+        this.clearCastleRights(this.turn, Dirs.WEST);
+        // let clearCastleRightsMask = this.turn === Colors.WHITE ? 0b1100 : 0b11;
+        // this.castleRights &= clearCastleRightsMask;
+      } else if (pieceType === PTypes.ROOKS && turnCastleRights) {
+        dir = from > PUtils[PTypes.KINGS].INIT_POS[this.turn] ? Dirs.EAST : Dirs.WEST;
+        this.clearCastleRights(this.turn, dir);
+        // clearCastlePos = 0;
+        // if (from > PUtils[PTypes.KINGS].INIT_POS[this.turn]) { clearCastlePos++; }
+        // if (this.turn === Colors.BLACK) { clearCastlePos += 2; }
+        // this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
       }
 
-      if (captPieceType === PTypes.ROOKS) {
-        clearCastlePos = 0;
-        if (to > PUtils[PTypes.KINGS].INIT_POS[this.opp]) {
-          clearCastlePos++;
-        }
-        if (this.opp === Colors.BLACK) {
-          clearCastlePos += 2;
-        }
-        this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
+      if (captPieceType === PTypes.ROOKS && this.getCastleRights(this.opp)) {
+        dir = to > PUtils[PTypes.KINGS].INIT_POS[this.opp] ? Dirs.EAST : Dirs.WEST;
+        this.clearCastleRights(this.opp, dir);
+        //
+        // clearCastlePos = 0;
+        // if (to > PUtils[PTypes.KINGS].INIT_POS[this.opp]) { clearCastlePos++; }
+        // if (this.opp === Colors.BLACK) { clearCastlePos += 2; }
+        // this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
       }
     }
 
@@ -1526,7 +1622,9 @@ var Position = function () {
   }, {
     key: 'addPrevState',
     value: function addPrevState() {
-      var state = { epBB: this.epBB, castleRights: this.castleRights };
+      var state = { epBB: this.epBB,
+        castleRights: this.castleRights,
+        stateHash: this.stateHash };
       this.prevStates.push(state);
     }
 
@@ -1541,6 +1639,7 @@ var Position = function () {
         case MoveTypes.DBL_PPUSH:
           var epPos = to + -PUtils[PTypes.PAWNS].DIRS[this.turn] * 8;
           this.epBB = BitBoard.fromPos(epPos);
+          this.stateHash = this.stateHash.xor(epPosHashKeys[epPos]);
           break;
         case MoveTypes.CSTL_KING:
           this.movePiece(from + 3, from + 1, this.turn, PTypes.ROOKS);
@@ -1618,6 +1717,7 @@ var Position = function () {
       this.pieces[color].setBit(pos);
       this.pieces[pieceType].setBit(pos);
       this.pTypesLocations[pos] = pieceType;
+      this.pPosHash = this.pPosHash.xor(piecePosHashKeys[pos][pieceType][color]);
     }
 
     // marks the given color and pieceType BBs as unoccupied at the specified position
@@ -1628,6 +1728,7 @@ var Position = function () {
       this.pieces[color].clearBit(pos);
       this.pieces[pieceType].clearBit(pos);
       this.pTypesLocations[pos] = null;
+      this.pPosHash = this.pPosHash.xor(piecePosHashKeys[pos][pieceType][color]);
     }
 
     // renders BBs for all piece sets
@@ -1635,11 +1736,11 @@ var Position = function () {
   }, {
     key: 'renderPieceSets',
     value: function renderPieceSets() {
-      var _this5 = this;
+      var _this6 = this;
 
       Object.keys(this.pieces).forEach(function (boardType) {
         console.log(boardType);
-        _this5.pieces[boardType].render();
+        _this6.pieces[boardType].render();
       });
     }
   }, {
@@ -1991,7 +2092,7 @@ var stepMove = __webpack_require__(7);
 var _require = __webpack_require__(0),
     BBMasks = _require.BBMasks;
 
-var _require2 = __webpack_require__(1),
+var _require2 = __webpack_require__(2),
     Colors = _require2.Colors;
 
 var DIRS = (_DIRS = {}, _defineProperty(_DIRS, Colors.WHITE, 1), _defineProperty(_DIRS, Colors.BLACK, -1), _DIRS);
@@ -2121,7 +2222,7 @@ var _require2 = __webpack_require__(4),
     KING_MOVES = _require2.KING_MOVES,
     SLIDE_MOVES = _require2.SLIDE_MOVES;
 
-var _require3 = __webpack_require__(1),
+var _require3 = __webpack_require__(2),
     Colors = _require3.Colors;
 
 var INIT_POS = (_INIT_POS = {}, _defineProperty(_INIT_POS, Colors.BLACK, 60), _defineProperty(_INIT_POS, Colors.WHITE, 4), _INIT_POS);
@@ -2152,7 +2253,7 @@ module.exports = King;
 "use strict";
 
 
-var _require = __webpack_require__(1),
+var _require = __webpack_require__(2),
     Types = _require.Types,
     Colors = _require.Colors,
     PieceTypeLetters = _require.PieceTypeLetters;
@@ -2195,7 +2296,7 @@ module.exports = { pieceToLetter: pieceToLetter, letterToColor: letterToColor, l
 "use strict";
 
 
-var _require = __webpack_require__(1),
+var _require = __webpack_require__(2),
     Types = _require.Types;
 
 function eachPieceType(cb) {
@@ -2214,7 +2315,91 @@ module.exports = eachPieceType;
 "use strict";
 
 
-var _require = __webpack_require__(2),
+var _require = __webpack_require__(0),
+    BitBoard = _require.BitBoard;
+
+var _require2 = __webpack_require__(1),
+    PTypes = _require2.PTypes,
+    PUtils = _require2.PUtils,
+    Colors = _require2.Colors,
+    eachPieceType = _require2.eachPieceType;
+
+// we store zobrist hash values in a bitboard object to enable bitwise operations
+// on values larger than 32bits. if we just used 32bits, we'd likely see hashing collisions
+// Note: the max safe integer in javascript is 2**53 - 1;
+
+
+function randNum() {
+  var num = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+  return BitBoard.fromNumber(num);
+}
+
+var piecePosHashKeys = function () {
+  var res = [];
+  var pos = void 0;
+  var newPosKeys = void 0;
+
+  var addPTypeKeys = function addPTypeKeys(pType) {
+    res[pos][pType] = {};
+    res[pos][pType][Colors.WHITE] = randNum();
+    res[pos][pType][Colors.BLACK] = randNum();
+  };
+
+  for (pos = 0; pos < 64; pos++) {
+    res[pos] = {};
+    eachPieceType(function (pType) {
+      return addPTypeKeys(pType);
+    });
+  }
+
+  return res;
+}();
+
+var epPosHashKeys = function () {
+  var res = {};
+  var pos = void 0;
+
+  // can only en passant onto 3rd or 6th row
+  for (pos = 16; pos <= 23; pos++) {
+    res[pos] = randNum();
+  }
+
+  for (pos = 40; pos <= 47; pos++) {
+    res[pos] = randNum();
+  }
+
+  return res;
+}();
+
+var castleHashKeys = function () {
+  var res = [];
+  var rightsIdx = void 0;
+
+  for (rightsIdx = 0; rightsIdx < 4; rightsIdx++) {
+    res[rightsIdx] = randNum();
+  }
+
+  return res;
+}();
+
+var turnHashKeys = function () {
+  var res = [];
+  res[Colors.WHITE] = randNum();
+  res[Colors.BLACK] = randNum();
+
+  return res;
+}();
+
+module.exports = { piecePosHashKeys: piecePosHashKeys, epPosHashKeys: epPosHashKeys, castleHashKeys: castleHashKeys, turnHashKeys: turnHashKeys };
+
+/***/ }),
+/* 25 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _require = __webpack_require__(1),
     PieceConv = _require.PieceConv,
     PTypes = _require.PTypes,
     Colors = _require.Colors;
@@ -2300,7 +2485,7 @@ function pieceSetsFromArray() {
 module.exports = { pieceSetsToArray: pieceSetsToArray, pieceSetsFromArray: pieceSetsFromArray };
 
 /***/ }),
-/* 25 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2310,7 +2495,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var _require = __webpack_require__(2),
+var _require = __webpack_require__(1),
     PTypes = _require.PTypes,
     PUtils = _require.PUtils,
     Colors = _require.Colors,
@@ -2362,11 +2547,15 @@ var AI = function () {
       // const move = moves[Math.floor(Math.random() * moves.length)];
       // position.makeMove(move);
       var startTime = new Date();
+      this.transPosTable = {};
       this.maxDepth = 4;
+      this.exploredNodes = 0;
       this.movesMade = position.prevMoves.length;
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       console.log('RUN TIME:');
       console.log(new Date() - startTime);
+      console.log('Explored Nodes:');
+      console.log(this.exploredNodes);
       return this.bestMove;
       // position.makeMove(this.bestMove);
     }
@@ -2410,19 +2599,41 @@ var AI = function () {
   }, {
     key: 'negaMax',
     value: function negaMax(position, depth, alpha, beta) {
+      var prevAlpha = alpha;
+      var currHash = position.getHash();
+      var entry = this.transPosTable[currHash];
+      if (entry && entry.depth >= depth) {
+        // console.log('found');
+        switch (entry.type) {
+          case 'exact':
+            return entry.score;
+          case 'lowerbound':
+            alpha = Math.max(alpha, entry.score);
+            break;
+          case 'upperbound':
+            beta = Math.min(beta, entry.score);
+            break;
+        }
+
+        if (alpha >= beta) {
+          return entry.score;
+        }
+      }
+
       if (depth === 0) {
+        this.exploredNodes++;
         return this.quiescenceSearch(position, alpha, beta);
       }
 
       var moves = this.sortMoves(position.generatePseudoMoves());
       var moveIdx = void 0;
       var canMove = false;
-      var score = void 0;
+      var score = -Infinity;
 
       for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
         if (position.makeMove(moves[moveIdx])) {
           canMove = true;
-          score = -this.negaMax(position, depth - 1, -beta, -alpha);
+          score = Math.max(score, -this.negaMax(position, depth - 1, -beta, -alpha));
           position.unmakePrevMove();
           if (score > alpha) {
             alpha = score;
@@ -2438,12 +2649,34 @@ var AI = function () {
 
       if (!canMove) {
         if (position.inCheck(position.turn)) {
-          return -PUtils[PTypes.KINGS].value;
+          score = -PUtils[PTypes.KINGS].value;
         } else {
-          return 0;
+          score = 0;
         }
+      }
+
+      this.storeResult(score, prevAlpha, beta, depth, currHash);
+      return score;
+    }
+  }, {
+    key: 'storeResult',
+    value: function storeResult(score, alpha, beta, depth, hash) {
+      this.transPosTable[hash] = {
+        score: score,
+        type: this.determineScoreType(score, alpha, beta),
+        depth: depth,
+        hash: hash
+      };
+    }
+  }, {
+    key: 'determineScoreType',
+    value: function determineScoreType(score, alpha, beta) {
+      if (score <= alpha) {
+        return 'upperbound';
+      } else if (score >= beta) {
+        return 'lowerbound';
       } else {
-        return alpha;
+        return 'exact';
       }
     }
   }, {
@@ -2472,7 +2705,7 @@ var AI = function () {
 module.exports = AI;
 
 /***/ }),
-/* 26 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
