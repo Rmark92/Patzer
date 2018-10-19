@@ -2,6 +2,8 @@ const { PTypes, PUtils,
         Colors, Dirs,
         eachPieceType } = require('../pieces');
 
+const TransposTable = require('./transpos_table');
+
 class AI {
   constructor() {
 
@@ -46,42 +48,47 @@ class AI {
     // position.makeMove(move);
     let startTime = new Date();
     // const currHash = position.getHash();
-    this.transPosTable = {};
+    this.transPosTable = new TransposTable();
     this.quiescenceEvals = {};
-    this.maxDepth = 6;
+    this.maxDepth = 4;
     // while (this.maxDepth <= 6) {
     //   this.negaMax(position, this.maxDepth, -Infinity, Infinity);
     //   this.maxDepth++;
     // }
     // this.exploredNodes = 0;
     this.movesMade = position.prevMoves.length;
+    this.transPosHits = 0;
+    this.qTTableHits = 0;
     this.negaMax(position, this.maxDepth, -Infinity, Infinity);
     console.log('RUN TIME:');
     console.log(new Date() - startTime);
-    console.log('Transpos Size:');
-    console.log(Object.keys(this.transPosTable).length);
-    console.log(Object.keys(this.quiescenceEvals).length);
+    // console.log('Transpos Size:');
+    // console.log(Object.keys(this.transPosTable).length);
+    console.log('TRANSPOS HITS:');
+    console.log(this.transPosHits);
+    // console.log('QEVALS SIZE:');
+    // console.log(Object.keys(this.quiescenceEvals).length);
+    // console.log('QEVALS HITS:');
+    // console.log(this.qTTableHits);
     // console.log('Explored Nodes:');
     // console.log(this.exploredNodes);
-    return this.transPosTable[position.getHash()].bestMove;
+    return this.transPosTable.getEntry(position.getHash()).bestMove;
     // return this.bestMove;
     // position.makeMove(this.bestMove);
   }
 
   quiescenceSearch(position, alpha, beta) {
     // for testing purposes...
-    if (position.prevMoves.length - this.movesMade > 20) {
-      console.log('over 20 moves deep!');
-    }
-    const currHash = position.getHash();
-    const entry = this.quiescenceEvals[currHash];
-    let standPatVal;
-    if (entry) {
-      standPatVal = entry;
-    } else {
-      standPatVal = this.evaluate(position);
-      this.quiescenceEvals[currHash] = standPatVal;
-    }
+    // const currHash = position.getHash();
+    // const entry = this.quiescenceEvals[currHash];
+    // let standPatVal;
+    // if (entry) {
+    //   this.qTTableHits++;
+    //   standPatVal = entry;
+    // } else {
+    //   this.quiescenceEvals[currHash] = standPatVal;
+    // }
+    const standPatVal = this.evaluate(position);
 
     if (standPatVal >= beta) {
       return beta;
@@ -117,8 +124,9 @@ class AI {
   negaMax(position, depth, alpha, beta) {
     const prevAlpha = alpha;
     const currHash = position.getHash();
-    const entry = this.transPosTable[currHash];
+    const entry = this.transPosTable.getEntry(currHash);
     if (entry && entry.depth >= depth) {
+      this.transPosHits++;
       // console.log('found');
       switch (entry.type) {
         case 'exact':
@@ -180,29 +188,29 @@ class AI {
     }
 
 
-    this.storeResult(bestScore, bestMove, prevAlpha, beta, depth, currHash);
+    this.transPosTable.storeEntry(bestScore, bestMove, prevAlpha, beta, depth, currHash);
     return bestScore;
   }
-
-  storeResult(score, bestMove, alpha, beta, depth, hash) {
-    this.transPosTable[hash] = {
-      score,
-      bestMove,
-      type: this.determineScoreType(score, alpha, beta),
-      depth,
-      hash
-    };
-  }
-
-  determineScoreType(score, alpha, beta) {
-    if (score <= alpha) {
-      return 'upperbound';
-    } else if (score >= beta) {
-      return 'lowerbound';
-    } else {
-      return 'exact';
-    }
-  }
+  //
+  // storeResult(score, bestMove, alpha, beta, depth, hash) {
+  //   this.transPosTable[hash] = {
+  //     score,
+  //     bestMove,
+  //     type: this.determineScoreType(score, alpha, beta),
+  //     depth,
+  //     hash
+  //   };
+  // }
+  //
+  // determineScoreType(score, alpha, beta) {
+  //   if (score <= alpha) {
+  //     return 'upperbound';
+  //   } else if (score >= beta) {
+  //     return 'lowerbound';
+  //   } else {
+  //     return 'exact';
+  //   }
+  // }
 
   sortMoves(moves, prevBestMove) {
     function calculateScore(move) {

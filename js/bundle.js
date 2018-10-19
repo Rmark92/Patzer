@@ -746,7 +746,7 @@ var _require = __webpack_require__(1),
     Colors = _require.Colors,
     PieceTypeHTML = _require.PieceTypeHTML;
 
-var Util = __webpack_require__(27);
+var Util = __webpack_require__(28);
 
 var _require2 = __webpack_require__(8),
     ColsFiles = _require2.ColsFiles,
@@ -1088,13 +1088,13 @@ var Position = function () {
       var whitesPos = this.pieces[Colors.WHITE];
       whitesPos.dup().pop1Bits(function (pos) {
         pType = _this.pTypesLocations[pos];
-        val = val.xor(piecePosHashKeys[pos][pType][Colors.WHITE]);
+        val ^= piecePosHashKeys[pos][pType][Colors.WHITE];
       });
 
       var blacksPos = this.pieces[Colors.BLACK];
       blacksPos.dup().pop1Bits(function (pos) {
         pType = _this.pTypesLocations[pos];
-        val = val.xor(piecePosHashKeys[pos][pType][Colors.BLACK]);
+        val ^= piecePosHashKeys[pos][pType][Colors.BLACK];
       });
 
       return val;
@@ -1104,13 +1104,13 @@ var Position = function () {
     value: function createStateHash() {
       var val = new BitBoard();
       this.epBB.dup().pop1Bits(function (pos) {
-        val = val.xor(epPosHashKeys[pos]);
+        val ^= epPosHashKeys[pos];
       });
 
       var castleRightsPos = void 0;
       for (castleRightsPos = 0; castleRightsPos < 4; castleRightsPos++) {
         if ((this.castleRights & 1 << castleRightsPos) >>> 0) {
-          val = val.xor(castleHashKeys[castleRightsPos]);
+          val ^= castleHashKeys[castleRightsPos];
         }
       }
 
@@ -1119,7 +1119,10 @@ var Position = function () {
   }, {
     key: 'getHash',
     value: function getHash() {
-      return this.pPosHash.xor(this.stateHash).xor(turnHashKeys[this.turn]).toNum();
+      return this.pPosHash ^ this.stateHash ^ turnHashKeys[this.turn];
+      // return this.pPosHash.xor(this.stateHash)
+      //                     .xor(turnHashKeys[this.turn])
+      //                     .toNum();
     }
   }, {
     key: 'setTurn',
@@ -1433,7 +1436,7 @@ var Position = function () {
       this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
       var epPos = this.epBB.bitScanForward();
       if (epPos !== null) {
-        this.stateHash.xor(epPosHashKeys[epPos]);
+        this.stateHash ^= epPosHashKeys[epPos];
       }
       this.epBB = new BitBoard();
 
@@ -1583,7 +1586,7 @@ var Position = function () {
       var clearRightsMask = 1 << clearRightsPos;
       if (clearRightsMask & this.castleRights) {
         this.castleRights = (this.castleRights & ~clearRightsMask) >>> 0;
-        this.stateHash = this.stateHash.xor(castleHashKeys[clearRightsPos]);
+        this.stateHash ^= castleHashKeys[clearRightsPos];
       }
     }
 
@@ -1632,7 +1635,7 @@ var Position = function () {
         case MoveTypes.DBL_PPUSH:
           var epPos = to + -PUtils[PTypes.PAWNS].DIRS[this.turn] * 8;
           this.epBB = BitBoard.fromPos(epPos);
-          this.stateHash = this.stateHash.xor(epPosHashKeys[epPos]);
+          this.stateHash ^= epPosHashKeys[epPos];
           break;
         case MoveTypes.CSTL_KING:
           this.movePiece(from + 3, from + 1, this.turn, PTypes.ROOKS);
@@ -1710,7 +1713,7 @@ var Position = function () {
       this.pieces[color].setBit(pos);
       this.pieces[pieceType].setBit(pos);
       this.pTypesLocations[pos] = pieceType;
-      this.pPosHash = this.pPosHash.xor(piecePosHashKeys[pos][pieceType][color]);
+      this.pPosHash ^= piecePosHashKeys[pos][pieceType][color];
     }
 
     // marks the given color and pieceType BBs as unoccupied at the specified position
@@ -1721,7 +1724,7 @@ var Position = function () {
       this.pieces[color].clearBit(pos);
       this.pieces[pieceType].clearBit(pos);
       this.pTypesLocations[pos] = null;
-      this.pPosHash = this.pPosHash.xor(piecePosHashKeys[pos][pieceType][color]);
+      this.pPosHash ^= piecePosHashKeys[pos][pieceType][color];
     }
 
     // renders BBs for all piece sets
@@ -2308,23 +2311,23 @@ module.exports = eachPieceType;
 "use strict";
 
 
-var _require = __webpack_require__(0),
-    BitBoard = _require.BitBoard;
-
-var _require2 = __webpack_require__(1),
-    PTypes = _require2.PTypes,
-    PUtils = _require2.PUtils,
-    Colors = _require2.Colors,
-    eachPieceType = _require2.eachPieceType;
+var _require = __webpack_require__(1),
+    PTypes = _require.PTypes,
+    PUtils = _require.PUtils,
+    Colors = _require.Colors,
+    eachPieceType = _require.eachPieceType;
 
 // we store zobrist hash values in a bitboard object to enable bitwise operations
 // on values larger than 32bits. if we just used 32bits, we'd likely see hashing collisions
 // Note: the max safe integer in javascript is 2**53 - 1;
 
-
-function randNum() {
-  var num = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-  return BitBoard.fromNumber(num);
+function randSigned32Bit() {
+  var positive = [true, false][Math.floor(Math.random() * 2)];
+  if (positive) {
+    return Math.floor(Math.random() * (Math.pow(2, 31) - 1));
+  } else {
+    return -Math.floor(Math.random() * Math.pow(2, 31));
+  }
 }
 
 var piecePosHashKeys = function () {
@@ -2334,8 +2337,8 @@ var piecePosHashKeys = function () {
 
   var addPTypeKeys = function addPTypeKeys(pType) {
     res[pos][pType] = {};
-    res[pos][pType][Colors.WHITE] = randNum();
-    res[pos][pType][Colors.BLACK] = randNum();
+    res[pos][pType][Colors.WHITE] = randSigned32Bit();
+    res[pos][pType][Colors.BLACK] = randSigned32Bit();
   };
 
   for (pos = 0; pos < 64; pos++) {
@@ -2354,11 +2357,11 @@ var epPosHashKeys = function () {
 
   // can only en passant onto 3rd or 6th row
   for (pos = 16; pos <= 23; pos++) {
-    res[pos] = randNum();
+    res[pos] = randSigned32Bit();
   }
 
   for (pos = 40; pos <= 47; pos++) {
-    res[pos] = randNum();
+    res[pos] = randSigned32Bit();
   }
 
   return res;
@@ -2369,7 +2372,7 @@ var castleHashKeys = function () {
   var rightsIdx = void 0;
 
   for (rightsIdx = 0; rightsIdx < 4; rightsIdx++) {
-    res[rightsIdx] = randNum();
+    res[rightsIdx] = randSigned32Bit();
   }
 
   return res;
@@ -2377,8 +2380,8 @@ var castleHashKeys = function () {
 
 var turnHashKeys = function () {
   var res = [];
-  res[Colors.WHITE] = randNum();
-  res[Colors.BLACK] = randNum();
+  res[Colors.WHITE] = randSigned32Bit();
+  res[Colors.BLACK] = randSigned32Bit();
 
   return res;
 }();
@@ -2495,6 +2498,8 @@ var _require = __webpack_require__(1),
     Dirs = _require.Dirs,
     eachPieceType = _require.eachPieceType;
 
+var TransposTable = __webpack_require__(27);
+
 var AI = function () {
   function AI() {
     _classCallCheck(this, AI);
@@ -2541,24 +2546,31 @@ var AI = function () {
       // position.makeMove(move);
       var startTime = new Date();
       // const currHash = position.getHash();
-      this.transPosTable = {};
+      this.transPosTable = new TransposTable();
       this.quiescenceEvals = {};
-      this.maxDepth = 6;
+      this.maxDepth = 4;
       // while (this.maxDepth <= 6) {
       //   this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       //   this.maxDepth++;
       // }
       // this.exploredNodes = 0;
       this.movesMade = position.prevMoves.length;
+      this.transPosHits = 0;
+      this.qTTableHits = 0;
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       console.log('RUN TIME:');
       console.log(new Date() - startTime);
-      console.log('Transpos Size:');
-      console.log(Object.keys(this.transPosTable).length);
-      console.log(Object.keys(this.quiescenceEvals).length);
+      // console.log('Transpos Size:');
+      // console.log(Object.keys(this.transPosTable).length);
+      console.log('TRANSPOS HITS:');
+      console.log(this.transPosHits);
+      // console.log('QEVALS SIZE:');
+      // console.log(Object.keys(this.quiescenceEvals).length);
+      // console.log('QEVALS HITS:');
+      // console.log(this.qTTableHits);
       // console.log('Explored Nodes:');
       // console.log(this.exploredNodes);
-      return this.transPosTable[position.getHash()].bestMove;
+      return this.transPosTable.getEntry(position.getHash()).bestMove;
       // return this.bestMove;
       // position.makeMove(this.bestMove);
     }
@@ -2566,18 +2578,16 @@ var AI = function () {
     key: 'quiescenceSearch',
     value: function quiescenceSearch(position, alpha, beta) {
       // for testing purposes...
-      if (position.prevMoves.length - this.movesMade > 20) {
-        console.log('over 20 moves deep!');
-      }
-      var currHash = position.getHash();
-      var entry = this.quiescenceEvals[currHash];
-      var standPatVal = void 0;
-      if (entry) {
-        standPatVal = entry;
-      } else {
-        standPatVal = this.evaluate(position);
-        this.quiescenceEvals[currHash] = standPatVal;
-      }
+      // const currHash = position.getHash();
+      // const entry = this.quiescenceEvals[currHash];
+      // let standPatVal;
+      // if (entry) {
+      //   this.qTTableHits++;
+      //   standPatVal = entry;
+      // } else {
+      //   this.quiescenceEvals[currHash] = standPatVal;
+      // }
+      var standPatVal = this.evaluate(position);
 
       if (standPatVal >= beta) {
         return beta;
@@ -2618,8 +2628,9 @@ var AI = function () {
     value: function negaMax(position, depth, alpha, beta) {
       var prevAlpha = alpha;
       var currHash = position.getHash();
-      var entry = this.transPosTable[currHash];
+      var entry = this.transPosTable.getEntry(currHash);
       if (entry && entry.depth >= depth) {
+        this.transPosHits++;
         // console.log('found');
         switch (entry.type) {
           case 'exact':
@@ -2684,31 +2695,30 @@ var AI = function () {
         }
       }
 
-      this.storeResult(bestScore, bestMove, prevAlpha, beta, depth, currHash);
+      this.transPosTable.storeEntry(bestScore, bestMove, prevAlpha, beta, depth, currHash);
       return bestScore;
     }
-  }, {
-    key: 'storeResult',
-    value: function storeResult(score, bestMove, alpha, beta, depth, hash) {
-      this.transPosTable[hash] = {
-        score: score,
-        bestMove: bestMove,
-        type: this.determineScoreType(score, alpha, beta),
-        depth: depth,
-        hash: hash
-      };
-    }
-  }, {
-    key: 'determineScoreType',
-    value: function determineScoreType(score, alpha, beta) {
-      if (score <= alpha) {
-        return 'upperbound';
-      } else if (score >= beta) {
-        return 'lowerbound';
-      } else {
-        return 'exact';
-      }
-    }
+    //
+    // storeResult(score, bestMove, alpha, beta, depth, hash) {
+    //   this.transPosTable[hash] = {
+    //     score,
+    //     bestMove,
+    //     type: this.determineScoreType(score, alpha, beta),
+    //     depth,
+    //     hash
+    //   };
+    // }
+    //
+    // determineScoreType(score, alpha, beta) {
+    //   if (score <= alpha) {
+    //     return 'upperbound';
+    //   } else if (score >= beta) {
+    //     return 'lowerbound';
+    //   } else {
+    //     return 'exact';
+    //   }
+    // }
+
   }, {
     key: 'sortMoves',
     value: function sortMoves(moves, prevBestMove) {
@@ -2739,6 +2749,137 @@ module.exports = AI;
 
 /***/ }),
 /* 27 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var TransposTable = function () {
+  function TransposTable() {
+    _classCallCheck(this, TransposTable);
+
+    this.size = 10000;
+    this.table = new Array(this.size);
+  }
+
+  _createClass(TransposTable, [{
+    key: 'getEntry',
+    value: function getEntry(key) {
+      var index = key % this.size;
+      if (this.table[index] && this.table[index].key === key) {
+        return this.table[index];
+      } else {
+        return null;
+      }
+    }
+  }, {
+    key: 'storeEntry',
+    value: function storeEntry(score, bestMove, alpha, beta, depth, key) {
+      var index = key % this.size;
+      if (this.table[index] && this.table[index].depth > depth) {
+        return;
+      } else {
+        this.table[index] = {
+          score: score,
+          bestMove: bestMove,
+          type: this.determineScoreType(score, alpha, beta),
+          depth: depth,
+          key: key
+        };
+      }
+    }
+  }, {
+    key: 'determineScoreType',
+    value: function determineScoreType(score, alpha, beta) {
+      if (score <= alpha) {
+        return 'upperbound';
+      } else if (score >= beta) {
+        return 'lowerbound';
+      } else {
+        return 'exact';
+      }
+    }
+  }]);
+
+  return TransposTable;
+}();
+
+var AlphaBetaTTable = function (_TransposTable) {
+  _inherits(AlphaBetaTTable, _TransposTable);
+
+  function AlphaBetaTTable() {
+    _classCallCheck(this, AlphaBetaTTable);
+
+    return _possibleConstructorReturn(this, (AlphaBetaTTable.__proto__ || Object.getPrototypeOf(AlphaBetaTTable)).apply(this, arguments));
+  }
+
+  _createClass(AlphaBetaTTable, [{
+    key: 'storeEntry',
+    value: function storeEntry(score, bestMove, alpha, beta, depth, key) {
+      var index = key % this.size;
+      if (this.table[index] && this.table[index].depth > depth) {
+        return;
+      } else {
+        this.table[index] = {
+          score: score,
+          bestMove: bestMove,
+          type: this.determineScoreType(score, alpha, beta),
+          depth: depth,
+          key: key
+        };
+      }
+    }
+  }, {
+    key: 'determineScoreType',
+    value: function determineScoreType(score, alpha, beta) {
+      if (score <= alpha) {
+        return 'upperbound';
+      } else if (score >= beta) {
+        return 'lowerbound';
+      } else {
+        return 'exact';
+      }
+    }
+  }]);
+
+  return AlphaBetaTTable;
+}(TransposTable);
+
+var EvalTTable = function (_TransposTable2) {
+  _inherits(EvalTTable, _TransposTable2);
+
+  function EvalTTable() {
+    _classCallCheck(this, EvalTTable);
+
+    return _possibleConstructorReturn(this, (EvalTTable.__proto__ || Object.getPrototypeOf(EvalTTable)).apply(this, arguments));
+  }
+
+  _createClass(EvalTTable, [{
+    key: 'storeEntry',
+    value: function storeEntry(score, key) {
+      var index = key % this.size;
+      this.table[index] = {
+        score: score,
+        key: key
+      };
+    }
+  }]);
+
+  return EvalTTable;
+}(TransposTable);
+
+module.exports = TransposTable;
+
+/***/ }),
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
