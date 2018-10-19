@@ -2,7 +2,9 @@ const { PTypes, PUtils,
         Colors, Dirs,
         eachPieceType } = require('../pieces');
 
-const TransposTable = require('./transpos_table');
+const { TransposTable,
+        AlphaBetaTTable,
+        EvalTTable } = require('./transpos_table');
 
 class AI {
   constructor() {
@@ -44,8 +46,9 @@ class AI {
 
   chooseMove(position) {
     let startTime = new Date();
-    this.transPosTable = new TransposTable();
-    this.maxDepth = 4;
+    this.transPosTable = new AlphaBetaTTable();
+    this.evalTTable = new EvalTTable();
+    this.maxDepth = 5;
     this.exploredNodes = 0;
     this.movesMade = position.prevMoves.length;
     this.transPosHits = 0;
@@ -55,12 +58,24 @@ class AI {
     console.log(new Date() - startTime);
     console.log('TRANSPOS HITS:');
     console.log(this.transPosHits);
+    console.log('EVAL TABLE HITS:');
+    console.log(this.qTTableHits);
     // console.log('Explored Nodes:');
     // console.log(this.exploredNodes);
     return this.transPosTable.getEntry(position.getHash()).bestMove;
   }
 
   quiescenceSearch(position, alpha, beta) {
+    // const currHash = position.getHash();
+    // const entry = this.evalTTable.getEntry(currHash);
+    // let standPatVal;
+    // if (entry) {
+    //   this.qTTableHits++;
+    //   standPatVal = entry.score;
+    // } else {
+    //   standPatVal = this.evaluate(position);
+    //   this.evalTTable.storeEntry(standPatVal, currHash);
+    // }
     const standPatVal = this.evaluate(position);
 
     if (standPatVal >= beta) {
@@ -109,12 +124,7 @@ class AI {
     }
 
     if (depth === 0) {
-      this.exploredNodes++;
-      let startQTime = new Date();
-      // return this.evaluate(position);
-      let qSearchScore = this.quiescenceSearch(position, alpha, beta);
-      this.qSearchTime += (new Date() - startQTime);
-      return qSearchScore;
+      return this.quiescenceSearch(position, alpha, beta);
     }
 
     let prevBestMove;

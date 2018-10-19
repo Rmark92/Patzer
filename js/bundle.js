@@ -2479,7 +2479,10 @@ var _require = __webpack_require__(1),
     Dirs = _require.Dirs,
     eachPieceType = _require.eachPieceType;
 
-var TransposTable = __webpack_require__(27);
+var _require2 = __webpack_require__(27),
+    TransposTable = _require2.TransposTable,
+    AlphaBetaTTable = _require2.AlphaBetaTTable,
+    EvalTTable = _require2.EvalTTable;
 
 var AI = function () {
   function AI() {
@@ -2523,8 +2526,9 @@ var AI = function () {
     key: 'chooseMove',
     value: function chooseMove(position) {
       var startTime = new Date();
-      this.transPosTable = new TransposTable();
-      this.maxDepth = 4;
+      this.transPosTable = new AlphaBetaTTable();
+      this.evalTTable = new EvalTTable();
+      this.maxDepth = 5;
       this.exploredNodes = 0;
       this.movesMade = position.prevMoves.length;
       this.transPosHits = 0;
@@ -2534,6 +2538,8 @@ var AI = function () {
       console.log(new Date() - startTime);
       console.log('TRANSPOS HITS:');
       console.log(this.transPosHits);
+      console.log('EVAL TABLE HITS:');
+      console.log(this.qTTableHits);
       // console.log('Explored Nodes:');
       // console.log(this.exploredNodes);
       return this.transPosTable.getEntry(position.getHash()).bestMove;
@@ -2541,6 +2547,16 @@ var AI = function () {
   }, {
     key: 'quiescenceSearch',
     value: function quiescenceSearch(position, alpha, beta) {
+      // const currHash = position.getHash();
+      // const entry = this.evalTTable.getEntry(currHash);
+      // let standPatVal;
+      // if (entry) {
+      //   this.qTTableHits++;
+      //   standPatVal = entry.score;
+      // } else {
+      //   standPatVal = this.evaluate(position);
+      //   this.evalTTable.storeEntry(standPatVal, currHash);
+      // }
       var standPatVal = this.evaluate(position);
 
       if (standPatVal >= beta) {
@@ -2596,12 +2612,7 @@ var AI = function () {
       }
 
       if (depth === 0) {
-        this.exploredNodes++;
-        var startQTime = new Date();
-        // return this.evaluate(position);
-        var qSearchScore = this.quiescenceSearch(position, alpha, beta);
-        this.qSearchTime += new Date() - startQTime;
-        return qSearchScore;
+        return this.quiescenceSearch(position, alpha, beta);
       }
 
       var prevBestMove = void 0;
@@ -2682,12 +2693,17 @@ module.exports = AI;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var TransposTable = function () {
   function TransposTable() {
     _classCallCheck(this, TransposTable);
 
+    // this.size = 10000;
     this.size = 10000;
     this.table = new Array(this.size);
   }
@@ -2702,7 +2718,47 @@ var TransposTable = function () {
         return null;
       }
     }
-  }, {
+    //
+    // storeEntry(score, bestMove, alpha, beta, depth, key) {
+    //   const index = key % this.size;
+    //   if (this.table[index] && this.table[index].depth > depth) {
+    //     return;
+    //   } else {
+    //     this.table[index] = {
+    //       score,
+    //       bestMove,
+    //       type: this.determineScoreType(score, alpha, beta),
+    //       depth,
+    //       key
+    //     };
+    //   }
+    // }
+    //
+    // determineScoreType(score, alpha, beta) {
+    //   if (score <= alpha) {
+    //     return 'upperbound';
+    //   } else if (score >= beta) {
+    //     return 'lowerbound';
+    //   } else {
+    //     return 'exact';
+    //   }
+    // }
+
+  }]);
+
+  return TransposTable;
+}();
+
+var AlphaBetaTTable = function (_TransposTable) {
+  _inherits(AlphaBetaTTable, _TransposTable);
+
+  function AlphaBetaTTable() {
+    _classCallCheck(this, AlphaBetaTTable);
+
+    return _possibleConstructorReturn(this, (AlphaBetaTTable.__proto__ || Object.getPrototypeOf(AlphaBetaTTable)).apply(this, arguments));
+  }
+
+  _createClass(AlphaBetaTTable, [{
     key: 'storeEntry',
     value: function storeEntry(score, bestMove, alpha, beta, depth, key) {
       var index = key % this.size;
@@ -2731,47 +2787,33 @@ var TransposTable = function () {
     }
   }]);
 
-  return TransposTable;
-}();
-// 
-// class AlphaBetaTTable extends TransposTable {
-//   storeEntry(score, bestMove, alpha, beta, depth, key) {
-//     const index = key % this.size;
-//     if (this.table[index] && this.table[index].depth > depth) {
-//       return;
-//     } else {
-//       this.table[index] = {
-//         score,
-//         bestMove,
-//         type: this.determineScoreType(score, alpha, beta),
-//         depth,
-//         key
-//       };
-//     }
-//   }
-//
-//   determineScoreType(score, alpha, beta) {
-//     if (score <= alpha) {
-//       return 'upperbound';
-//     } else if (score >= beta) {
-//       return 'lowerbound';
-//     } else {
-//       return 'exact';
-//     }
-//   }
-// }
-//
-// class EvalTTable extends TransposTable {
-//   storeEntry(score, key) {
-//     const index = key % this.size;
-//     this.table[index] = {
-//       score,
-//       key
-//     };
-//   }
-// }
+  return AlphaBetaTTable;
+}(TransposTable);
 
-module.exports = TransposTable;
+var EvalTTable = function (_TransposTable2) {
+  _inherits(EvalTTable, _TransposTable2);
+
+  function EvalTTable() {
+    _classCallCheck(this, EvalTTable);
+
+    return _possibleConstructorReturn(this, (EvalTTable.__proto__ || Object.getPrototypeOf(EvalTTable)).apply(this, arguments));
+  }
+
+  _createClass(EvalTTable, [{
+    key: 'storeEntry',
+    value: function storeEntry(score, key) {
+      var index = key % this.size;
+      this.table[index] = {
+        score: score,
+        key: key
+      };
+    }
+  }]);
+
+  return EvalTTable;
+}(TransposTable);
+
+module.exports = { TransposTable: TransposTable, AlphaBetaTTable: AlphaBetaTTable, EvalTTable: EvalTTable };
 
 /***/ }),
 /* 28 */
