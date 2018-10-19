@@ -56,10 +56,12 @@ class AI {
     this.negaMax(position, this.maxDepth, -Infinity, Infinity);
     console.log('RUN TIME:');
     console.log(new Date() - startTime);
+    console.log('Explored Nodes:');
+    console.log(this.exploredNodes);
     console.log('TRANSPOS HITS:');
     console.log(this.transPosHits);
-    console.log('EVAL TABLE HITS:');
-    console.log(this.qTTableHits);
+    // console.log('EVAL TABLE HITS:');
+    // console.log(this.qTTableHits);
     // console.log('Explored Nodes:');
     // console.log(this.exploredNodes);
     return this.transPosTable.getEntry(position.getHash()).bestMove;
@@ -76,6 +78,7 @@ class AI {
     //   standPatVal = this.evaluate(position);
     //   this.evalTTable.storeEntry(standPatVal, currHash);
     // }
+    this.exploredNodes++;
     const standPatVal = this.evaluate(position);
 
     if (standPatVal >= beta) {
@@ -126,6 +129,8 @@ class AI {
     if (depth === 0) {
       return this.quiescenceSearch(position, alpha, beta);
     }
+
+    this.exploredNodes++;
 
     let prevBestMove;
     if (entry && entry.bestMove) {
