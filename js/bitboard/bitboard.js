@@ -19,6 +19,8 @@ const Utils = require('./utils.js');
 // 8  9 10 11 12 13 14 15  v
 // 0  1  2  3  4  5  6  7
 
+const POW32 = Math.pow(2, 32);
+
 class BitBoard {
   constructor(low, high) {
     this.low = (low || 0) >>> 0;

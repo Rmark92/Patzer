@@ -2,6 +2,8 @@ const { PTypes, PUtils,
         Colors, Dirs,
         eachPieceType } = require('../pieces');
 
+const TransposTable = require('./transpos_table');
+
 class AI {
   constructor() {
 
@@ -41,23 +43,21 @@ class AI {
   }
 
   chooseMove(position) {
-    // const moves = position.generateLegalMoves();
-    // const move = moves[Math.floor(Math.random() * moves.length)];
-    // position.makeMove(move);
     let startTime = new Date();
+    this.transPosTable = new TransposTable();
     this.maxDepth = 4;
     this.exploredNodes = 0;
     this.movesMade = position.prevMoves.length;
-    this.qSearchTime = 0;
+    this.transPosHits = 0;
+    this.qTTableHits = 0;
     this.negaMax(position, this.maxDepth, -Infinity, Infinity);
     console.log('RUN TIME:');
     console.log(new Date() - startTime);
-    console.log('qSearchTime:');
-    console.log(this.qSearchTime);
-    console.log('Explored Nodes:');
-    console.log(this.exploredNodes);
-    return this.bestMove;
-    // position.makeMove(this.bestMove);
+    console.log('TRANSPOS HITS:');
+    console.log(this.transPosHits);
+    // console.log('Explored Nodes:');
+    // console.log(this.exploredNodes);
+    return this.transPosTable.getEntry(position.getHash()).bestMove;
   }
 
   quiescenceSearch(position, alpha, beta) {
@@ -89,6 +89,25 @@ class AI {
   }
 
   negaMax(position, depth, alpha, beta) {
+    const prevAlpha = alpha;
+    const currHash = position.getHash();
+    const entry = this.transPosTable.getEntry(currHash);
+    if (entry && entry.depth >= depth) {
+      this.transPosHits++;
+      switch (entry.type) {
+        case 'exact':
+          return entry.score;
+        case 'lowerbound':
+          alpha = Math.max(alpha, entry.score);
+          break;
+        case 'upperbound':
+          beta = Math.min(beta, entry.score);
+          break;
+      }
+
+      if (alpha >= beta) { return entry.score; }
+    }
+
     if (depth === 0) {
       this.exploredNodes++;
       let startQTime = new Date();
@@ -98,19 +117,29 @@ class AI {
       return qSearchScore;
     }
 
-    const moves = this.sortMoves(position.generatePseudoMoves());
+    let prevBestMove;
+    if (entry && entry.bestMove) {
+      prevBestMove = entry.bestMove;
+    }
+
+    const moves = this.sortMoves(position.generatePseudoMoves(), prevBestMove);
     let moveIdx;
     let canMove = false;
     let score;
+    let bestScore = -Infinity;
+    let bestMove = null;
 
     for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
       if (position.makeMove(moves[moveIdx])) {
         canMove = true;
         score = -this.negaMax(position, depth - 1, -beta, -alpha);
         position.unmakePrevMove();
-        if (score > alpha) {
-          alpha = score;
-          if (depth === this.maxDepth) { this.bestMove = moves[moveIdx]; }
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = moves[moveIdx];
+          if (score > alpha) {
+            alpha = score;
+          }
         }
         if (alpha >= beta) { break; }
       }
@@ -118,17 +147,22 @@ class AI {
 
     if (!canMove) {
       if (position.inCheck(position.turn)) {
-        return -PUtils[PTypes.KINGS].value;
+        bestScore = -PUtils[PTypes.KINGS].value;
       } else {
-        return 0;
+        bestScore = 0;
       }
-    } else {
-      return alpha;
     }
+
+
+    this.transPosTable.storeEntry(bestScore, bestMove, prevAlpha, beta, depth, currHash);
+    return bestScore;
   }
 
-  sortMoves(moves) {
+  sortMoves(moves, prevBestMove) {
     function calculateScore(move) {
+      if (prevBestMove && move.val === prevBestMove.val) {
+        return 10000000;
+      }
       let score = move.getCaptPiece()? ((1 + move.getCaptPiece()) / (1 + move.getPiece())): 0;
     	score = score * 6 + move.getPiece();
     	score = score * 16 + move.getType();

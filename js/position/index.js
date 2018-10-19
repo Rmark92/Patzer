@@ -5,6 +5,11 @@ const { Move, MoveTypes } = require('../move');
 const { PUtils, PTypes,
         Colors, Dirs } = require('../pieces');
 
+const { piecePosHashKeys,
+        epPosHashKeys,
+        castleHashKeys,
+        turnHashKeys } = require('./zhash_constants.js');
+
 const { pieceSetsToArray,
         pieceSetsFromArray } = require('./utils/array_conversions.js');
 
@@ -29,6 +34,12 @@ class Position {
 
     this.pTypesLocations = this.createPTypesLocations();
 
+    // we separate our hashed values into piece position hashes
+    // and state hashes for simpler integration with our move making/unmaking process
+    // they are xor'd to represent the complete position
+    this.pPosHash = this.createPiecesPosHash();
+    this.stateHash = this.createStateHash();
+
     this.setTurn(turn, this.getOtherColor(turn));
   }
 
@@ -41,6 +52,45 @@ class Position {
     }
 
     return res;
+  }
+
+  createPiecesPosHash() {
+    let val = new BitBoard();
+
+    let pType;
+    const whitesPos = this.pieces[Colors.WHITE];
+    whitesPos.dup().pop1Bits((pos) => {
+      pType = this.pTypesLocations[pos];
+      val ^= piecePosHashKeys[pos][pType][Colors.WHITE];
+    });
+
+    const blacksPos = this.pieces[Colors.BLACK];
+    blacksPos.dup().pop1Bits((pos) => {
+      pType = this.pTypesLocations[pos];
+      val ^= piecePosHashKeys[pos][pType][Colors.BLACK];
+    });
+
+    return val;
+  }
+
+  createStateHash() {
+    let val = new BitBoard();
+    this.epBB.dup().pop1Bits((pos) => {
+      val ^= epPosHashKeys[pos];
+    });
+
+    let castleRightsPos;
+    for (castleRightsPos = 0; castleRightsPos < 4; castleRightsPos++) {
+      if ((this.castleRights & (1 << castleRightsPos)) >>> 0) {
+        val ^= castleHashKeys[castleRightsPos];
+      }
+    }
+
+    return val;
+  }
+
+  getHash() {
+    return this.pPosHash ^ this.stateHash ^ turnHashKeys[this.turn];
   }
 
   setTurn(turn, opp) {
@@ -289,6 +339,8 @@ class Position {
     this.addPrevState();
 
     this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
+    const epPos = this.epBB.bitScanForward();
+    if (epPos !== null) { this.stateHash ^= epPosHashKeys[epPos]; }
     this.epBB = new BitBoard();
 
     this.execMoveType(moveData.from, moveData.to, moveData.type);
@@ -391,8 +443,14 @@ class Position {
     const prevState = this.prevStates.pop();
     this.epBB = prevState.epBB;
     this.castleRights = prevState.castleRights;
+    this.stateHash = prevState.stateHash;
 
-    this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+    if (moveData.isPromo) {
+      this.setPieceAt(moveData.from, this.turn, PTypes.PAWNS);
+    } else {
+      this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+    }
+
 
     if (moveData.captPieceType) {
       this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
@@ -401,32 +459,43 @@ class Position {
     return true;
   }
 
+  clearCastleRights(color, dir) {
+    let clearRightsPos = 0;
+    if (color === Colors.BLACK) { clearRightsPos += 2; }
+    if (dir === Dirs.EAST) { clearRightsPos += 1; }
+
+    let clearRightsMask = 1 << clearRightsPos;
+    if (clearRightsMask & this.castleRights) {
+      this.castleRights = (this.castleRights & (~clearRightsMask)) >>> 0;
+      this.stateHash ^= castleHashKeys[clearRightsPos];
+    }
+  }
+
   // makes adjustments to the castling rights
   // if a rook or king is moved
   adjustCastleRights(pieceType, from, captPieceType, to) {
-    let clearCastlePos;
-    if (pieceType === PTypes.KINGS) {
-      let clearCastleRightsMask = this.turn === Colors.WHITE ? 0b1100 : 0b11;
-      this.castleRights &= clearCastleRightsMask;
-    } else if (pieceType === PTypes.ROOKS) {
-      clearCastlePos = 0;
-      if (from > PUtils[PTypes.KINGS].INIT_POS[this.turn]) { clearCastlePos++; }
-      if (this.turn === Colors.BLACK) { clearCastlePos += 2; }
-      this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
+    const turnCastleRights = this.getCastleRights(this.turn);
+    let dir;
+    if (pieceType === PTypes.KINGS && turnCastleRights) {
+      this.clearCastleRights(this.turn, Dirs.EAST);
+      this.clearCastleRights(this.turn, Dirs.WEST);
+    } else if (pieceType === PTypes.ROOKS && turnCastleRights) {
+      dir = from > PUtils[PTypes.KINGS].INIT_POS[this.turn] ? Dirs.EAST : Dirs.WEST;
+      this.clearCastleRights(this.turn, dir);
     }
 
-    if (captPieceType === PTypes.ROOKS) {
-      clearCastlePos = 0;
-      if (to > PUtils[PTypes.KINGS].INIT_POS[this.opp]) { clearCastlePos++; }
-      if (this.opp === Colors.BLACK) { clearCastlePos += 2; }
-      this.castleRights = (this.castleRights & ~(1 << clearCastlePos)) >>> 0;
+    if (captPieceType === PTypes.ROOKS && this.getCastleRights(this.opp)) {
+      dir = to > PUtils[PTypes.KINGS].INIT_POS[this.opp] ? Dirs.EAST : Dirs.WEST;
+      this.clearCastleRights(this.opp, dir);
     }
   }
 
   // adds the current state values to the prevStates array
   // used for move unmaking purposes
   addPrevState() {
-    const state = { epBB: this.epBB, castleRights: this.castleRights };
+    const state = { epBB: this.epBB,
+                    castleRights: this.castleRights,
+                    stateHash: this.stateHash };
     this.prevStates.push(state);
   }
 
@@ -438,6 +507,7 @@ class Position {
       case MoveTypes.DBL_PPUSH:
         let epPos = to + (-PUtils[PTypes.PAWNS].DIRS[this.turn] * 8);
         this.epBB = BitBoard.fromPos(epPos);
+        this.stateHash ^= epPosHashKeys[epPos];
         break;
       case MoveTypes.CSTL_KING:
         this.movePiece(from + 3, from + 1, this.turn, PTypes.ROOKS);
@@ -506,6 +576,7 @@ class Position {
     this.pieces[color].setBit(pos);
     this.pieces[pieceType].setBit(pos);
     this.pTypesLocations[pos] = pieceType;
+    this.pPosHash ^= piecePosHashKeys[pos][pieceType][color];
   }
 
   // marks the given color and pieceType BBs as unoccupied at the specified position
@@ -513,6 +584,7 @@ class Position {
     this.pieces[color].clearBit(pos);
     this.pieces[pieceType].clearBit(pos);
     this.pTypesLocations[pos] = null;
+    this.pPosHash ^= piecePosHashKeys[pos][pieceType][color];
   }
 
   // renders BBs for all piece sets
