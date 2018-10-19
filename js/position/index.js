@@ -91,9 +91,6 @@ class Position {
 
   getHash() {
     return this.pPosHash ^ this.stateHash ^ turnHashKeys[this.turn];
-    // return this.pPosHash.xor(this.stateHash)
-    //                     .xor(turnHashKeys[this.turn])
-    //                     .toNum();
   }
 
   setTurn(turn, opp) {

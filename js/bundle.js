@@ -388,11 +388,6 @@ var BitBoard = function () {
       return this.high === 0 && this.low === 0;
     }
   }, {
-    key: 'toNum',
-    value: function toNum() {
-      return this.high * POW32 + this.low;
-    }
-  }, {
     key: 'shiftRight',
     value: function shiftRight(numBits) {
       var newLowBits = void 0,
@@ -535,17 +530,6 @@ var BitBoard = function () {
       console.log('------');
     }
   }], [{
-    key: 'fromNumber',
-    value: function fromNumber(num) {
-      if (num < 0) {
-        return new BitBoard();
-      }
-
-      var lowBits = num % POW32;
-      var highBits = Math.floor(num / POW32);
-      return new BitBoard(lowBits, highBits);
-    }
-  }, {
     key: 'fromPos',
     value: function fromPos(pos) {
       var res = new BitBoard();
@@ -1120,9 +1104,6 @@ var Position = function () {
     key: 'getHash',
     value: function getHash() {
       return this.pPosHash ^ this.stateHash ^ turnHashKeys[this.turn];
-      // return this.pPosHash.xor(this.stateHash)
-      //                     .xor(turnHashKeys[this.turn])
-      //                     .toNum();
     }
   }, {
     key: 'setTurn',
@@ -2317,9 +2298,9 @@ var _require = __webpack_require__(1),
     Colors = _require.Colors,
     eachPieceType = _require.eachPieceType;
 
-// we store zobrist hash values in a bitboard object to enable bitwise operations
-// on values larger than 32bits. if we just used 32bits, we'd likely see hashing collisions
-// Note: the max safe integer in javascript is 2**53 - 1;
+// we store zobrist hash values as signed 32bit integers
+// if we limited the range of values to signed 32bits,
+// there likely wouldn't be enough variation to mitigate hashing collisions
 
 function randSigned32Bit() {
   var positive = [true, false][Math.floor(Math.random() * 2)];
@@ -2541,52 +2522,24 @@ var AI = function () {
   }, {
     key: 'chooseMove',
     value: function chooseMove(position) {
-      // const moves = position.generateLegalMoves();
-      // const move = moves[Math.floor(Math.random() * moves.length)];
-      // position.makeMove(move);
       var startTime = new Date();
-      // const currHash = position.getHash();
       this.transPosTable = new TransposTable();
-      this.quiescenceEvals = {};
       this.maxDepth = 4;
-      // while (this.maxDepth <= 6) {
-      //   this.negaMax(position, this.maxDepth, -Infinity, Infinity);
-      //   this.maxDepth++;
-      // }
-      // this.exploredNodes = 0;
       this.movesMade = position.prevMoves.length;
       this.transPosHits = 0;
       this.qTTableHits = 0;
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       console.log('RUN TIME:');
       console.log(new Date() - startTime);
-      // console.log('Transpos Size:');
-      // console.log(Object.keys(this.transPosTable).length);
       console.log('TRANSPOS HITS:');
       console.log(this.transPosHits);
-      // console.log('QEVALS SIZE:');
-      // console.log(Object.keys(this.quiescenceEvals).length);
-      // console.log('QEVALS HITS:');
-      // console.log(this.qTTableHits);
       // console.log('Explored Nodes:');
       // console.log(this.exploredNodes);
       return this.transPosTable.getEntry(position.getHash()).bestMove;
-      // return this.bestMove;
-      // position.makeMove(this.bestMove);
     }
   }, {
     key: 'quiescenceSearch',
     value: function quiescenceSearch(position, alpha, beta) {
-      // for testing purposes...
-      // const currHash = position.getHash();
-      // const entry = this.quiescenceEvals[currHash];
-      // let standPatVal;
-      // if (entry) {
-      //   this.qTTableHits++;
-      //   standPatVal = entry;
-      // } else {
-      //   this.quiescenceEvals[currHash] = standPatVal;
-      // }
       var standPatVal = this.evaluate(position);
 
       if (standPatVal >= beta) {
@@ -2605,12 +2558,6 @@ var AI = function () {
         if (position.makeMove(moves[moveIdx])) {
           score = -this.quiescenceSearch(position, -beta, -alpha);
           position.unmakePrevMove();
-          // if (position.getHash() !== currHash) {
-          //   console.log(position.prevMoves.map((move) => move.val));
-          //   console.log(moves[moveIdx]);
-          //   fuck;
-          //   // console.log(moves[moveIdx].getType());
-          // }
 
           if (score >= beta) {
             return beta;
@@ -2631,7 +2578,6 @@ var AI = function () {
       var entry = this.transPosTable.getEntry(currHash);
       if (entry && entry.depth >= depth) {
         this.transPosHits++;
-        // console.log('found');
         switch (entry.type) {
           case 'exact':
             return entry.score;
@@ -2649,14 +2595,11 @@ var AI = function () {
       }
 
       if (depth === 0) {
-        // return this.evaluate(position);
-        // this.exploredNodes++;
         return this.quiescenceSearch(position, alpha, beta);
       }
 
       var prevBestMove = void 0;
       if (entry && entry.bestMove) {
-        // console.log('best move found');
         prevBestMove = entry.bestMove;
       }
 
@@ -2672,13 +2615,11 @@ var AI = function () {
           canMove = true;
           score = -this.negaMax(position, depth - 1, -beta, -alpha);
           position.unmakePrevMove();
-          // if (position.getHash() !== currHash) { console.log(moves[moveIdx].getType()); }
           if (score > bestScore) {
             bestScore = score;
             bestMove = moves[moveIdx];
             if (score > alpha) {
               alpha = score;
-              // if (depth === this.maxDepth) { this.bestMove = moves[moveIdx]; }
             }
           }
           if (alpha >= beta) {
@@ -2698,27 +2639,6 @@ var AI = function () {
       this.transPosTable.storeEntry(bestScore, bestMove, prevAlpha, beta, depth, currHash);
       return bestScore;
     }
-    //
-    // storeResult(score, bestMove, alpha, beta, depth, hash) {
-    //   this.transPosTable[hash] = {
-    //     score,
-    //     bestMove,
-    //     type: this.determineScoreType(score, alpha, beta),
-    //     depth,
-    //     hash
-    //   };
-    // }
-    //
-    // determineScoreType(score, alpha, beta) {
-    //   if (score <= alpha) {
-    //     return 'upperbound';
-    //   } else if (score >= beta) {
-    //     return 'lowerbound';
-    //   } else {
-    //     return 'exact';
-    //   }
-    // }
-
   }, {
     key: 'sortMoves',
     value: function sortMoves(moves, prevBestMove) {
@@ -2755,10 +2675,6 @@ module.exports = AI;
 
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -2811,70 +2727,43 @@ var TransposTable = function () {
 
   return TransposTable;
 }();
-
-var AlphaBetaTTable = function (_TransposTable) {
-  _inherits(AlphaBetaTTable, _TransposTable);
-
-  function AlphaBetaTTable() {
-    _classCallCheck(this, AlphaBetaTTable);
-
-    return _possibleConstructorReturn(this, (AlphaBetaTTable.__proto__ || Object.getPrototypeOf(AlphaBetaTTable)).apply(this, arguments));
-  }
-
-  _createClass(AlphaBetaTTable, [{
-    key: 'storeEntry',
-    value: function storeEntry(score, bestMove, alpha, beta, depth, key) {
-      var index = key % this.size;
-      if (this.table[index] && this.table[index].depth > depth) {
-        return;
-      } else {
-        this.table[index] = {
-          score: score,
-          bestMove: bestMove,
-          type: this.determineScoreType(score, alpha, beta),
-          depth: depth,
-          key: key
-        };
-      }
-    }
-  }, {
-    key: 'determineScoreType',
-    value: function determineScoreType(score, alpha, beta) {
-      if (score <= alpha) {
-        return 'upperbound';
-      } else if (score >= beta) {
-        return 'lowerbound';
-      } else {
-        return 'exact';
-      }
-    }
-  }]);
-
-  return AlphaBetaTTable;
-}(TransposTable);
-
-var EvalTTable = function (_TransposTable2) {
-  _inherits(EvalTTable, _TransposTable2);
-
-  function EvalTTable() {
-    _classCallCheck(this, EvalTTable);
-
-    return _possibleConstructorReturn(this, (EvalTTable.__proto__ || Object.getPrototypeOf(EvalTTable)).apply(this, arguments));
-  }
-
-  _createClass(EvalTTable, [{
-    key: 'storeEntry',
-    value: function storeEntry(score, key) {
-      var index = key % this.size;
-      this.table[index] = {
-        score: score,
-        key: key
-      };
-    }
-  }]);
-
-  return EvalTTable;
-}(TransposTable);
+// 
+// class AlphaBetaTTable extends TransposTable {
+//   storeEntry(score, bestMove, alpha, beta, depth, key) {
+//     const index = key % this.size;
+//     if (this.table[index] && this.table[index].depth > depth) {
+//       return;
+//     } else {
+//       this.table[index] = {
+//         score,
+//         bestMove,
+//         type: this.determineScoreType(score, alpha, beta),
+//         depth,
+//         key
+//       };
+//     }
+//   }
+//
+//   determineScoreType(score, alpha, beta) {
+//     if (score <= alpha) {
+//       return 'upperbound';
+//     } else if (score >= beta) {
+//       return 'lowerbound';
+//     } else {
+//       return 'exact';
+//     }
+//   }
+// }
+//
+// class EvalTTable extends TransposTable {
+//   storeEntry(score, key) {
+//     const index = key % this.size;
+//     this.table[index] = {
+//       score,
+//       key
+//     };
+//   }
+// }
 
 module.exports = TransposTable;
 

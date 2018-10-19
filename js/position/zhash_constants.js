@@ -1,8 +1,8 @@
 const { PTypes, PUtils, Colors, eachPieceType } = require('../pieces');
 
-// we store zobrist hash values in a bitboard object to enable bitwise operations
-// on values larger than 32bits. if we just used 32bits, we'd likely see hashing collisions
-// Note: the max safe integer in javascript is 2**53 - 1;
+// we store zobrist hash values as signed 32bit integers
+// if we limited the range of values to signed 32bits,
+// there likely wouldn't be enough variation to mitigate hashing collisions
 
 function randSigned32Bit() {
   const positive = [true, false][Math.floor(Math.random() * 2)];

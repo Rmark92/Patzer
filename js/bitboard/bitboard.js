@@ -59,10 +59,6 @@ class BitBoard {
     return (this.high === 0 && this.low === 0);
   }
 
-  toNum() {
-    return this.high * POW32 + this.low;
-  }
-
   shiftRight(numBits) {
     let newLowBits, newHighBits;
 
@@ -163,16 +159,6 @@ class BitBoard {
 
   dup() {
     return new BitBoard(this.low, this.high);
-  }
-
-  static fromNumber(num) {
-    if (num < 0) {
-      return new BitBoard();
-    }
-
-    const lowBits = num % POW32;
-    const highBits = Math.floor(num / POW32);
-    return new BitBoard(lowBits, highBits);
   }
 
   static fromPos(pos) {
