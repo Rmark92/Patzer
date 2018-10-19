@@ -1,12 +1,16 @@
-const { BitBoard } = require('../bitboard');
 const { PTypes, PUtils, Colors, eachPieceType } = require('../pieces');
 
 // we store zobrist hash values in a bitboard object to enable bitwise operations
 // on values larger than 32bits. if we just used 32bits, we'd likely see hashing collisions
 // Note: the max safe integer in javascript is 2**53 - 1;
-function randNum() {
-  const num = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-  return BitBoard.fromNumber(num);
+
+function randSigned32Bit() {
+  const positive = [true, false][Math.floor(Math.random() * 2)];
+  if (positive) {
+    return Math.floor(Math.random() * (Math.pow(2, 31) - 1));
+  } else {
+    return -Math.floor(Math.random() * (Math.pow(2, 31)));
+  }
 }
 
 const piecePosHashKeys = function() {
@@ -16,8 +20,8 @@ const piecePosHashKeys = function() {
 
   const addPTypeKeys = (pType) => {
     res[pos][pType] = {};
-    res[pos][pType][Colors.WHITE] = randNum();
-    res[pos][pType][Colors.BLACK] = randNum();
+    res[pos][pType][Colors.WHITE] = randSigned32Bit();
+    res[pos][pType][Colors.BLACK] = randSigned32Bit();
   };
 
   for (pos = 0; pos < 64; pos++) {
@@ -34,11 +38,11 @@ const epPosHashKeys = function() {
 
   // can only en passant onto 3rd or 6th row
   for (pos = 16; pos <= 23; pos++) {
-    res[pos] = randNum();
+    res[pos] = randSigned32Bit();
   }
 
   for (pos = 40; pos <= 47; pos++) {
-    res[pos] = randNum();
+    res[pos] = randSigned32Bit();
   }
 
   return res;
@@ -49,7 +53,7 @@ const castleHashKeys = function() {
   let rightsIdx;
 
   for (rightsIdx = 0; rightsIdx < 4; rightsIdx++) {
-    res[rightsIdx] = randNum();
+    res[rightsIdx] = randSigned32Bit();
   }
 
   return res;
@@ -57,8 +61,8 @@ const castleHashKeys = function() {
 
 const turnHashKeys = function() {
   const res = [];
-  res[Colors.WHITE] = randNum();
-  res[Colors.BLACK] = randNum();
+  res[Colors.WHITE] = randSigned32Bit();
+  res[Colors.BLACK] = randSigned32Bit();
 
   return res;
 }();
