@@ -48,9 +48,12 @@ class AI {
     this.maxDepth = 4;
     this.exploredNodes = 0;
     this.movesMade = position.prevMoves.length;
+    this.qSearchTime = 0;
     this.negaMax(position, this.maxDepth, -Infinity, Infinity);
     console.log('RUN TIME:');
     console.log(new Date() - startTime);
+    console.log('qSearchTime:');
+    console.log(this.qSearchTime);
     console.log('Explored Nodes:');
     console.log(this.exploredNodes);
     return this.bestMove;
@@ -58,10 +61,6 @@ class AI {
   }
 
   quiescenceSearch(position, alpha, beta) {
-    // for testing purposes...
-    if (position.prevMoves.length - this.movesMade > 20) {
-      console.log('over 20 moves deep!');
-    }
     const standPatVal = this.evaluate(position);
 
     if (standPatVal >= beta) {
@@ -92,7 +91,11 @@ class AI {
   negaMax(position, depth, alpha, beta) {
     if (depth === 0) {
       this.exploredNodes++;
-      return this.quiescenceSearch(position, alpha, beta);
+      let startQTime = new Date();
+      // return this.evaluate(position);
+      let qSearchScore = this.quiescenceSearch(position, alpha, beta);
+      this.qSearchTime += (new Date() - startQTime);
+      return qSearchScore;
     }
 
     const moves = this.sortMoves(position.generatePseudoMoves());
