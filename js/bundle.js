@@ -2480,6 +2480,7 @@ var _require = __webpack_require__(1),
     eachPieceType = _require.eachPieceType;
 
 var TransposTable = __webpack_require__(27);
+var PerfMonitor = __webpack_require__(29);
 
 var AI = function () {
   function AI() {
@@ -2522,27 +2523,26 @@ var AI = function () {
   }, {
     key: 'chooseMove',
     value: function chooseMove(position) {
-      var startTime = new Date();
+      this.perfMonitor = new PerfMonitor();
       this.transPosTable = new TransposTable();
-      this.exploredNodes = 0;
-      this.transPosHits = 0;
+
+      this.perfMonitor.setStartTime();
+
       this.maxDepth = 2;
       while (this.maxDepth <= 5) {
         this.negaMax(position, this.maxDepth, -Infinity, Infinity);
         this.maxDepth++;
       }
-      console.log('RUN TIME:');
-      console.log(new Date() - startTime);
-      console.log('Explored Nodes:');
-      console.log(this.exploredNodes);
-      console.log('TRANSPOS HITS:');
-      console.log(this.transPosHits);
+
+      this.perfMonitor.setEndTime();
+      this.perfMonitor.printResults();
+
       return this.transPosTable.getEntry(position.getHash()).bestMove;
     }
   }, {
     key: 'quiescenceSearch',
     value: function quiescenceSearch(position, alpha, beta) {
-      this.exploredNodes++;
+      this.perfMonitor.logExploredNode();
       var standPatVal = this.evaluate(position);
 
       if (standPatVal >= beta) {
@@ -2580,7 +2580,7 @@ var AI = function () {
       var currHash = position.getHash();
       var entry = this.transPosTable.getEntry(currHash);
       if (entry && entry.depth >= depth) {
-        this.transPosHits++;
+        this.perfMonitor.logTableHit();
         switch (entry.type) {
           case 'exact':
             return entry.score;
@@ -2591,7 +2591,6 @@ var AI = function () {
             beta = Math.min(beta, entry.score);
             break;
         }
-
         if (alpha >= beta) {
           return entry.score;
         }
@@ -2601,12 +2600,9 @@ var AI = function () {
         return this.quiescenceSearch(position, alpha, beta);
       }
 
-      this.exploredNodes++;
+      this.perfMonitor.logExploredNode();
 
-      var prevBestMove = void 0;
-      if (entry && entry.bestMove) {
-        prevBestMove = entry.bestMove;
-      }
+      var prevBestMove = entry && entry.bestMove ? entry.bestMove : null;
 
       var moves = this.sortMoves(position.generatePseudoMoves(), prevBestMove);
       var moveIdx = void 0;
@@ -2780,6 +2776,66 @@ module.exports = {
   fileRankFromPos: fileRankFromPos,
   isDarkSquare: isDarkSquare
 };
+
+/***/ }),
+/* 29 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var PerfMonitor = function () {
+  function PerfMonitor() {
+    _classCallCheck(this, PerfMonitor);
+
+    this.exploredNodes = 0;
+    this.tableHits = 0;
+  }
+
+  _createClass(PerfMonitor, [{
+    key: 'setStartTime',
+    value: function setStartTime() {
+      this.startTime = new Date();
+    }
+  }, {
+    key: 'setEndTime',
+    value: function setEndTime() {
+      this.endTime = new Date();
+    }
+  }, {
+    key: 'printResults',
+    value: function printResults() {
+      console.log('---------');
+
+      if (this.startTime && this.endTime) {
+        console.log('Run Time: ' + (this.endTime - this.startTime));
+      }
+
+      console.log('Explored Positions: ' + this.exploredNodes);
+      console.log('Table Hits: ' + this.tableHits);
+
+      console.log('---------');
+    }
+  }, {
+    key: 'logTableHit',
+    value: function logTableHit() {
+      this.tableHits++;
+    }
+  }, {
+    key: 'logExploredNode',
+    value: function logExploredNode() {
+      this.exploredNodes++;
+    }
+  }]);
+
+  return PerfMonitor;
+}();
+
+module.exports = PerfMonitor;
 
 /***/ })
 /******/ ]);

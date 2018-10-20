@@ -1,8 +1,8 @@
 const { PTypes, PUtils,
         Colors, Dirs,
         eachPieceType } = require('../pieces');
-
 const TransposTable = require('./transpos_table');
+const PerfMonitor = require('./perf_monitor');
 
 class AI {
   constructor() {
@@ -43,26 +43,25 @@ class AI {
   }
 
   chooseMove(position) {
-    let startTime = new Date();
+    this.perfMonitor = new PerfMonitor();
     this.transPosTable = new TransposTable();
-    this.exploredNodes = 0;
-    this.transPosHits = 0;
+
+    this.perfMonitor.setStartTime();
+
     this.maxDepth = 2;
     while (this.maxDepth <= 5) {
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       this.maxDepth++;
     }
-    console.log('RUN TIME:');
-    console.log(new Date() - startTime);
-    console.log('Explored Nodes:');
-    console.log(this.exploredNodes);
-    console.log('TRANSPOS HITS:');
-    console.log(this.transPosHits);
+
+    this.perfMonitor.setEndTime();
+    this.perfMonitor.printResults();
+
     return this.transPosTable.getEntry(position.getHash()).bestMove;
   }
 
   quiescenceSearch(position, alpha, beta) {
-    this.exploredNodes++;
+    this.perfMonitor.logExploredNode();
     const standPatVal = this.evaluate(position);
 
     if (standPatVal >= beta) {
@@ -95,7 +94,7 @@ class AI {
     const currHash = position.getHash();
     const entry = this.transPosTable.getEntry(currHash);
     if (entry && entry.depth >= depth) {
-      this.transPosHits++;
+      this.perfMonitor.logTableHit();
       switch (entry.type) {
         case 'exact':
           return entry.score;
@@ -106,7 +105,6 @@ class AI {
           beta = Math.min(beta, entry.score);
           break;
       }
-
       if (alpha >= beta) { return entry.score; }
     }
 
@@ -114,12 +112,9 @@ class AI {
       return this.quiescenceSearch(position, alpha, beta);
     }
 
-    this.exploredNodes++;
+    this.perfMonitor.logExploredNode();
 
-    let prevBestMove;
-    if (entry && entry.bestMove) {
-      prevBestMove = entry.bestMove;
-    }
+    let prevBestMove = (entry && entry.bestMove) ? entry.bestMove : null;
 
     const moves = this.sortMoves(position.generatePseudoMoves(), prevBestMove);
     let moveIdx;
