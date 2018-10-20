@@ -16,17 +16,36 @@ class UI {
 
   run() {
     this.drawBoard();
+    this.setupButtons();
     this.playNextTurn();
+  }
+
+  setupButtons() {
+    $('#unmake').click((event) => {
+      if ($(event.currentTarget).hasClass('active')) {
+        this.position.unmakePrevMove();
+        this.position.unmakePrevMove();
+        this.playNextTurn();
+      }
+    });
+
+    $('#auto').click((event) => {
+      if ($(event.currentTarget).hasClass('active')) {
+        this.aiMove();
+      }
+    });
   }
 
   playNextTurn() {
     this.updatePieces();
     this.currMoves = this.position.generateLegalMoves();
     if (this.currMoves.length === 0) {
+      $('.btn').addClass('active');
       return;
     }
 
     if (this.position.turn === this.playerColor) {
+      $('.btn').addClass('active');
       this.setupPlayerMove();
     } else {
       setTimeout(() => this.aiMove(), 0);
@@ -101,6 +120,7 @@ class UI {
   }
 
   aiMove() {
+    $('.btn').removeClass('active');
     const move = this.ai.chooseMove(this.position);
     this.animateMove(move, () => {
       this.position.makeMove(move);

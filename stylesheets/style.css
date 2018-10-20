@@ -1,5 +1,7 @@
 body {
   font-family: 'Ubuntu Condensed', sans-serif;
+  display: flex;
+  flex-direction: row;
 }
 
 th {
@@ -45,11 +47,31 @@ tr {
   color: black;
 }
 
-
 .can-move-to {
   box-shadow: inset 0 0 40px #f0f712;
 }
 
 .square.ui-droppable-hover {
   box-shadow: inset 0 0 80px #fbff04;
+}
+
+#game-options {
+  display: flex;
+  flex-direction: column;
+}
+
+.btn {
+  height: 80px;
+  width: 100px;
+  text-align: center;
+  color: white;
+  background-color: gray;
+}
+
+.btn.active {
+  background-color: blue;
+}
+
+.btn.active:hover {
+  cursor: pointer;
 }

@@ -753,24 +753,46 @@ var UI = function () {
     key: 'run',
     value: function run() {
       this.drawBoard();
+      this.setupButtons();
       this.playNextTurn();
+    }
+  }, {
+    key: 'setupButtons',
+    value: function setupButtons() {
+      var _this = this;
+
+      $('#unmake').click(function (event) {
+        if ($(event.currentTarget).hasClass('active')) {
+          _this.position.unmakePrevMove();
+          _this.position.unmakePrevMove();
+          _this.playNextTurn();
+        }
+      });
+
+      $('#auto').click(function (event) {
+        if ($(event.currentTarget).hasClass('active')) {
+          _this.aiMove();
+        }
+      });
     }
   }, {
     key: 'playNextTurn',
     value: function playNextTurn() {
-      var _this = this;
+      var _this2 = this;
 
       this.updatePieces();
       this.currMoves = this.position.generateLegalMoves();
       if (this.currMoves.length === 0) {
+        $('.btn').addClass('active');
         return;
       }
 
       if (this.position.turn === this.playerColor) {
+        $('.btn').addClass('active');
         this.setupPlayerMove();
       } else {
         setTimeout(function () {
-          return _this.aiMove();
+          return _this2.aiMove();
         }, 0);
       }
     }
@@ -804,7 +826,7 @@ var UI = function () {
   }, {
     key: 'drawBoard',
     value: function drawBoard() {
-      var _this2 = this;
+      var _this3 = this;
 
       var board = $('#board');
 
@@ -813,7 +835,7 @@ var UI = function () {
         newRankRow = $('<tr>');
         newRankRow.append('<th class="rank">' + rank + '</th>');
         ColsFiles.forEach(function (file) {
-          newRankRow.append(_this2.generateSquare(file, rank));
+          newRankRow.append(_this3.generateSquare(file, rank));
         });
         newRankRow.append('<th class="rank">' + rank + '</th>');
         board.prepend(newRankRow);
@@ -848,12 +870,13 @@ var UI = function () {
   }, {
     key: 'aiMove',
     value: function aiMove() {
-      var _this3 = this;
+      var _this4 = this;
 
+      $('.btn').removeClass('active');
       var move = this.ai.chooseMove(this.position);
       this.animateMove(move, function () {
-        _this3.position.makeMove(move);
-        _this3.playNextTurn();
+        _this4.position.makeMove(move);
+        _this4.playNextTurn();
       });
     }
   }, {
@@ -941,7 +964,7 @@ var UI = function () {
   }, {
     key: 'activateDroppableSquares',
     value: function activateDroppableSquares(moveToFroms) {
-      var _this4 = this;
+      var _this5 = this;
 
       var destSq = void 0;
       var originSquare = void 0;
@@ -962,11 +985,11 @@ var UI = function () {
           drop: function drop(event, ui) {
             originSquare = $(ui.draggable).parent().attr('id');
             originPos = Util.posFromFileRank(originSquare);
-            selectedMove = _this4.currMoves.filter(function (move) {
+            selectedMove = _this5.currMoves.filter(function (move) {
               return move.getFrom() === originPos && move.getTo() === parseInt(toPos);
             })[0];
-            _this4.position.makeMove(selectedMove);
-            _this4.playNextTurn();
+            _this5.position.makeMove(selectedMove);
+            _this5.playNextTurn();
           }
         });
       });
