@@ -42,14 +42,15 @@ class AI {
     return materialScore + piecePositionScore;
   }
 
-  chooseMove(position) {
+  chooseMove(position, thinkingTime) {
     this.perfMonitor = new PerfMonitor();
     this.transPosTable = new TransposTable();
 
+    this.endTime = Date.now() + 30000;
     this.perfMonitor.setStartTime();
 
     this.maxDepth = 2;
-    while (this.maxDepth <= 5) {
+    while (Date.now() < this.endTime) {
       this.negaMax(position, this.maxDepth, -Infinity, Infinity);
       this.maxDepth++;
     }
@@ -61,6 +62,10 @@ class AI {
   }
 
   quiescenceSearch(position, alpha, beta) {
+    if (Date.now() > this.endTime) {
+      this.perfMonitor.setDepth(this.maxDepth - 1);
+      return 'early exit';
+    }
     this.perfMonitor.logExploredNode();
     const standPatVal = this.evaluate(position);
 
@@ -90,6 +95,11 @@ class AI {
   }
 
   negaMax(position, depth, alpha, beta) {
+    if (Date.now() > this.endTime) {
+      this.perfMonitor.setDepth(this.maxDepth - 1);
+      return 'early exit';
+    }
+
     const prevAlpha = alpha;
     const currHash = position.getHash();
     const entry = this.transPosTable.getEntry(currHash);
@@ -119,6 +129,7 @@ class AI {
     const moves = this.sortMoves(position.generatePseudoMoves(), prevBestMove);
     let moveIdx;
     let canMove = false;
+    let result;
     let score;
     let bestScore = -Infinity;
     let bestMove = null;
@@ -126,8 +137,12 @@ class AI {
     for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
       if (position.makeMove(moves[moveIdx])) {
         canMove = true;
-        score = -this.negaMax(position, depth - 1, -beta, -alpha);
+        result = this.negaMax(position, depth - 1, -beta, -alpha);
         position.unmakePrevMove();
+        if (result === 'early exit') {
+          return result;
+        }
+        score = -result;
         if (score > bestScore) {
           bestScore = score;
           bestMove = moves[moveIdx];

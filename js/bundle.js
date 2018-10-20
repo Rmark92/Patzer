@@ -2556,14 +2556,15 @@ var AI = function () {
     }
   }, {
     key: 'chooseMove',
-    value: function chooseMove(position) {
+    value: function chooseMove(position, thinkingTime) {
       this.perfMonitor = new PerfMonitor();
       this.transPosTable = new TransposTable();
 
+      this.endTime = Date.now() + 30000;
       this.perfMonitor.setStartTime();
 
       this.maxDepth = 2;
-      while (this.maxDepth <= 5) {
+      while (Date.now() < this.endTime) {
         this.negaMax(position, this.maxDepth, -Infinity, Infinity);
         this.maxDepth++;
       }
@@ -2576,6 +2577,10 @@ var AI = function () {
   }, {
     key: 'quiescenceSearch',
     value: function quiescenceSearch(position, alpha, beta) {
+      if (Date.now() > this.endTime) {
+        this.perfMonitor.setDepth(this.maxDepth - 1);
+        return 'early exit';
+      }
       this.perfMonitor.logExploredNode();
       var standPatVal = this.evaluate(position);
 
@@ -2610,6 +2615,11 @@ var AI = function () {
   }, {
     key: 'negaMax',
     value: function negaMax(position, depth, alpha, beta) {
+      if (Date.now() > this.endTime) {
+        this.perfMonitor.setDepth(this.maxDepth - 1);
+        return 'early exit';
+      }
+
       var prevAlpha = alpha;
       var currHash = position.getHash();
       var entry = this.transPosTable.getEntry(currHash);
@@ -2641,6 +2651,7 @@ var AI = function () {
       var moves = this.sortMoves(position.generatePseudoMoves(), prevBestMove);
       var moveIdx = void 0;
       var canMove = false;
+      var result = void 0;
       var score = void 0;
       var bestScore = -Infinity;
       var bestMove = null;
@@ -2648,8 +2659,12 @@ var AI = function () {
       for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
         if (position.makeMove(moves[moveIdx])) {
           canMove = true;
-          score = -this.negaMax(position, depth - 1, -beta, -alpha);
+          result = this.negaMax(position, depth - 1, -beta, -alpha);
           position.unmakePrevMove();
+          if (result === 'early exit') {
+            return result;
+          }
+          score = -result;
           if (score > bestScore) {
             bestScore = score;
             bestMove = moves[moveIdx];
@@ -2854,6 +2869,12 @@ var PerfMonitor = function () {
       this.endTime = new Date();
     }
   }, {
+    key: 'setDepth',
+    value: function setDepth(depth) {
+      // console.log('setting depth');
+      this.depth = depth;
+    }
+  }, {
     key: 'printResults',
     value: function printResults() {
       console.log('---------');
@@ -2862,6 +2883,7 @@ var PerfMonitor = function () {
         console.log('Run Time: ' + (this.endTime - this.startTime));
       }
 
+      console.log('Depth:  ' + this.depth);
       console.log('Explored Positions: ' + this.exploredNodes);
       console.log('Table Hits: ' + this.tableHits);
 

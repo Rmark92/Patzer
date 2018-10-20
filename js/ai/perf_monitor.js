@@ -12,6 +12,11 @@ class PerfMonitor {
     this.endTime = new Date();
   }
 
+  setDepth(depth) {
+    // console.log('setting depth');
+    this.depth = depth;
+  }
+
   printResults() {
     console.log('---------');
 
@@ -19,6 +24,7 @@ class PerfMonitor {
       console.log(`Run Time: ${this.endTime - this.startTime}`);
     }
 
+    console.log(`Depth:  ${this.depth}`);
     console.log(`Explored Positions: ${this.exploredNodes}`);
     console.log(`Table Hits: ${this.tableHits}`);
 
