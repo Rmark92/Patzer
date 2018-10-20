@@ -48,12 +48,15 @@ class AI {
     let startTime = new Date();
     this.transPosTable = new AlphaBetaTTable();
     this.evalTTable = new EvalTTable();
-    this.maxDepth = 5;
     this.exploredNodes = 0;
     this.movesMade = position.prevMoves.length;
     this.transPosHits = 0;
     this.qTTableHits = 0;
-    this.negaMax(position, this.maxDepth, -Infinity, Infinity);
+    this.maxDepth = 2;
+    while (this.maxDepth <= 5) {
+      this.negaMax(position, this.maxDepth, -Infinity, Infinity);
+      this.maxDepth++;
+    }
     console.log('RUN TIME:');
     console.log(new Date() - startTime);
     console.log('Explored Nodes:');
