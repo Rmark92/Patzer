@@ -31,22 +31,58 @@ class UI {
 
     $('#auto').click((event) => {
       if ($(event.currentTarget).hasClass('active')) {
-        this.aiMove();
+        setTimeout(() => this.aiMove(), 0);
       }
     });
   }
 
+  displayGameResult() {
+    $('#auto').removeClass('active');
+    $('#unmake').addClass('active');
+    const movesHistory = $('#move-history');
+    let endGameStatus = this.determineGameResult();
+    movesHistory.prepend(`<li>${endGameStatus}<li>`);
+  }
+
+  determineGameResult() {
+    if (this.position.inCheck(this.position.turn)) {
+      return 'Checkmate';
+    } else if (this.position.isThreeMoveRepetition()) {
+      return 'Draw -- Three Move Repitition';
+    } else if (this.position.isMoveLimitExceeded()) {
+      return 'Draw -- Move Limit Exceeded (50)';
+    } else {
+      return 'Stalemate';
+    }
+  }
+
+  // processGameStatus() {
+  //   this.currMoves = this.position.generateLegalMoves();
+  //   if (this.currMoves.length === 0) {
+  //     $('#auto').removeClass('active');
+  //     $('#unmake').addClass('active');
+  //     const movesHistory = $('#move-history');
+  //     let endGameStatus = this.position.getStatus();
+  //     movesHistory.prepend(`<li>${endGameStatus}<li>`);
+  //     return endGameStatus;
+  //   } else {
+  //     return 'Normal';
+  //   }
+  // }
+
   playNextTurn() {
     this.updateMovesList();
     this.updatePieces();
-    this.currMoves = this.position.generateLegalMoves();
-    if (this.currMoves.length === 0) {
-      $('.btn').addClass('active');
-      return;
-    }
+    // this.currMoves = this.position.generateLegalMoves();
+    // if (this.currMoves.length === 0) {
+    //   $('#auto').removeClass('active');
+    //   $('#unmake').addClass('active');
+    //   const movesHistory = $('#move-history');
+    //   movesHistory.prepend(`<li>${this.position.getStatus()}<li>`);
+    //   return;
+    // }
 
     if (this.position.turn === this.playerColor) {
-      $('.btn').addClass('active');
       this.setupPlayerMove();
     } else {
       setTimeout(() => this.aiMove(), 0);
@@ -131,7 +167,14 @@ class UI {
 
   aiMove() {
     $('.btn').removeClass('active');
-    const move = this.ai.chooseMove(this.position);
+    this.currMoves = this.position.generateLegalMoves();
+    if (this.currMoves.length === 0) {
+      this.displayGameResult();
+      return;
+    }
+
+    const move = this.ai.chooseMove(this.position, 1000, this.currMoves);
+
     this.animateMove(move, () => {
       this.position.makeMove(move);
       this.playNextTurn();
@@ -174,6 +217,12 @@ class UI {
   }
 
   setupPlayerMove() {
+    $('.btn').addClass('active');
+    this.currMoves = this.position.generateLegalMoves();
+    if (this.currMoves.length === 0) {
+      this.displayGameResult();
+      return;
+    }
     const movesData = this.currMoves.map((move) => move.getData());
     const moveFromTos = {};
     const moveToFroms = {};

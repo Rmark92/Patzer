@@ -114,6 +114,7 @@ class Position {
   // to only check for full legality of moves that we actually consider
   generatePseudoMoves(includeQuiet = true) {
     const moves = [];
+    if (this.isNonStalemateDraw()) { return moves; }
     this.addPawnMoves(moves, includeQuiet);
     this.addNormalMoves(moves, includeQuiet);
     this.addKingMoves(moves, includeQuiet);
@@ -495,7 +496,8 @@ class Position {
   addPrevState() {
     const state = { epBB: this.epBB,
                     castleRights: this.castleRights,
-                    stateHash: this.stateHash };
+                    stateHash: this.stateHash,
+                  };
     this.prevStates.push(state);
   }
 
@@ -587,6 +589,29 @@ class Position {
     this.pPosHash ^= piecePosHashKeys[pos][pieceType][color];
   }
 
+  //
+  isNonStalemateDraw() {
+    return this.isMoveLimitExceeded() || this.isThreeMoveRepetition();
+  }
+
+  isThreeMoveRepetition() {
+    const lastMoveIdx = this.prevMoves.length - 1;
+    if (lastMoveIdx < 5) {
+      return false;
+    }
+
+    return (this.prevMoves[lastMoveIdx] ===
+            this.prevMoves[lastMoveIdx - 2] ===
+            this.prevMoves[lastMoveIdx - 4]) &&
+           (this.prevMoves[lastMoveIdx - 1] ===
+             this.prevMoves[lastMoveIdx - 3] ===
+             this.prevMoves[lastMoveIdx - 5]);
+  }
+
+  isMoveLimitExceeded() {
+    return this.prevMoves.length >= 100;
+  }
+
   // renders BBs for all piece sets
   renderPieceSets() {
     Object.keys(this.pieces).forEach((boardType) => {
@@ -598,6 +623,7 @@ class Position {
   getBoardArr() {
     return pieceSetsToArray(this.pieces);
   }
+
 
   // renders the board for the current position
   renderBoardArr() {

@@ -771,10 +771,49 @@ var UI = function () {
 
       $('#auto').click(function (event) {
         if ($(event.currentTarget).hasClass('active')) {
-          _this.aiMove();
+          setTimeout(function () {
+            return _this.aiMove();
+          }, 0);
         }
       });
     }
+  }, {
+    key: 'displayGameResult',
+    value: function displayGameResult() {
+      $('#auto').removeClass('active');
+      $('#unmake').addClass('active');
+      var movesHistory = $('#move-history');
+      var endGameStatus = this.determineGameResult();
+      movesHistory.prepend('<li>' + endGameStatus + '<li>');
+    }
+  }, {
+    key: 'determineGameResult',
+    value: function determineGameResult() {
+      if (this.position.inCheck(this.position.turn)) {
+        return 'Checkmate';
+      } else if (this.position.isThreeMoveRepetition()) {
+        return 'Draw -- Three Move Repitition';
+      } else if (this.position.isMoveLimitExceeded()) {
+        return 'Draw -- Move Limit Exceeded (50)';
+      } else {
+        return 'Stalemate';
+      }
+    }
+
+    // processGameStatus() {
+    //   this.currMoves = this.position.generateLegalMoves();
+    //   if (this.currMoves.length === 0) {
+    //     $('#auto').removeClass('active');
+    //     $('#unmake').addClass('active');
+    //     const movesHistory = $('#move-history');
+    //     let endGameStatus = this.position.getStatus();
+    //     movesHistory.prepend(`<li>${endGameStatus}<li>`);
+    //     return endGameStatus;
+    //   } else {
+    //     return 'Normal';
+    //   }
+    // }
+
   }, {
     key: 'playNextTurn',
     value: function playNextTurn() {
@@ -782,14 +821,16 @@ var UI = function () {
 
       this.updateMovesList();
       this.updatePieces();
-      this.currMoves = this.position.generateLegalMoves();
-      if (this.currMoves.length === 0) {
-        $('.btn').addClass('active');
-        return;
-      }
+      // this.currMoves = this.position.generateLegalMoves();
+      // if (this.currMoves.length === 0) {
+      //   $('#auto').removeClass('active');
+      //   $('#unmake').addClass('active');
+      //   const movesHistory = $('#move-history');
+      //   movesHistory.prepend(`<li>${this.position.getStatus()}<li>`);
+      //   return;
+      // }
 
       if (this.position.turn === this.playerColor) {
-        $('.btn').addClass('active');
         this.setupPlayerMove();
       } else {
         setTimeout(function () {
@@ -884,7 +925,14 @@ var UI = function () {
       var _this4 = this;
 
       $('.btn').removeClass('active');
-      var move = this.ai.chooseMove(this.position);
+      this.currMoves = this.position.generateLegalMoves();
+      if (this.currMoves.length === 0) {
+        this.displayGameResult();
+        return;
+      }
+
+      var move = this.ai.chooseMove(this.position, 1000, this.currMoves);
+
       this.animateMove(move, function () {
         _this4.position.makeMove(move);
         _this4.playNextTurn();
@@ -929,6 +977,12 @@ var UI = function () {
   }, {
     key: 'setupPlayerMove',
     value: function setupPlayerMove() {
+      $('.btn').addClass('active');
+      this.currMoves = this.position.generateLegalMoves();
+      if (this.currMoves.length === 0) {
+        this.displayGameResult();
+        return;
+      }
       var movesData = this.currMoves.map(function (move) {
         return move.getData();
       });
@@ -1169,6 +1223,9 @@ var Position = function () {
       var includeQuiet = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
 
       var moves = [];
+      if (this.isNonStalemateDraw()) {
+        return moves;
+      }
       this.addPawnMoves(moves, includeQuiet);
       this.addNormalMoves(moves, includeQuiet);
       this.addKingMoves(moves, includeQuiet);
@@ -1635,7 +1692,8 @@ var Position = function () {
     value: function addPrevState() {
       var state = { epBB: this.epBB,
         castleRights: this.castleRights,
-        stateHash: this.stateHash };
+        stateHash: this.stateHash
+      };
       this.prevStates.push(state);
     }
 
@@ -1740,6 +1798,29 @@ var Position = function () {
       this.pieces[pieceType].clearBit(pos);
       this.pTypesLocations[pos] = null;
       this.pPosHash ^= piecePosHashKeys[pos][pieceType][color];
+    }
+
+    //
+
+  }, {
+    key: 'isNonStalemateDraw',
+    value: function isNonStalemateDraw() {
+      return this.isMoveLimitExceeded() || this.isThreeMoveRepetition();
+    }
+  }, {
+    key: 'isThreeMoveRepetition',
+    value: function isThreeMoveRepetition() {
+      var lastMoveIdx = this.prevMoves.length - 1;
+      if (lastMoveIdx < 5) {
+        return false;
+      }
+
+      return this.prevMoves[lastMoveIdx] === this.prevMoves[lastMoveIdx - 2] === this.prevMoves[lastMoveIdx - 4] && this.prevMoves[lastMoveIdx - 1] === this.prevMoves[lastMoveIdx - 3] === this.prevMoves[lastMoveIdx - 5];
+    }
+  }, {
+    key: 'isMoveLimitExceeded',
+    value: function isMoveLimitExceeded() {
+      return this.prevMoves.length >= 100;
     }
 
     // renders BBs for all piece sets
@@ -2556,23 +2637,34 @@ var AI = function () {
     }
   }, {
     key: 'chooseMove',
-    value: function chooseMove(position, thinkingTime) {
-      this.perfMonitor = new PerfMonitor();
+    value: function chooseMove(position, thinkingTime, availableMoves) {
+      this.perfMonitor = new PerfMonitor(availableMoves.length);
       this.transPosTable = new TransposTable();
 
-      this.endTime = Date.now() + 30000;
+      this.endTime = Date.now() + thinkingTime;
       this.perfMonitor.setStartTime();
 
-      this.maxDepth = 2;
-      while (Date.now() < this.endTime) {
+      this.maxDepth = 1;
+      while (Date.now() < this.endTime && this.maxDepth < 30) {
         this.negaMax(position, this.maxDepth, -Infinity, Infinity);
         this.maxDepth++;
       }
 
-      this.perfMonitor.setEndTime();
-      this.perfMonitor.printResults();
+      if (this.depth >= 30) {
+        console.log('Approaching draw...');
+      } else {
+        this.perfMonitor.setEndTime();
+        this.perfMonitor.printResults();
+      }
 
-      return this.transPosTable.getEntry(position.getHash()).bestMove;
+      var currNodeEntry = this.transPosTable.getEntry(position.getHash());
+      if (currNodeEntry && currNodeEntry.bestMove) {
+        return currNodeEntry.bestMove;
+      } else {
+        return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+      }
+
+      // return this.transPosTable.getEntry(position.getHash()).bestMove;
     }
   }, {
     key: 'quiescenceSearch',
@@ -2620,6 +2712,8 @@ var AI = function () {
         return 'early exit';
       }
 
+      this.perfMonitor.logExploredNode();
+
       var prevAlpha = alpha;
       var currHash = position.getHash();
       var entry = this.transPosTable.getEntry(currHash);
@@ -2643,8 +2737,6 @@ var AI = function () {
       if (depth === 0) {
         return this.quiescenceSearch(position, alpha, beta);
       }
-
-      this.perfMonitor.logExploredNode();
 
       var prevBestMove = entry && entry.bestMove ? entry.bestMove : null;
 
@@ -2851,11 +2943,12 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var PerfMonitor = function () {
-  function PerfMonitor() {
+  function PerfMonitor(initBranchCount) {
     _classCallCheck(this, PerfMonitor);
 
     this.exploredNodes = 0;
     this.tableHits = 0;
+    this.initBranchCount = initBranchCount;
   }
 
   _createClass(PerfMonitor, [{
@@ -2885,9 +2978,16 @@ var PerfMonitor = function () {
 
       console.log('Depth:  ' + this.depth);
       console.log('Explored Positions: ' + this.exploredNodes);
+      console.log('Pruned Positions est.: ' + (Math.pow(this.initBranchCount, this.depth) - this.exploredNodes));
       console.log('Table Hits: ' + this.tableHits);
 
       console.log('---------');
+    }
+  }, {
+    key: 'calculatePrunedPercentage',
+    value: function calculatePrunedPercentage() {
+      var percentAnalyzed = this.exploredNodes / Math.pow(this.initBranchCount, this.depth);
+      return Math.round((1 - percentAnalyzed) * 100);
     }
   }, {
     key: 'logTableHit',
