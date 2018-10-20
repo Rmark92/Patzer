@@ -30,9 +30,25 @@ function formatMoves(moveList) {
   });
 }
 
+function formatTime(millisecs) {
+  let timeStr = (millisecs / 1000).toString();
+  if (timeStr.indexOf('.') == -1) timeStr += '.';
+
+  while (timeStr.length < timeStr.indexOf('.') + 3) {
+    timeStr += '0';
+  }
+
+  while (timeStr.length > timeStr.indexOf('.') + 3) {
+    timeStr = timeStr.slice(0, timeStr.length - 1);
+  }
+
+  return timeStr;
+}
+
 module.exports = {
   posFromFileRank,
   fileRankFromPos,
   isDarkSquare,
-  formatMoves
+  formatMoves,
+  formatTime
 };

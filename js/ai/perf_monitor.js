@@ -1,8 +1,8 @@
 class PerfMonitor {
-  constructor(initBranchCount) {
-    this.exploredNodes = 0;
+  constructor() {
+    this.mainSearchNodes = 0;
+    this.qSearchNodes = 0;
     this.tableHits = 0;
-    this.initBranchCount = initBranchCount;
   }
 
   setStartTime() {
@@ -14,7 +14,6 @@ class PerfMonitor {
   }
 
   setDepth(depth) {
-    // console.log('setting depth');
     this.depth = depth;
   }
 
@@ -26,24 +25,24 @@ class PerfMonitor {
     }
 
     console.log(`Depth:  ${this.depth}`);
-    console.log(`Explored Positions: ${this.exploredNodes}`);
-    console.log(`Pruned Positions est.: ${Math.pow(this.initBranchCount, this.depth) - this.exploredNodes}`);
+    console.log(`Total Explored Positions: ${this.qSearchNodes + this.mainSearchNodes}`);
+    console.log(`Main Search Nodes: ${this.mainSearchNodes}`);
+    console.log(`Quiescent Search Nodes: ${this.qSearchNodes}`);
     console.log(`Table Hits: ${this.tableHits}`);
 
     console.log('---------');
-  }
-
-  calculatePrunedPercentage() {
-    const percentAnalyzed = this.exploredNodes / Math.pow(this.initBranchCount, this.depth);
-    return Math.round((1 - percentAnalyzed) * 100);
   }
 
   logTableHit() {
     this.tableHits++;
   }
 
-  logExploredNode() {
-    this.exploredNodes++;
+  logMainSearchNode() {
+    this.mainSearchNodes++;
+  }
+
+  logQuiescentNode() {
+    this.qSearchNodes++;
   }
 }
 

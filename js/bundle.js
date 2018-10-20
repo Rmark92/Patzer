@@ -771,11 +771,26 @@ var UI = function () {
 
       $('#auto').click(function (event) {
         if ($(event.currentTarget).hasClass('active')) {
-          setTimeout(function () {
-            return _this.aiMove();
-          }, 0);
+          _this.aiMove();
         }
       });
+
+      $('#ai-time-slider').slider({
+        value: this.ai.thinkingTime / 1000,
+        min: Math.round(Math.log(.01) * 1000) / 1000,
+        max: Math.round(Math.log(30) * 1000) / 1000,
+        step: 0.01,
+        slide: function slide(event, ui) {
+          var val = Math.round(Math.pow(Math.E, ui.value) * 1000);
+          $('#ai-time-val').text(Util.formatTime(val));
+        },
+        change: function change(event, ui) {
+          var val = Math.round(Math.pow(Math.E, ui.value) * 1000);
+          _this.ai.setThinkingTime(val);
+        }
+      });
+
+      $('#ai-time-val').text(Util.formatTime(this.ai.thinkingTime));
     }
   }, {
     key: 'displayGameResult',
@@ -789,53 +804,27 @@ var UI = function () {
   }, {
     key: 'determineGameResult',
     value: function determineGameResult() {
-      if (this.position.inCheck(this.position.turn)) {
-        return 'Checkmate';
-      } else if (this.position.isThreeMoveRepetition()) {
+      if (this.position.isThreeMoveRepetition()) {
         return 'Draw -- Three Move Repitition';
       } else if (this.position.isMoveLimitExceeded()) {
         return 'Draw -- Move Limit Exceeded (50)';
+      } else if (this.position.inCheck(this.position.turn)) {
+        return 'Checkmate';
       } else {
         return 'Stalemate';
       }
     }
-
-    // processGameStatus() {
-    //   this.currMoves = this.position.generateLegalMoves();
-    //   if (this.currMoves.length === 0) {
-    //     $('#auto').removeClass('active');
-    //     $('#unmake').addClass('active');
-    //     const movesHistory = $('#move-history');
-    //     let endGameStatus = this.position.getStatus();
-    //     movesHistory.prepend(`<li>${endGameStatus}<li>`);
-    //     return endGameStatus;
-    //   } else {
-    //     return 'Normal';
-    //   }
-    // }
-
   }, {
     key: 'playNextTurn',
     value: function playNextTurn() {
-      var _this2 = this;
-
       this.updateMovesList();
       this.updatePieces();
-      // this.currMoves = this.position.generateLegalMoves();
-      // if (this.currMoves.length === 0) {
-      //   $('#auto').removeClass('active');
-      //   $('#unmake').addClass('active');
-      //   const movesHistory = $('#move-history');
-      //   movesHistory.prepend(`<li>${this.position.getStatus()}<li>`);
-      //   return;
-      // }
 
       if (this.position.turn === this.playerColor) {
         this.setupPlayerMove();
       } else {
-        setTimeout(function () {
-          return _this2.aiMove();
-        }, 0);
+        this.aiMove();
+        // setTimeout(() => this.aiMove(), 0);
       }
     }
   }, {
@@ -878,7 +867,7 @@ var UI = function () {
   }, {
     key: 'drawBoard',
     value: function drawBoard() {
-      var _this3 = this;
+      var _this2 = this;
 
       var board = $('#board');
 
@@ -887,7 +876,7 @@ var UI = function () {
         newRankRow = $('<tr>');
         newRankRow.append('<th class="rank">' + rank + '</th>');
         ColsFiles.forEach(function (file) {
-          newRankRow.append(_this3.generateSquare(file, rank));
+          newRankRow.append(_this2.generateSquare(file, rank));
         });
         newRankRow.append('<th class="rank">' + rank + '</th>');
         board.prepend(newRankRow);
@@ -922,7 +911,7 @@ var UI = function () {
   }, {
     key: 'aiMove',
     value: function aiMove() {
-      var _this4 = this;
+      var _this3 = this;
 
       $('.btn').removeClass('active');
       this.currMoves = this.position.generateLegalMoves();
@@ -931,12 +920,14 @@ var UI = function () {
         return;
       }
 
-      var move = this.ai.chooseMove(this.position, 1000, this.currMoves);
-
-      this.animateMove(move, function () {
-        _this4.position.makeMove(move);
-        _this4.playNextTurn();
-      });
+      var move = void 0;
+      setTimeout(function () {
+        move = _this3.ai.chooseMove(_this3.position, _this3.currMoves);
+        _this3.animateMove(move, function () {
+          _this3.position.makeMove(move);
+          _this3.playNextTurn();
+        });
+      }, 0);
     }
   }, {
     key: 'animateMove',
@@ -1029,7 +1020,7 @@ var UI = function () {
   }, {
     key: 'activateDroppableSquares',
     value: function activateDroppableSquares(moveToFroms) {
-      var _this5 = this;
+      var _this4 = this;
 
       var destSq = void 0;
       var originSquare = void 0;
@@ -1050,11 +1041,11 @@ var UI = function () {
           drop: function drop(event, ui) {
             originSquare = $(ui.draggable).parent().attr('id');
             originPos = Util.posFromFileRank(originSquare);
-            selectedMove = _this5.currMoves.filter(function (move) {
+            selectedMove = _this4.currMoves.filter(function (move) {
               return move.getFrom() === originPos && move.getTo() === parseInt(toPos);
             })[0];
-            _this5.position.makeMove(selectedMove);
-            _this5.playNextTurn();
+            _this4.position.makeMove(selectedMove);
+            _this4.playNextTurn();
           }
         });
       });
@@ -2600,9 +2591,16 @@ var PerfMonitor = __webpack_require__(29);
 var AI = function () {
   function AI() {
     _classCallCheck(this, AI);
+
+    this.thinkingTime = 1000;
   }
 
   _createClass(AI, [{
+    key: 'setThinkingTime',
+    value: function setThinkingTime(thinkingTime) {
+      this.thinkingTime = thinkingTime;
+    }
+  }, {
     key: 'scoreMaterial',
     value: function scoreMaterial(position, color) {
       var score = 0;
@@ -2637,11 +2635,11 @@ var AI = function () {
     }
   }, {
     key: 'chooseMove',
-    value: function chooseMove(position, thinkingTime, availableMoves) {
-      this.perfMonitor = new PerfMonitor(availableMoves.length);
+    value: function chooseMove(position, availableMoves) {
+      this.perfMonitor = new PerfMonitor();
       this.transPosTable = new TransposTable();
 
-      this.endTime = Date.now() + thinkingTime;
+      this.endTime = Date.now() + this.thinkingTime;
       this.perfMonitor.setStartTime();
 
       this.maxDepth = 1;
@@ -2650,9 +2648,12 @@ var AI = function () {
         this.maxDepth++;
       }
 
-      if (this.depth >= 30) {
+      if (this.maxDepth >= 30) {
         console.log('Approaching draw...');
       } else {
+        if (!this.perfMonitor.depth) {
+          this.perfMonitor.setDepth(this.maxDepth);
+        }
         this.perfMonitor.setEndTime();
         this.perfMonitor.printResults();
       }
@@ -2673,7 +2674,7 @@ var AI = function () {
         this.perfMonitor.setDepth(this.maxDepth - 1);
         return 'early exit';
       }
-      this.perfMonitor.logExploredNode();
+      this.perfMonitor.logQuiescentNode();
       var standPatVal = this.evaluate(position);
 
       if (standPatVal >= beta) {
@@ -2712,8 +2713,6 @@ var AI = function () {
         return 'early exit';
       }
 
-      this.perfMonitor.logExploredNode();
-
       var prevAlpha = alpha;
       var currHash = position.getHash();
       var entry = this.transPosTable.getEntry(currHash);
@@ -2737,6 +2736,8 @@ var AI = function () {
       if (depth === 0) {
         return this.quiescenceSearch(position, alpha, beta);
       }
+
+      this.perfMonitor.logMainSearchNode();
 
       var prevBestMove = entry && entry.bestMove ? entry.bestMove : null;
 
@@ -2924,11 +2925,27 @@ function formatMoves(moveList) {
   });
 }
 
+function formatTime(millisecs) {
+  var timeStr = (millisecs / 1000).toString();
+  if (timeStr.indexOf('.') == -1) timeStr += '.';
+
+  while (timeStr.length < timeStr.indexOf('.') + 3) {
+    timeStr += '0';
+  }
+
+  while (timeStr.length > timeStr.indexOf('.') + 3) {
+    timeStr = timeStr.slice(0, timeStr.length - 1);
+  }
+
+  return timeStr;
+}
+
 module.exports = {
   posFromFileRank: posFromFileRank,
   fileRankFromPos: fileRankFromPos,
   isDarkSquare: isDarkSquare,
-  formatMoves: formatMoves
+  formatMoves: formatMoves,
+  formatTime: formatTime
 };
 
 /***/ }),
@@ -2943,12 +2960,12 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var PerfMonitor = function () {
-  function PerfMonitor(initBranchCount) {
+  function PerfMonitor() {
     _classCallCheck(this, PerfMonitor);
 
-    this.exploredNodes = 0;
+    this.mainSearchNodes = 0;
+    this.qSearchNodes = 0;
     this.tableHits = 0;
-    this.initBranchCount = initBranchCount;
   }
 
   _createClass(PerfMonitor, [{
@@ -2964,7 +2981,6 @@ var PerfMonitor = function () {
   }, {
     key: 'setDepth',
     value: function setDepth(depth) {
-      // console.log('setting depth');
       this.depth = depth;
     }
   }, {
@@ -2977,17 +2993,12 @@ var PerfMonitor = function () {
       }
 
       console.log('Depth:  ' + this.depth);
-      console.log('Explored Positions: ' + this.exploredNodes);
-      console.log('Pruned Positions est.: ' + (Math.pow(this.initBranchCount, this.depth) - this.exploredNodes));
+      console.log('Total Explored Positions: ' + (this.qSearchNodes + this.mainSearchNodes));
+      console.log('Main Search Nodes: ' + this.mainSearchNodes);
+      console.log('Quiescent Search Nodes: ' + this.qSearchNodes);
       console.log('Table Hits: ' + this.tableHits);
 
       console.log('---------');
-    }
-  }, {
-    key: 'calculatePrunedPercentage',
-    value: function calculatePrunedPercentage() {
-      var percentAnalyzed = this.exploredNodes / Math.pow(this.initBranchCount, this.depth);
-      return Math.round((1 - percentAnalyzed) * 100);
     }
   }, {
     key: 'logTableHit',
@@ -2995,9 +3006,14 @@ var PerfMonitor = function () {
       this.tableHits++;
     }
   }, {
-    key: 'logExploredNode',
-    value: function logExploredNode() {
-      this.exploredNodes++;
+    key: 'logMainSearchNode',
+    value: function logMainSearchNode() {
+      this.mainSearchNodes++;
+    }
+  }, {
+    key: 'logQuiescentNode',
+    value: function logQuiescentNode() {
+      this.qSearchNodes++;
     }
   }]);
 

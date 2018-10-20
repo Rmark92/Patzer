@@ -6,7 +6,11 @@ const PerfMonitor = require('./perf_monitor');
 
 class AI {
   constructor() {
+    this.thinkingTime = 1000;
+  }
 
+  setThinkingTime(thinkingTime) {
+    this.thinkingTime = thinkingTime;
   }
 
   scoreMaterial(position, color) {
@@ -42,11 +46,11 @@ class AI {
     return materialScore + piecePositionScore;
   }
 
-  chooseMove(position, thinkingTime, availableMoves) {
-    this.perfMonitor = new PerfMonitor(availableMoves.length);
+  chooseMove(position, availableMoves) {
+    this.perfMonitor = new PerfMonitor();
     this.transPosTable = new TransposTable();
 
-    this.endTime = Date.now() + thinkingTime;
+    this.endTime = Date.now() + this.thinkingTime;
     this.perfMonitor.setStartTime();
 
     this.maxDepth = 1;
@@ -55,9 +59,10 @@ class AI {
       this.maxDepth++;
     }
 
-    if (this.depth >= 30) {
+    if (this.maxDepth >= 30) {
       console.log('Approaching draw...');
     } else {
+      if (!this.perfMonitor.depth) { this.perfMonitor.setDepth(this.maxDepth); }
       this.perfMonitor.setEndTime();
       this.perfMonitor.printResults();
     }
@@ -77,7 +82,7 @@ class AI {
       this.perfMonitor.setDepth(this.maxDepth - 1);
       return 'early exit';
     }
-    this.perfMonitor.logExploredNode();
+    this.perfMonitor.logQuiescentNode();
     const standPatVal = this.evaluate(position);
 
     if (standPatVal >= beta) {
@@ -111,8 +116,6 @@ class AI {
       return 'early exit';
     }
 
-    this.perfMonitor.logExploredNode();
-
     const prevAlpha = alpha;
     const currHash = position.getHash();
     const entry = this.transPosTable.getEntry(currHash);
@@ -134,6 +137,8 @@ class AI {
     if (depth === 0) {
       return this.quiescenceSearch(position, alpha, beta);
     }
+
+    this.perfMonitor.logMainSearchNode();
 
     let prevBestMove = (entry && entry.bestMove) ? entry.bestMove : null;
 

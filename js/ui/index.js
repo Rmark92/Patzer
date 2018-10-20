@@ -31,9 +31,26 @@ class UI {
 
     $('#auto').click((event) => {
       if ($(event.currentTarget).hasClass('active')) {
-        setTimeout(() => this.aiMove(), 0);
+        this.aiMove();
       }
     });
+
+    $('#ai-time-slider').slider({
+      value: this.ai.thinkingTime / 1000,
+      min: Math.round(Math.log(.01) * 1000) / 1000,
+      max: Math.round(Math.log(30) * 1000) / 1000,
+      step: 0.01,
+      slide: (event, ui) => {
+        const val = Math.round(Math.pow(Math.E, ui.value) * 1000);
+        $('#ai-time-val').text(Util.formatTime(val));
+      },
+      change: (event, ui) => {
+        const val = Math.round(Math.pow(Math.E, ui.value) * 1000);
+        this.ai.setThinkingTime(val);
+      }
+    });
+
+    $('#ai-time-val').text(Util.formatTime(this.ai.thinkingTime));
   }
 
   displayGameResult() {
@@ -45,47 +62,26 @@ class UI {
   }
 
   determineGameResult() {
-    if (this.position.inCheck(this.position.turn)) {
-      return 'Checkmate';
-    } else if (this.position.isThreeMoveRepetition()) {
+    if (this.position.isThreeMoveRepetition()) {
       return 'Draw -- Three Move Repitition';
     } else if (this.position.isMoveLimitExceeded()) {
       return 'Draw -- Move Limit Exceeded (50)';
+    } else if (this.position.inCheck(this.position.turn)) {
+      return 'Checkmate';
     } else {
       return 'Stalemate';
     }
   }
 
-  // processGameStatus() {
-  //   this.currMoves = this.position.generateLegalMoves();
-  //   if (this.currMoves.length === 0) {
-  //     $('#auto').removeClass('active');
-  //     $('#unmake').addClass('active');
-  //     const movesHistory = $('#move-history');
-  //     let endGameStatus = this.position.getStatus();
-  //     movesHistory.prepend(`<li>${endGameStatus}<li>`);
-  //     return endGameStatus;
-  //   } else {
-  //     return 'Normal';
-  //   }
-  // }
-
   playNextTurn() {
     this.updateMovesList();
     this.updatePieces();
-    // this.currMoves = this.position.generateLegalMoves();
-    // if (this.currMoves.length === 0) {
-    //   $('#auto').removeClass('active');
-    //   $('#unmake').addClass('active');
-    //   const movesHistory = $('#move-history');
-    //   movesHistory.prepend(`<li>${this.position.getStatus()}<li>`);
-    //   return;
-    // }
 
     if (this.position.turn === this.playerColor) {
       this.setupPlayerMove();
     } else {
-      setTimeout(() => this.aiMove(), 0);
+      this.aiMove();
+      // setTimeout(() => this.aiMove(), 0);
     }
 
   }
@@ -173,12 +169,14 @@ class UI {
       return;
     }
 
-    const move = this.ai.chooseMove(this.position, 1000, this.currMoves);
-
-    this.animateMove(move, () => {
-      this.position.makeMove(move);
-      this.playNextTurn();
-    });
+    let move;
+    setTimeout(() => {
+      move = this.ai.chooseMove(this.position, this.currMoves);
+      this.animateMove(move, () => {
+        this.position.makeMove(move);
+        this.playNextTurn();
+      });
+    }, 0);
   }
 
   animateMove(move, cb) {
