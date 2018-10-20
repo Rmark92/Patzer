@@ -1,5 +1,6 @@
+const { PieceConv, Colors } = require('../pieces');
 const { ColsFiles, FilesCols,
-        RowsRanks, RanksRows} = require('./constants.js');
+        RowsRanks, RanksRows } = require('./constants.js');
 
 function posFromFileRank(fileRank) {
   const [file, rank] = fileRank.split('');
@@ -19,8 +20,19 @@ function isDarkSquare(fileRank) {
          (row % 2 === 1 && col % 2 === 1);
 }
 
+function formatMoves(moveList) {
+  let color;
+  return moveList.map((move, idx) => {
+    color = (idx % 2 === 0) ? Colors.WHITE : Colors.BLACK;
+    return `${PieceConv.pieceToLetter(move.getPiece(), color)} ` +
+           `${fileRankFromPos(move.getFrom())} -> ` +
+           `${fileRankFromPos(move.getTo())}`;
+  });
+}
+
 module.exports = {
   posFromFileRank,
   fileRankFromPos,
-  isDarkSquare
+  isDarkSquare,
+  formatMoves
 };

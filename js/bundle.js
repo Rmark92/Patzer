@@ -780,6 +780,7 @@ var UI = function () {
     value: function playNextTurn() {
       var _this2 = this;
 
+      this.updateMovesList();
       this.updatePieces();
       this.currMoves = this.position.generateLegalMoves();
       if (this.currMoves.length === 0) {
@@ -795,6 +796,16 @@ var UI = function () {
           return _this2.aiMove();
         }, 0);
       }
+    }
+  }, {
+    key: 'updateMovesList',
+    value: function updateMovesList() {
+      var movesHistory = $('#move-history');
+      movesHistory.empty();
+      var moveStrs = Util.formatMoves(this.position.prevMoves);
+      moveStrs.forEach(function (moveStr) {
+        movesHistory.prepend($('<li>' + moveStr + '</li>'));
+      });
     }
   }, {
     key: 'reset',
@@ -2763,11 +2774,15 @@ module.exports = TransposTable;
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
-var _require = __webpack_require__(8),
-    ColsFiles = _require.ColsFiles,
-    FilesCols = _require.FilesCols,
-    RowsRanks = _require.RowsRanks,
-    RanksRows = _require.RanksRows;
+var _require = __webpack_require__(1),
+    PieceConv = _require.PieceConv,
+    Colors = _require.Colors;
+
+var _require2 = __webpack_require__(8),
+    ColsFiles = _require2.ColsFiles,
+    FilesCols = _require2.FilesCols,
+    RowsRanks = _require2.RowsRanks,
+    RanksRows = _require2.RanksRows;
 
 function posFromFileRank(fileRank) {
   var _fileRank$split = fileRank.split(''),
@@ -2794,10 +2809,19 @@ function isDarkSquare(fileRank) {
   return row % 2 === 0 && col % 2 === 0 || row % 2 === 1 && col % 2 === 1;
 }
 
+function formatMoves(moveList) {
+  var color = void 0;
+  return moveList.map(function (move, idx) {
+    color = idx % 2 === 0 ? Colors.WHITE : Colors.BLACK;
+    return PieceConv.pieceToLetter(move.getPiece(), color) + ' ' + (fileRankFromPos(move.getFrom()) + ' -> ') + ('' + fileRankFromPos(move.getTo()));
+  });
+}
+
 module.exports = {
   posFromFileRank: posFromFileRank,
   fileRankFromPos: fileRankFromPos,
-  isDarkSquare: isDarkSquare
+  isDarkSquare: isDarkSquare,
+  formatMoves: formatMoves
 };
 
 /***/ }),

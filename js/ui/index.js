@@ -37,6 +37,7 @@ class UI {
   }
 
   playNextTurn() {
+    this.updateMovesList();
     this.updatePieces();
     this.currMoves = this.position.generateLegalMoves();
     if (this.currMoves.length === 0) {
@@ -51,6 +52,15 @@ class UI {
       setTimeout(() => this.aiMove(), 0);
     }
 
+  }
+
+  updateMovesList() {
+    const movesHistory = $('#move-history');
+    movesHistory.empty();
+    const moveStrs = Util.formatMoves(this.position.prevMoves);
+    moveStrs.forEach((moveStr) => {
+      movesHistory.prepend($(`<li>${moveStr}</li>`));
+    });
   }
 
   reset() {

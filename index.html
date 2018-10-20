@@ -11,23 +11,34 @@
     <script language="javascript" type="text/javascript" src="./js/bundle.js"></script>
   </head>
   <body>
-    <table id="board"></table>
-    <div id="game-options">
-      <div class="btn" id="unmake">Unmake</div>
-      <div class="btn" id="auto">Auto</div>
-      <form id="reset-game">
-        <!-- <fieldset>
-          <input id="player-white-option" type="radio" value="0">
-          </input>
-          <label for="player-white-option">White</label>
-          <input id="player-black-option" type="radio" value="1">
-          </input>
-          <label for="player-black-option">Black</label>
-        </fieldset> -->
-        <!-- <button type="submit" id="reset-game">
-          Reset
-        </button> -->
-      </form>
-    </div>
+    <header>
+      <h2>Patzer</h2>
+    </header>
+    <main>
+      <table id="board"></table>
+      <section id="control-panel">
+        <div id="move-options">
+          <div class="btn" id="unmake">Unmake</div>
+          <div class="btn" id="auto">Auto</div>
+        </div>
+        <div class="move-list">
+          <ul id="move-history">
+          </ul>
+        </div>
+        <form id="reset-game">
+          <!-- <fieldset>
+            <input id="player-white-option" type="radio" value="0">
+            </input>
+            <label for="player-white-option">White</label>
+            <input id="player-black-option" type="radio" value="1">
+            </input>
+            <label for="player-black-option">Black</label>
+          </fieldset> -->
+          <!-- <button type="submit" id="reset-game">
+            Reset
+          </button> -->
+        </form>
+      </section>
+    </main>
   </body>
 </html>
