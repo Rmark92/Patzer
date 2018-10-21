@@ -44,6 +44,17 @@ class PerfMonitor {
   logQuiescentNode() {
     this.qSearchNodes++;
   }
+
+  getResults() {
+    return {
+      runTime: this.endTime - this.startTime,
+      depth: this.depth,
+      exploredPositions: this.qSearchNodes + this.mainSearchNodes,
+      mainSearchNodes: this.mainSearchNodes,
+      qSearchNodes: this.qSearchNodes,
+      tTableHits: this.tableHits
+    };
+  }
 }
 
 module.exports = PerfMonitor;

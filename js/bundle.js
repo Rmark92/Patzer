@@ -730,7 +730,7 @@ var _require = __webpack_require__(1),
     Colors = _require.Colors,
     PieceTypeHTML = _require.PieceTypeHTML;
 
-var Util = __webpack_require__(28);
+var Util = __webpack_require__(30);
 
 var _require2 = __webpack_require__(8),
     ColsFiles = _require2.ColsFiles,
@@ -763,8 +763,7 @@ var UI = function () {
 
       $('#unmake').click(function (event) {
         if ($(event.currentTarget).hasClass('active')) {
-          _this.position.unmakePrevMove();
-          _this.position.unmakePrevMove();
+          _this.unmakePlayerMove();
           _this.playNextTurn();
         }
       });
@@ -793,6 +792,14 @@ var UI = function () {
       $('#ai-time-val').text(Util.formatTime(this.ai.thinkingTime));
     }
   }, {
+    key: 'unmakePlayerMove',
+    value: function unmakePlayerMove() {
+      this.position.unmakePrevMove();
+      this.shiftFromMovesList();
+      this.position.unmakePrevMove();
+      this.shiftFromMovesList();
+    }
+  }, {
     key: 'displayGameResult',
     value: function displayGameResult() {
       $('#auto').removeClass('active');
@@ -817,25 +824,55 @@ var UI = function () {
   }, {
     key: 'playNextTurn',
     value: function playNextTurn() {
-      this.updateMovesList();
       this.updatePieces();
 
       if (this.position.turn === this.playerColor) {
         this.setupPlayerMove();
       } else {
         this.aiMove();
-        // setTimeout(() => this.aiMove(), 0);
       }
     }
   }, {
-    key: 'updateMovesList',
-    value: function updateMovesList() {
+    key: 'populateStatsTable',
+    value: function populateStatsTable(moveStr, moveStats) {
+      $('.ai-stats-header').text('AI Stats (' + moveStr + ')');
+      $('.depth-stat').text(moveStats.depth);
+      $('.runtime-stat').text(moveStats.runTime || 'N/A');
+      $('.explored-stat').text(moveStats.exploredPositions);
+      $('.main-search-stat').text(moveStats.mainSearchNodes);
+      $('.qsearch-stat').text(moveStats.qSearchNodes);
+      $('.ttable-hit-stat').text(moveStats.tTableHits);
+    }
+  }, {
+    key: 'createMoveItem',
+    value: function createMoveItem(moveData) {
+      var _this2 = this;
+
+      var moveItem = $('<tr class="move-item"></tr>');
+      var moveStr = Util.formatMove(moveData.move, moveData.color);
+
+      moveItem.append($('<td class="move-str">' + moveStr + '</td>'));
+
+      if (moveData.stats) {
+        moveItem.addClass('stats-view-link');
+        moveItem.click(function () {
+          return _this2.populateStatsTable(moveStr, moveData.stats);
+        });
+      }
+
+      return moveItem;
+    }
+  }, {
+    key: 'addToMovesList',
+    value: function addToMovesList(moveData) {
       var movesHistory = $('#move-history');
-      movesHistory.empty();
-      var moveStrs = Util.formatMoves(this.position.prevMoves);
-      moveStrs.forEach(function (moveStr) {
-        movesHistory.prepend($('<li>' + moveStr + '</li>'));
-      });
+      var newMoveItem = this.createMoveItem(moveData);
+      movesHistory.prepend(newMoveItem);
+    }
+  }, {
+    key: 'shiftFromMovesList',
+    value: function shiftFromMovesList() {
+      $(".move-item:first").remove();
     }
   }, {
     key: 'reset',
@@ -867,7 +904,7 @@ var UI = function () {
   }, {
     key: 'drawBoard',
     value: function drawBoard() {
-      var _this2 = this;
+      var _this3 = this;
 
       var board = $('#board');
 
@@ -876,7 +913,7 @@ var UI = function () {
         newRankRow = $('<tr>');
         newRankRow.append('<th class="rank">' + rank + '</th>');
         ColsFiles.forEach(function (file) {
-          newRankRow.append(_this2.generateSquare(file, rank));
+          newRankRow.append(_this3.generateSquare(file, rank));
         });
         newRankRow.append('<th class="rank">' + rank + '</th>');
         board.prepend(newRankRow);
@@ -909,9 +946,18 @@ var UI = function () {
       });
     }
   }, {
+    key: 'makeMove',
+    value: function makeMove(move, stats) {
+      this.addToMovesList({ move: move, color: this.position.turn, stats: stats });
+      if (stats) {
+        this.populateStatsTable(Util.formatMove(move, this.position.turn), stats);
+      }
+      this.position.makeMove(move);
+    }
+  }, {
     key: 'aiMove',
     value: function aiMove() {
-      var _this3 = this;
+      var _this4 = this;
 
       $('.btn').removeClass('active');
       this.currMoves = this.position.generateLegalMoves();
@@ -920,12 +966,11 @@ var UI = function () {
         return;
       }
 
-      var move = void 0;
       setTimeout(function () {
-        move = _this3.ai.chooseMove(_this3.position, _this3.currMoves);
-        _this3.animateMove(move, function () {
-          _this3.position.makeMove(move);
-          _this3.playNextTurn();
+        var aiMoveData = _this4.ai.chooseMove(_this4.position, _this4.currMoves);
+        _this4.animateMove(aiMoveData.move, function () {
+          _this4.makeMove(aiMoveData.move, aiMoveData.performance);
+          _this4.playNextTurn();
         });
       }, 0);
     }
@@ -1020,7 +1065,7 @@ var UI = function () {
   }, {
     key: 'activateDroppableSquares',
     value: function activateDroppableSquares(moveToFroms) {
-      var _this4 = this;
+      var _this5 = this;
 
       var destSq = void 0;
       var originSquare = void 0;
@@ -1041,11 +1086,11 @@ var UI = function () {
           drop: function drop(event, ui) {
             originSquare = $(ui.draggable).parent().attr('id');
             originPos = Util.posFromFileRank(originSquare);
-            selectedMove = _this4.currMoves.filter(function (move) {
+            selectedMove = _this5.currMoves.filter(function (move) {
               return move.getFrom() === originPos && move.getTo() === parseInt(toPos);
             })[0];
-            _this4.position.makeMove(selectedMove);
-            _this4.playNextTurn();
+            _this5.makeMove(selectedMove);
+            _this5.playNextTurn();
           }
         });
       });
@@ -2578,21 +2623,14 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var _require = __webpack_require__(1),
-    PTypes = _require.PTypes,
-    PUtils = _require.PUtils,
-    Colors = _require.Colors,
-    Dirs = _require.Dirs,
-    eachPieceType = _require.eachPieceType;
-
-var TransposTable = __webpack_require__(27);
-var PerfMonitor = __webpack_require__(29);
+var MoveSearch = __webpack_require__(27);
 
 var AI = function () {
   function AI() {
     _classCallCheck(this, AI);
 
     this.thinkingTime = 1000;
+    this.prevPerformance = null;
   }
 
   _createClass(AI, [{
@@ -2601,50 +2639,61 @@ var AI = function () {
       this.thinkingTime = thinkingTime;
     }
   }, {
-    key: 'scoreMaterial',
-    value: function scoreMaterial(position, color) {
-      var score = 0;
-      eachPieceType(function (pieceType) {
-        score += position.getColorPieceSet(color, pieceType).popCount() * PUtils[pieceType].value;
-      });
-
-      return score;
-    }
-  }, {
-    key: 'scorePiecePositions',
-    value: function scorePiecePositions(position, color) {
-      var score = 0;
-      var piecePositions = void 0;
-      eachPieceType(function (pieceType) {
-        piecePositions = position.getColorPieceSet(color, pieceType);
-        piecePositions.dup().pop1Bits(function (pos) {
-          score += PUtils[pieceType].positionValues[color ? pos : 56 ^ pos];
-        });
-      });
-
-      return score;
-    }
-  }, {
-    key: 'evaluate',
-    value: function evaluate(position) {
-      var materialScore = this.scoreMaterial(position, position.turn) - this.scoreMaterial(position, position.opp);
-
-      var piecePositionScore = this.scorePiecePositions(position, position.turn) - this.scorePiecePositions(position, position.opp);
-
-      return materialScore + piecePositionScore;
-    }
-  }, {
     key: 'chooseMove',
     value: function chooseMove(position, availableMoves) {
-      this.perfMonitor = new PerfMonitor();
-      this.transPosTable = new TransposTable();
+      var moveSearch = new MoveSearch(position, availableMoves);
+      var bestMove = moveSearch.findBest(this.thinkingTime);
+      var perfResults = moveSearch.getPerformance();
 
-      this.endTime = Date.now() + this.thinkingTime;
+      return { move: bestMove, performance: perfResults };
+    }
+  }]);
+
+  return AI;
+}();
+
+module.exports = AI;
+
+/***/ }),
+/* 27 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var _require = __webpack_require__(1),
+    PTypes = _require.PTypes,
+    PUtils = _require.PUtils,
+    Colors = _require.Colors,
+    Dirs = _require.Dirs,
+    eachPieceType = _require.eachPieceType;
+
+var TransposTable = __webpack_require__(28);
+var PerfMonitor = __webpack_require__(29);
+
+var MoveSearch = function () {
+  function MoveSearch(position, initAvailable) {
+    _classCallCheck(this, MoveSearch);
+
+    this.position = position;
+    this.initAvailable = initAvailable;
+    this.transPosTable = new TransposTable();
+    this.perfMonitor = new PerfMonitor();
+  }
+
+  _createClass(MoveSearch, [{
+    key: 'findBest',
+    value: function findBest(thinkingTime) {
       this.perfMonitor.setStartTime();
+      this.endTime = Date.now() + thinkingTime;
 
       this.maxDepth = 1;
       while (Date.now() < this.endTime && this.maxDepth < 30) {
-        this.negaMax(position, this.maxDepth, -Infinity, Infinity);
+        this.negaMax(this.maxDepth, -Infinity, Infinity);
         this.maxDepth++;
       }
 
@@ -2658,24 +2707,27 @@ var AI = function () {
         this.perfMonitor.printResults();
       }
 
-      var currNodeEntry = this.transPosTable.getEntry(position.getHash());
+      var currNodeEntry = this.transPosTable.getEntry(this.position.getHash());
       if (currNodeEntry && currNodeEntry.bestMove) {
         return currNodeEntry.bestMove;
       } else {
-        return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+        return this.initAvailable[Math.floor(Math.random() * this.initAvailable.length)];
       }
-
-      // return this.transPosTable.getEntry(position.getHash()).bestMove;
+    }
+  }, {
+    key: 'getPerformance',
+    value: function getPerformance() {
+      return this.perfMonitor.getResults();
     }
   }, {
     key: 'quiescenceSearch',
-    value: function quiescenceSearch(position, alpha, beta) {
+    value: function quiescenceSearch(alpha, beta) {
       if (Date.now() > this.endTime) {
         this.perfMonitor.setDepth(this.maxDepth - 1);
         return 'early exit';
       }
       this.perfMonitor.logQuiescentNode();
-      var standPatVal = this.evaluate(position);
+      var standPatVal = this.evaluate();
 
       if (standPatVal >= beta) {
         return beta;
@@ -2683,16 +2735,16 @@ var AI = function () {
         alpha = standPatVal;
       }
 
-      var inCheck = position.inCheck(position.turn);
+      var inCheck = this.position.inCheck(this.position.turn);
       // include quiet moves (ie non captures) only if the king is in check;
-      var moves = this.sortMoves(position.generatePseudoMoves(inCheck));
+      var moves = this.sortMoves(this.position.generatePseudoMoves(inCheck));
       var moveIdx = void 0;
       var score = void 0;
 
       for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
-        if (position.makeMove(moves[moveIdx])) {
-          score = -this.quiescenceSearch(position, -beta, -alpha);
-          position.unmakePrevMove();
+        if (this.position.makeMove(moves[moveIdx])) {
+          score = -this.quiescenceSearch(-beta, -alpha);
+          this.position.unmakePrevMove();
 
           if (score >= beta) {
             return beta;
@@ -2707,14 +2759,14 @@ var AI = function () {
     }
   }, {
     key: 'negaMax',
-    value: function negaMax(position, depth, alpha, beta) {
+    value: function negaMax(depth, alpha, beta) {
       if (Date.now() > this.endTime) {
         this.perfMonitor.setDepth(this.maxDepth - 1);
         return 'early exit';
       }
 
       var prevAlpha = alpha;
-      var currHash = position.getHash();
+      var currHash = this.position.getHash();
       var entry = this.transPosTable.getEntry(currHash);
       if (entry && entry.depth >= depth) {
         this.perfMonitor.logTableHit();
@@ -2734,14 +2786,14 @@ var AI = function () {
       }
 
       if (depth === 0) {
-        return this.quiescenceSearch(position, alpha, beta);
+        return this.quiescenceSearch(alpha, beta);
       }
 
       this.perfMonitor.logMainSearchNode();
 
       var prevBestMove = entry && entry.bestMove ? entry.bestMove : null;
 
-      var moves = this.sortMoves(position.generatePseudoMoves(), prevBestMove);
+      var moves = this.sortMoves(this.position.generatePseudoMoves(), prevBestMove);
       var moveIdx = void 0;
       var canMove = false;
       var result = void 0;
@@ -2750,10 +2802,10 @@ var AI = function () {
       var bestMove = null;
 
       for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
-        if (position.makeMove(moves[moveIdx])) {
+        if (this.position.makeMove(moves[moveIdx])) {
           canMove = true;
-          result = this.negaMax(position, depth - 1, -beta, -alpha);
-          position.unmakePrevMove();
+          result = this.negaMax(depth - 1, -beta, -alpha);
+          this.position.unmakePrevMove();
           if (result === 'early exit') {
             return result;
           }
@@ -2772,7 +2824,7 @@ var AI = function () {
       }
 
       if (!canMove) {
-        if (position.inCheck(position.turn)) {
+        if (this.position.inCheck(this.position.turn)) {
           bestScore = -PUtils[PTypes.KINGS].value;
         } else {
           bestScore = 0;
@@ -2803,15 +2855,52 @@ var AI = function () {
       });
       return moves;
     }
+  }, {
+    key: 'evaluate',
+    value: function evaluate() {
+      var materialScore = this.scoreMaterial(this.position.turn) - this.scoreMaterial(this.position.opp);
+
+      var piecePositionScore = this.scorePiecePositions(this.position.turn) - this.scorePiecePositions(this.position.opp);
+
+      return materialScore + piecePositionScore;
+    }
+  }, {
+    key: 'scoreMaterial',
+    value: function scoreMaterial(color) {
+      var _this = this;
+
+      var score = 0;
+      eachPieceType(function (pieceType) {
+        score += _this.position.getColorPieceSet(color, pieceType).popCount() * PUtils[pieceType].value;
+      });
+
+      return score;
+    }
+  }, {
+    key: 'scorePiecePositions',
+    value: function scorePiecePositions(color) {
+      var _this2 = this;
+
+      var score = 0;
+      var piecePositions = void 0;
+      eachPieceType(function (pieceType) {
+        piecePositions = _this2.position.getColorPieceSet(color, pieceType);
+        piecePositions.dup().pop1Bits(function (pos) {
+          score += PUtils[pieceType].positionValues[color ? pos : 56 ^ pos];
+        });
+      });
+
+      return score;
+    }
   }]);
 
-  return AI;
+  return MoveSearch;
 }();
 
-module.exports = AI;
+module.exports = MoveSearch;
 
 /***/ }),
-/* 27 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2872,81 +2961,6 @@ var TransposTable = function () {
 }();
 
 module.exports = TransposTable;
-
-/***/ }),
-/* 28 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
-
-var _require = __webpack_require__(1),
-    PieceConv = _require.PieceConv,
-    Colors = _require.Colors;
-
-var _require2 = __webpack_require__(8),
-    ColsFiles = _require2.ColsFiles,
-    FilesCols = _require2.FilesCols,
-    RowsRanks = _require2.RowsRanks,
-    RanksRows = _require2.RanksRows;
-
-function posFromFileRank(fileRank) {
-  var _fileRank$split = fileRank.split(''),
-      _fileRank$split2 = _slicedToArray(_fileRank$split, 2),
-      file = _fileRank$split2[0],
-      rank = _fileRank$split2[1];
-
-  return RanksRows[rank] * 8 + FilesCols[file];
-}
-
-function fileRankFromPos(pos) {
-  return ColsFiles[pos % 8] + RowsRanks[Math.floor(pos / 8)];
-}
-
-// if the row and col are either both even or both odd
-function isDarkSquare(fileRank) {
-  var _fileRank$split3 = fileRank.split(''),
-      _fileRank$split4 = _slicedToArray(_fileRank$split3, 2),
-      file = _fileRank$split4[0],
-      rank = _fileRank$split4[1];
-
-  var row = RanksRows[rank];
-  var col = FilesCols[file];
-  return row % 2 === 0 && col % 2 === 0 || row % 2 === 1 && col % 2 === 1;
-}
-
-function formatMoves(moveList) {
-  var color = void 0;
-  return moveList.map(function (move, idx) {
-    color = idx % 2 === 0 ? Colors.WHITE : Colors.BLACK;
-    return PieceConv.pieceToLetter(move.getPiece(), color) + ' ' + (fileRankFromPos(move.getFrom()) + ' -> ') + ('' + fileRankFromPos(move.getTo()));
-  });
-}
-
-function formatTime(millisecs) {
-  var timeStr = (millisecs / 1000).toString();
-  if (timeStr.indexOf('.') == -1) timeStr += '.';
-
-  while (timeStr.length < timeStr.indexOf('.') + 3) {
-    timeStr += '0';
-  }
-
-  while (timeStr.length > timeStr.indexOf('.') + 3) {
-    timeStr = timeStr.slice(0, timeStr.length - 1);
-  }
-
-  return timeStr;
-}
-
-module.exports = {
-  posFromFileRank: posFromFileRank,
-  fileRankFromPos: fileRankFromPos,
-  isDarkSquare: isDarkSquare,
-  formatMoves: formatMoves,
-  formatTime: formatTime
-};
 
 /***/ }),
 /* 29 */
@@ -3015,12 +3029,102 @@ var PerfMonitor = function () {
     value: function logQuiescentNode() {
       this.qSearchNodes++;
     }
+  }, {
+    key: 'getResults',
+    value: function getResults() {
+      return {
+        runTime: this.endTime - this.startTime,
+        depth: this.depth,
+        exploredPositions: this.qSearchNodes + this.mainSearchNodes,
+        mainSearchNodes: this.mainSearchNodes,
+        qSearchNodes: this.qSearchNodes,
+        tTableHits: this.tableHits
+      };
+    }
   }]);
 
   return PerfMonitor;
 }();
 
 module.exports = PerfMonitor;
+
+/***/ }),
+/* 30 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
+var _require = __webpack_require__(1),
+    PieceConv = _require.PieceConv,
+    Colors = _require.Colors;
+
+var _require2 = __webpack_require__(8),
+    ColsFiles = _require2.ColsFiles,
+    FilesCols = _require2.FilesCols,
+    RowsRanks = _require2.RowsRanks,
+    RanksRows = _require2.RanksRows;
+
+function posFromFileRank(fileRank) {
+  var _fileRank$split = fileRank.split(''),
+      _fileRank$split2 = _slicedToArray(_fileRank$split, 2),
+      file = _fileRank$split2[0],
+      rank = _fileRank$split2[1];
+
+  return RanksRows[rank] * 8 + FilesCols[file];
+}
+
+function fileRankFromPos(pos) {
+  return ColsFiles[pos % 8] + RowsRanks[Math.floor(pos / 8)];
+}
+
+// if the row and col are either both even or both odd
+function isDarkSquare(fileRank) {
+  var _fileRank$split3 = fileRank.split(''),
+      _fileRank$split4 = _slicedToArray(_fileRank$split3, 2),
+      file = _fileRank$split4[0],
+      rank = _fileRank$split4[1];
+
+  var row = RanksRows[rank];
+  var col = FilesCols[file];
+  return row % 2 === 0 && col % 2 === 0 || row % 2 === 1 && col % 2 === 1;
+}
+
+function formatMove(move, color) {
+  return PieceConv.pieceToLetter(move.getPiece(), color) + ':' + (fileRankFromPos(move.getFrom()) + '->') + ('' + fileRankFromPos(move.getTo()));
+}
+
+function parseMoveStats(moveStats) {
+  return Object.keys(moveStats).map(function (key) {
+    return key + ': ' + moveStats[key];
+  }).join("<br/>");
+}
+
+function formatTime(millisecs) {
+  var timeStr = (millisecs / 1000).toString();
+  if (timeStr.indexOf('.') == -1) timeStr += '.';
+
+  while (timeStr.length < timeStr.indexOf('.') + 3) {
+    timeStr += '0';
+  }
+
+  while (timeStr.length > timeStr.indexOf('.') + 3) {
+    timeStr = timeStr.slice(0, timeStr.length - 1);
+  }
+
+  return timeStr;
+}
+
+module.exports = {
+  posFromFileRank: posFromFileRank,
+  fileRankFromPos: fileRankFromPos,
+  isDarkSquare: isDarkSquare,
+  formatMove: formatMove,
+  parseMoveStats: parseMoveStats,
+  formatTime: formatTime
+};
 
 /***/ })
 /******/ ]);

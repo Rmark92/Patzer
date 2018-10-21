@@ -11,24 +11,40 @@
     <script language="javascript" type="text/javascript" src="./js/bundle.js"></script>
   </head>
   <body>
-    <header>
-      <h2>Patzer</h2>
-    </header>
     <main>
       <table id="board"></table>
-      <section id="control-panel">
-        <div id="move-options">
-          <div class="btn" id="unmake">Unmake</div>
-          <div class="btn" id="auto">Auto</div>
+      <section id="side-panel">
+        <div class="main-header">Patzer</div>
+        <div class="move-options">
+          <div class="btn" id="auto">Choose AI Move</div>
+          <div class="btn" id="unmake">Unmake Move</div>
         </div>
-        <div id="ai-time-control">
-          <div id="ai-time-slider"></div>
-          <div id="ai-time-val"></div>
-        </div
+        <div id="ai-time">
+          <div class="ai-thinking-time-label">
+            <h3>AI Thinking Time: </h3> <span id="ai-time-val"></span>
+          </div>
+          <div class="ai-time-control">
+            <div id="ai-time-slider"></div>
+          </div>
         </div>
-        <div class="move-list">
-          <ul id="move-history">
-          </ul>
+        <div class="data">
+          <div class="move-list">
+            <h4 class="move-list-header">Moves</h4>
+            <div class="move-list-container">
+              <table id="move-history"></table>
+            </div>
+          </div>
+          <div class="ai-stats">
+            <h4 class="ai-stats-header">AI Stats</h4>
+            <table class="move-stats">
+              <tr><th class="stat-header">Depth:</th><td class="depth-stat"></td></tr>
+              <tr><th class="stat-header">Run Time:</th><td class="runtime-stat"></td></tr>
+              <tr><th class="stat-header">Explored Nodes:</th><td class="explored-stat"></td></tr>
+              <tr><th class="stat-header">Main Search Nodes:</th><td class="main-search-stat"></td></tr>
+              <tr><th class="stat-header">Quiescence Search Nodes:</th><td class="qsearch-stat"></td></tr>
+              <tr><th class="stat-header">Transposition Table Hits:</th><td class="ttable-hit-stat"></td></tr>
+            </table>
+          </div>
         </div>
         <form id="reset-game">
           <!-- <fieldset>

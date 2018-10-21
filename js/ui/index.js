@@ -23,8 +23,7 @@ class UI {
   setupButtons() {
     $('#unmake').click((event) => {
       if ($(event.currentTarget).hasClass('active')) {
-        this.position.unmakePrevMove();
-        this.position.unmakePrevMove();
+        this.unmakePlayerMove();
         this.playNextTurn();
       }
     });
@@ -53,6 +52,13 @@ class UI {
     $('#ai-time-val').text(Util.formatTime(this.ai.thinkingTime));
   }
 
+  unmakePlayerMove() {
+    this.position.unmakePrevMove();
+    this.shiftFromMovesList();
+    this.position.unmakePrevMove();
+    this.shiftFromMovesList();
+  }
+
   displayGameResult() {
     $('#auto').removeClass('active');
     $('#unmake').addClass('active');
@@ -74,25 +80,47 @@ class UI {
   }
 
   playNextTurn() {
-    this.updateMovesList();
     this.updatePieces();
 
     if (this.position.turn === this.playerColor) {
       this.setupPlayerMove();
     } else {
       this.aiMove();
-      // setTimeout(() => this.aiMove(), 0);
     }
-
   }
 
-  updateMovesList() {
+  populateStatsTable(moveStr, moveStats) {
+    $('.ai-stats-header').text(`AI Stats (${moveStr})`);
+    $('.depth-stat').text(moveStats.depth);
+    $('.runtime-stat').text(moveStats.runTime || 'N/A');
+    $('.explored-stat').text(moveStats.exploredPositions);
+    $('.main-search-stat').text(moveStats.mainSearchNodes);
+    $('.qsearch-stat').text(moveStats.qSearchNodes);
+    $('.ttable-hit-stat').text(moveStats.tTableHits);
+  }
+
+  createMoveItem(moveData) {
+    const moveItem = $('<tr class="move-item"></tr>');
+    const moveStr = Util.formatMove(moveData.move, moveData.color);
+
+    moveItem.append($(`<td class="move-str">${moveStr}</td>`));
+
+    if (moveData.stats) {
+      moveItem.addClass('stats-view-link');
+      moveItem.click(() => this.populateStatsTable(moveStr, moveData.stats));
+    }
+
+    return moveItem;
+  }
+
+  addToMovesList(moveData) {
     const movesHistory = $('#move-history');
-    movesHistory.empty();
-    const moveStrs = Util.formatMoves(this.position.prevMoves);
-    moveStrs.forEach((moveStr) => {
-      movesHistory.prepend($(`<li>${moveStr}</li>`));
-    });
+    const newMoveItem = this.createMoveItem(moveData);
+    movesHistory.prepend(newMoveItem);
+  }
+
+  shiftFromMovesList() {
+    $(".move-item:first").remove();
   }
 
   reset() {
@@ -161,6 +189,14 @@ class UI {
     });
   }
 
+  makeMove(move, stats) {
+    this.addToMovesList({ move, color: this.position.turn, stats });
+    if (stats) {
+      this.populateStatsTable(Util.formatMove(move, this.position.turn), stats);
+    }
+    this.position.makeMove(move);
+  }
+
   aiMove() {
     $('.btn').removeClass('active');
     this.currMoves = this.position.generateLegalMoves();
@@ -169,11 +205,10 @@ class UI {
       return;
     }
 
-    let move;
     setTimeout(() => {
-      move = this.ai.chooseMove(this.position, this.currMoves);
-      this.animateMove(move, () => {
-        this.position.makeMove(move);
+      const aiMoveData = this.ai.chooseMove(this.position, this.currMoves);
+      this.animateMove(aiMoveData.move, () => {
+        this.makeMove(aiMoveData.move, aiMoveData.performance);
         this.playNextTurn();
       });
     }, 0);
@@ -284,7 +319,7 @@ class UI {
             return move.getFrom() === originPos &&
                    move.getTo() === parseInt(toPos);
           })[0];
-          this.position.makeMove(selectedMove);
+          this.makeMove(selectedMove);
           this.playNextTurn();
         }
       });

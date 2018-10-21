@@ -20,14 +20,16 @@ function isDarkSquare(fileRank) {
          (row % 2 === 1 && col % 2 === 1);
 }
 
-function formatMoves(moveList) {
-  let color;
-  return moveList.map((move, idx) => {
-    color = (idx % 2 === 0) ? Colors.WHITE : Colors.BLACK;
-    return `${PieceConv.pieceToLetter(move.getPiece(), color)} ` +
-           `${fileRankFromPos(move.getFrom())} -> ` +
-           `${fileRankFromPos(move.getTo())}`;
-  });
+function formatMove(move, color) {
+  return `${PieceConv.pieceToLetter(move.getPiece(), color)}:` +
+         `${fileRankFromPos(move.getFrom())}->` +
+         `${fileRankFromPos(move.getTo())}`;
+}
+
+function parseMoveStats(moveStats) {
+  return Object.keys(moveStats)
+               .map((key) => `${key}: ${moveStats[key]}`)
+               .join("<br/>");
 }
 
 function formatTime(millisecs) {
@@ -49,6 +51,7 @@ module.exports = {
   posFromFileRank,
   fileRankFromPos,
   isDarkSquare,
-  formatMoves,
+  formatMove,
+  parseMoveStats,
   formatTime
 };
