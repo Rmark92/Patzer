@@ -16,6 +16,15 @@ const RanksRows = function() {
   }, {});
 }();
 
+const GameStatus = {
+  ThreeFoldRep: 'Draw - Threefold Repition',
+  MoveLimitExc: 'Draw - Move Limit Exceeded (100)',
+  Checkmate: 'Checkmate',
+  Stalemate: 'Stalemate',
+  PlayerTurn: 'Player Turn',
+  AITurn: 'AI Turn'
+};
+
 const Selectors = {
   BOARD_ID: "#board",
   PIECE_CLASS: 'piece',
@@ -30,4 +39,4 @@ const Selectors = {
 //
 // };
 
-module.exports = { ColsFiles, FilesCols, RowsRanks, RanksRows, Selectors };
+module.exports = { ColsFiles, FilesCols, RowsRanks, RanksRows, Selectors, GameStatus };

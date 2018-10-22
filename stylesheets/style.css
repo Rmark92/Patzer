@@ -75,17 +75,24 @@ tr {
   margin-left: 2%;
 }
 
+#side-panel > * {
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
 .main-header {
   text-align: center;
   font-size: 50px;
+}
+
+.status-header > h3 {
+  display: inline-block;
 }
 
 .move-options {
   display: flex;
   flex-direction: row;
   justify-content: space-around;
-  margin-bottom: 25px;
-  margin-top: 60px;
   width: 100%;
 }
 
@@ -100,8 +107,8 @@ tr {
   border-radius: 4px;
 }
 
-.btn.active {
-  background-color: blue;
+.move-options .btn.active {
+  background-color: #12cac3;
 }
 
 .btn.active:hover {
@@ -113,12 +120,11 @@ tr {
   flex-direction: row;
   justify-content: space-between;
   height: 215px;
-  margin-bottom: 40px;
 }
 
 .move-list {
   text-align: center;
-  width: 40%;
+  width: 30%;
 }
 
 .move-list-header {
@@ -131,10 +137,12 @@ tr {
   overflow-y: scroll */
   height: 140px;
   overflow-y: scroll;
+  border: 1px solid black;
 }
 
 #move-history {
   width: 100%;
+  font-size: 12px;
   /* list-style: none; */
 }
 
@@ -151,7 +159,7 @@ tr {
 }
 
 .move-stats {
-  font-size: 14px;
+  font-size: 12px;
   border-spacing: 0px;
   width: 100%;
 }
@@ -166,12 +174,22 @@ tr {
 }
 
 .stats-view-link {
-  color: blue;
-  text-decoration: underline;
+  color: black;
+  text-decoration: none;
 }
 
-.stats-view-link:hover {
+.stats-view-link.active {
+  color: blue;
+}
+
+.stats-view-link.active:hover {
+  text-decoration: underline;
   cursor: pointer;
+}
+
+#ai-time {
+  padding-top: 30px;
+  padding-bottom: 30px;
 }
 
 .ai-thinking-time-label {

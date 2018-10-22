@@ -15,17 +15,12 @@
       <table id="board"></table>
       <section id="side-panel">
         <div class="main-header">Patzer</div>
+        <div class="status-header">
+          <h3>Status: </h3> <span id="status">Player Turn</span>
+        </div>
         <div class="move-options">
           <div class="btn" id="auto">Choose AI Move</div>
           <div class="btn" id="unmake">Unmake Move</div>
-        </div>
-        <div id="ai-time">
-          <div class="ai-thinking-time-label">
-            <h3>AI Thinking Time: </h3> <span id="ai-time-val"></span>
-          </div>
-          <div class="ai-time-control">
-            <div id="ai-time-slider"></div>
-          </div>
         </div>
         <div class="data">
           <div class="move-list">
@@ -44,6 +39,14 @@
               <tr><th class="stat-header">Quiescence Search Nodes:</th><td class="qsearch-stat"></td></tr>
               <tr><th class="stat-header">Transposition Table Hits:</th><td class="ttable-hit-stat"></td></tr>
             </table>
+          </div>
+        </div>
+        <div id="ai-time">
+          <div class="ai-thinking-time-label">
+            <h3>AI Thinking Time: </h3> <span id="ai-time-val"></span>
+          </div>
+          <div class="ai-time-control">
+            <div id="ai-time-slider"></div>
           </div>
         </div>
         <form id="reset-game">

@@ -40,7 +40,11 @@ class Position {
     this.pPosHash = this.createPiecesPosHash();
     this.stateHash = this.createStateHash();
 
+
     this.setTurn(turn, this.getOtherColor(turn));
+    this.positionCounts = {};
+    this.addPositionCount();
+    // this.positionCounts[this.getHash()] = 1;
   }
 
   createPTypesLocations() {
@@ -336,7 +340,6 @@ class Position {
     });
 
     if (!isLegal) { return false; }
-
     this.addPrevState();
 
     this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
@@ -348,6 +351,7 @@ class Position {
 
     this.prevMoves.push(move);
     this.swapTurn();
+    this.addPositionCount();
 
     return true;
   }
@@ -436,7 +440,10 @@ class Position {
   unmakePrevMove() {
     const prevMove = this.prevMoves.pop();
     if (!prevMove) { return false; }
+
+    this.subtractPositionCount();
     this.swapTurn();
+
     const moveData = prevMove.getData();
 
     this.reverseMoveType(moveData.from, moveData.to, moveData.type);
@@ -496,9 +503,26 @@ class Position {
   addPrevState() {
     const state = { epBB: this.epBB,
                     castleRights: this.castleRights,
-                    stateHash: this.stateHash,
+                    stateHash: this.stateHash
                   };
     this.prevStates.push(state);
+  }
+
+  addPositionCount() {
+    const currHash = this.getHash();
+    if (!this.positionCounts[currHash]) {
+      this.positionCounts[currHash] = 1;
+    } else {
+      this.positionCounts[currHash] += 1;
+    }
+  }
+
+  subtractPositionCount() {
+    const currHash = this.getHash();
+    this.positionCounts[currHash] -= 1;
+    if (this.positionCounts[currHash] <= 0) {
+      delete this.positionCounts[currHash];
+    }
   }
 
   // makes special adjustments to the position based on the move type
@@ -591,21 +615,11 @@ class Position {
 
   //
   isNonStalemateDraw() {
-    return this.isMoveLimitExceeded() || this.isThreeMoveRepetition();
+    return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
   }
 
-  isThreeMoveRepetition() {
-    const lastMoveIdx = this.prevMoves.length - 1;
-    if (lastMoveIdx < 5) {
-      return false;
-    }
-
-    return (this.prevMoves[lastMoveIdx] ===
-            this.prevMoves[lastMoveIdx - 2] ===
-            this.prevMoves[lastMoveIdx - 4]) &&
-           (this.prevMoves[lastMoveIdx - 1] ===
-             this.prevMoves[lastMoveIdx - 3] ===
-             this.prevMoves[lastMoveIdx - 5]);
+  isThreefoldRepetition() {
+    return this.positionCounts[this.getHash()] === 3;
   }
 
   isMoveLimitExceeded() {

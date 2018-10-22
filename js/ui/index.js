@@ -4,7 +4,7 @@ const { PTypes, Colors, PieceTypeHTML } = require('../pieces');
 const Util = require('./util.js');
 const { ColsFiles, FilesCols,
         RowsRanks, RanksRows,
-        Selectors } = require('./constants.js');
+        Selectors, GameStatus } = require('./constants.js');
 
 class UI {
   constructor() {
@@ -52,6 +52,42 @@ class UI {
     $('#ai-time-val').text(Util.formatTime(this.ai.thinkingTime));
   }
 
+  deactivateBtns() {
+    $('.btn').removeClass('active');
+  }
+
+  activateBtns() {
+    $('.btn').addClass('active');
+  }
+
+  resetStatus() {
+    this.currMoves = this.position.generateLegalMoves();
+
+    if (this.currMoves.length === 0) {
+      if (this.position.isThreefoldRepetition()) {
+        this.status = GameStatus.ThreeFoldRep;
+      } else if (this.position.isMoveLimitExceeded()) {
+        this.status = GameStatus.MoveLimitExc;
+      } else if (this.position.inCheck(this.position.turn)) {
+        this.status = GameStatus.Checkmate;
+      } else {
+        this.status = GameStatus.Stalemate;
+      }
+      this.activateBtns();
+      $('#auto').removeClass('active');
+    } else {
+      if (this.position.turn === this.playerColor) {
+        this.status = GameStatus.PlayerTurn;
+      } else {
+        this.status = GameStatus.AITurn;
+      }
+    }
+
+    const statusEl = $('#status');
+
+    statusEl.text(this.status);
+  }
+
   unmakePlayerMove() {
     this.position.unmakePrevMove();
     this.shiftFromMovesList();
@@ -59,16 +95,8 @@ class UI {
     this.shiftFromMovesList();
   }
 
-  displayGameResult() {
-    $('#auto').removeClass('active');
-    $('#unmake').addClass('active');
-    const movesHistory = $('#move-history');
-    let endGameStatus = this.determineGameResult();
-    movesHistory.prepend(`<li>${endGameStatus}<li>`);
-  }
-
   determineGameResult() {
-    if (this.position.isThreeMoveRepetition()) {
+    if (this.position.isThreefoldRepetition()) {
       return 'Draw -- Three Move Repitition';
     } else if (this.position.isMoveLimitExceeded()) {
       return 'Draw -- Move Limit Exceeded (50)';
@@ -106,7 +134,7 @@ class UI {
     moveItem.append($(`<td class="move-str">${moveStr}</td>`));
 
     if (moveData.stats) {
-      moveItem.addClass('stats-view-link');
+      moveItem.addClass('stats-view-link btn');
       moveItem.click(() => this.populateStatsTable(moveStr, moveData.stats));
     }
 
@@ -197,13 +225,15 @@ class UI {
     this.position.makeMove(move);
   }
 
+  isGameOver() {
+    return ![GameStatus.AITurn, GameStatus.PlayerTurn].includes(this.status);
+  }
+
   aiMove() {
-    $('.btn').removeClass('active');
-    this.currMoves = this.position.generateLegalMoves();
-    if (this.currMoves.length === 0) {
-      this.displayGameResult();
-      return;
-    }
+    // $('.btn').removeClass('active');
+    this.deactivateBtns();
+    this.resetStatus();
+    if (this.isGameOver()) { return; }
 
     setTimeout(() => {
       const aiMoveData = this.ai.chooseMove(this.position, this.currMoves);
@@ -226,7 +256,7 @@ class UI {
         'left': captOffset.left,
         'top': captOffset.top
       });
-      captPiece.fadeOut('slow');
+      captPiece.fadeOut(450);
     }
 
     const oldOffset = pieceEl.offset();
@@ -242,7 +272,7 @@ class UI {
     });
     pieceEl.hide();
 
-    animPiece.animate({'top': newOffset.top, 'left': newOffset.left}, 'slow', function(){
+    animPiece.animate({'top': newOffset.top, 'left': newOffset.left}, 450, function(){
       pieceEl.show();
       animPiece.remove();
       cb();
@@ -250,12 +280,10 @@ class UI {
   }
 
   setupPlayerMove() {
-    $('.btn').addClass('active');
-    this.currMoves = this.position.generateLegalMoves();
-    if (this.currMoves.length === 0) {
-      this.displayGameResult();
-      return;
-    }
+    this.activateBtns();
+    this.resetStatus();
+    if (this.isGameOver()) { return; }
+
     const movesData = this.currMoves.map((move) => move.getData());
     const moveFromTos = {};
     const moveToFroms = {};

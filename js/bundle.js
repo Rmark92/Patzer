@@ -681,6 +681,15 @@ var RanksRows = function () {
   }, {});
 }();
 
+var GameStatus = {
+  ThreeFoldRep: 'Draw - Threefold Repition',
+  MoveLimitExc: 'Draw - Move Limit Exceeded (100)',
+  Checkmate: 'Checkmate',
+  Stalemate: 'Stalemate',
+  PlayerTurn: 'Player Turn',
+  AITurn: 'AI Turn'
+};
+
 var Selectors = {
   BOARD_ID: "#board",
   PIECE_CLASS: 'piece',
@@ -695,7 +704,7 @@ var Selectors = {
 //
 // };
 
-module.exports = { ColsFiles: ColsFiles, FilesCols: FilesCols, RowsRanks: RowsRanks, RanksRows: RanksRows, Selectors: Selectors };
+module.exports = { ColsFiles: ColsFiles, FilesCols: FilesCols, RowsRanks: RowsRanks, RanksRows: RanksRows, Selectors: Selectors, GameStatus: GameStatus };
 
 /***/ }),
 /* 9 */
@@ -737,7 +746,8 @@ var _require2 = __webpack_require__(8),
     FilesCols = _require2.FilesCols,
     RowsRanks = _require2.RowsRanks,
     RanksRows = _require2.RanksRows,
-    Selectors = _require2.Selectors;
+    Selectors = _require2.Selectors,
+    GameStatus = _require2.GameStatus;
 
 var UI = function () {
   function UI() {
@@ -792,6 +802,45 @@ var UI = function () {
       $('#ai-time-val').text(Util.formatTime(this.ai.thinkingTime));
     }
   }, {
+    key: 'deactivateBtns',
+    value: function deactivateBtns() {
+      $('.btn').removeClass('active');
+    }
+  }, {
+    key: 'activateBtns',
+    value: function activateBtns() {
+      $('.btn').addClass('active');
+    }
+  }, {
+    key: 'resetStatus',
+    value: function resetStatus() {
+      this.currMoves = this.position.generateLegalMoves();
+
+      if (this.currMoves.length === 0) {
+        if (this.position.isThreefoldRepetition()) {
+          this.status = GameStatus.ThreeFoldRep;
+        } else if (this.position.isMoveLimitExceeded()) {
+          this.status = GameStatus.MoveLimitExc;
+        } else if (this.position.inCheck(this.position.turn)) {
+          this.status = GameStatus.Checkmate;
+        } else {
+          this.status = GameStatus.Stalemate;
+        }
+        this.activateBtns();
+        $('#auto').removeClass('active');
+      } else {
+        if (this.position.turn === this.playerColor) {
+          this.status = GameStatus.PlayerTurn;
+        } else {
+          this.status = GameStatus.AITurn;
+        }
+      }
+
+      var statusEl = $('#status');
+
+      statusEl.text(this.status);
+    }
+  }, {
     key: 'unmakePlayerMove',
     value: function unmakePlayerMove() {
       this.position.unmakePrevMove();
@@ -800,18 +849,9 @@ var UI = function () {
       this.shiftFromMovesList();
     }
   }, {
-    key: 'displayGameResult',
-    value: function displayGameResult() {
-      $('#auto').removeClass('active');
-      $('#unmake').addClass('active');
-      var movesHistory = $('#move-history');
-      var endGameStatus = this.determineGameResult();
-      movesHistory.prepend('<li>' + endGameStatus + '<li>');
-    }
-  }, {
     key: 'determineGameResult',
     value: function determineGameResult() {
-      if (this.position.isThreeMoveRepetition()) {
+      if (this.position.isThreefoldRepetition()) {
         return 'Draw -- Three Move Repitition';
       } else if (this.position.isMoveLimitExceeded()) {
         return 'Draw -- Move Limit Exceeded (50)';
@@ -854,7 +894,7 @@ var UI = function () {
       moveItem.append($('<td class="move-str">' + moveStr + '</td>'));
 
       if (moveData.stats) {
-        moveItem.addClass('stats-view-link');
+        moveItem.addClass('stats-view-link btn');
         moveItem.click(function () {
           return _this2.populateStatsTable(moveStr, moveData.stats);
         });
@@ -955,14 +995,19 @@ var UI = function () {
       this.position.makeMove(move);
     }
   }, {
+    key: 'isGameOver',
+    value: function isGameOver() {
+      return ![GameStatus.AITurn, GameStatus.PlayerTurn].includes(this.status);
+    }
+  }, {
     key: 'aiMove',
     value: function aiMove() {
       var _this4 = this;
 
-      $('.btn').removeClass('active');
-      this.currMoves = this.position.generateLegalMoves();
-      if (this.currMoves.length === 0) {
-        this.displayGameResult();
+      // $('.btn').removeClass('active');
+      this.deactivateBtns();
+      this.resetStatus();
+      if (this.isGameOver()) {
         return;
       }
 
@@ -988,7 +1033,7 @@ var UI = function () {
           'left': captOffset.left,
           'top': captOffset.top
         });
-        captPiece.fadeOut('slow');
+        captPiece.fadeOut(450);
       }
 
       var oldOffset = pieceEl.offset();
@@ -1004,7 +1049,7 @@ var UI = function () {
       });
       pieceEl.hide();
 
-      animPiece.animate({ 'top': newOffset.top, 'left': newOffset.left }, 'slow', function () {
+      animPiece.animate({ 'top': newOffset.top, 'left': newOffset.left }, 450, function () {
         pieceEl.show();
         animPiece.remove();
         cb();
@@ -1013,12 +1058,12 @@ var UI = function () {
   }, {
     key: 'setupPlayerMove',
     value: function setupPlayerMove() {
-      $('.btn').addClass('active');
-      this.currMoves = this.position.generateLegalMoves();
-      if (this.currMoves.length === 0) {
-        this.displayGameResult();
+      this.activateBtns();
+      this.resetStatus();
+      if (this.isGameOver()) {
         return;
       }
+
       var movesData = this.currMoves.map(function (move) {
         return move.getData();
       });
@@ -1171,6 +1216,9 @@ var Position = function () {
     this.stateHash = this.createStateHash();
 
     this.setTurn(turn, this.getOtherColor(turn));
+    this.positionCounts = {};
+    this.addPositionCount();
+    // this.positionCounts[this.getHash()] = 1;
   }
 
   _createClass(Position, [{
@@ -1538,7 +1586,6 @@ var Position = function () {
       if (!isLegal) {
         return false;
       }
-
       this.addPrevState();
 
       this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
@@ -1552,6 +1599,7 @@ var Position = function () {
 
       this.prevMoves.push(move);
       this.swapTurn();
+      this.addPositionCount();
 
       return true;
     }
@@ -1658,7 +1706,10 @@ var Position = function () {
       if (!prevMove) {
         return false;
       }
+
+      this.subtractPositionCount();
       this.swapTurn();
+
       var moveData = prevMove.getData();
 
       this.reverseMoveType(moveData.from, moveData.to, moveData.type);
@@ -1731,6 +1782,25 @@ var Position = function () {
         stateHash: this.stateHash
       };
       this.prevStates.push(state);
+    }
+  }, {
+    key: 'addPositionCount',
+    value: function addPositionCount() {
+      var currHash = this.getHash();
+      if (!this.positionCounts[currHash]) {
+        this.positionCounts[currHash] = 1;
+      } else {
+        this.positionCounts[currHash] += 1;
+      }
+    }
+  }, {
+    key: 'subtractPositionCount',
+    value: function subtractPositionCount() {
+      var currHash = this.getHash();
+      this.positionCounts[currHash] -= 1;
+      if (this.positionCounts[currHash] <= 0) {
+        delete this.positionCounts[currHash];
+      }
     }
 
     // makes special adjustments to the position based on the move type
@@ -1841,17 +1911,12 @@ var Position = function () {
   }, {
     key: 'isNonStalemateDraw',
     value: function isNonStalemateDraw() {
-      return this.isMoveLimitExceeded() || this.isThreeMoveRepetition();
+      return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
     }
   }, {
-    key: 'isThreeMoveRepetition',
-    value: function isThreeMoveRepetition() {
-      var lastMoveIdx = this.prevMoves.length - 1;
-      if (lastMoveIdx < 5) {
-        return false;
-      }
-
-      return this.prevMoves[lastMoveIdx] === this.prevMoves[lastMoveIdx - 2] === this.prevMoves[lastMoveIdx - 4] && this.prevMoves[lastMoveIdx - 1] === this.prevMoves[lastMoveIdx - 3] === this.prevMoves[lastMoveIdx - 5];
+    key: 'isThreefoldRepetition',
+    value: function isThreefoldRepetition() {
+      return this.positionCounts[this.getHash()] === 3;
     }
   }, {
     key: 'isMoveLimitExceeded',
