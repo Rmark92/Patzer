@@ -17,7 +17,7 @@ const RanksRows = function() {
 }();
 
 const GameStatus = {
-  ThreeFoldRep: 'Draw - Threefold Repition',
+  ThreeFoldRep: 'Draw - Threefold Repetition',
   // MoveLimitExc: 'Draw - Move Limit Exceeded (100)',
   Checkmate: 'Checkmate',
   Stalemate: 'Stalemate',

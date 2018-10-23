@@ -81,8 +81,8 @@ class UI {
     if (this.currMoves.length === 0) {
       if (this.position.isThreefoldRepetition()) {
         this.status = GameStatus.ThreeFoldRep;
-      } else if (this.position.isMoveLimitExceeded()) {
-        this.status = GameStatus.MoveLimitExc;
+      // } else if (this.position.isMoveLimitExceeded()) {
+      //   this.status = GameStatus.MoveLimitExc;
       } else if (this.position.inCheck(this.position.turn)) {
         this.status = GameStatus.Checkmate;
       } else {
@@ -109,18 +109,6 @@ class UI {
     if (this.position.turn !== this.playerColor) {
       this.position.unmakePrevMove();
       this.shiftFromMovesList();
-    }
-  }
-
-  determineGameResult() {
-    if (this.position.isThreefoldRepetition()) {
-      return 'Draw -- Three Move Repitition';
-    } else if (this.position.isMoveLimitExceeded()) {
-      return 'Draw -- Move Limit Exceeded (50)';
-    } else if (this.position.inCheck(this.position.turn)) {
-      return 'Checkmate';
-    } else {
-      return 'Stalemate';
     }
   }
 

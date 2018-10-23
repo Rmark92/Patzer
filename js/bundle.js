@@ -682,7 +682,7 @@ var RanksRows = function () {
 }();
 
 var GameStatus = {
-  ThreeFoldRep: 'Draw - Threefold Repition',
+  ThreeFoldRep: 'Draw - Threefold Repetition',
   // MoveLimitExc: 'Draw - Move Limit Exceeded (100)',
   Checkmate: 'Checkmate',
   Stalemate: 'Stalemate',
@@ -829,8 +829,8 @@ var UI = function () {
       if (this.currMoves.length === 0) {
         if (this.position.isThreefoldRepetition()) {
           this.status = GameStatus.ThreeFoldRep;
-        } else if (this.position.isMoveLimitExceeded()) {
-          this.status = GameStatus.MoveLimitExc;
+          // } else if (this.position.isMoveLimitExceeded()) {
+          //   this.status = GameStatus.MoveLimitExc;
         } else if (this.position.inCheck(this.position.turn)) {
           this.status = GameStatus.Checkmate;
         } else {
@@ -858,19 +858,6 @@ var UI = function () {
       if (this.position.turn !== this.playerColor) {
         this.position.unmakePrevMove();
         this.shiftFromMovesList();
-      }
-    }
-  }, {
-    key: 'determineGameResult',
-    value: function determineGameResult() {
-      if (this.position.isThreefoldRepetition()) {
-        return 'Draw -- Three Move Repitition';
-      } else if (this.position.isMoveLimitExceeded()) {
-        return 'Draw -- Move Limit Exceeded (50)';
-      } else if (this.position.inCheck(this.position.turn)) {
-        return 'Checkmate';
-      } else {
-        return 'Stalemate';
       }
     }
   }, {
