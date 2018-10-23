@@ -19,8 +19,8 @@
           <h3>Status: </h3> <span id="status">Player Turn</span>
         </div>
         <div class="move-options">
-          <div class="btn" id="auto">Choose AI Move</div>
-          <div class="btn" id="unmake">Unmake Move</div>
+          <div class="btn clickable" id="auto">Choose AI Move</div>
+          <div class="btn clickable" id="unmake">Unmake Move</div>
         </div>
         <div class="data">
           <div class="move-list">
@@ -41,27 +41,26 @@
             </table>
           </div>
         </div>
-        <div id="ai-time">
-          <div class="ai-thinking-time-label">
-            <h3>AI Thinking Time: </h3> <span id="ai-time-val"></span>
+        <div class="new-game-form">
+          <div id="ai-time">
+            <div class="ai-thinking-time-label">
+              <h4>AI Thinking Time: </h4> <span id="ai-time-val"></span>
+            </div>
+            <div class="ai-time-control">
+              <div id="ai-time-slider"></div>
+            </div>
           </div>
-          <div class="ai-time-control">
-            <div id="ai-time-slider"></div>
+          <div id="color-options">
+            <h4>Color: </h4>
+            <input type="radio" id="white" value="0" name="color-option" checked></input>
+            <label for="white">White</label>
+            <input type="radio" id="black" value="1" name="color-option"></input>
+            <label for="black">Black</label>
+          </div>
+          <div class="btn clickable" id="new-game">
+            New Game
           </div>
         </div>
-        <form id="reset-game">
-          <!-- <fieldset>
-            <input id="player-white-option" type="radio" value="0">
-            </input>
-            <label for="player-white-option">White</label>
-            <input id="player-black-option" type="radio" value="1">
-            </input>
-            <label for="player-black-option">Black</label>
-          </fieldset> -->
-          <!-- <button type="submit" id="reset-game">
-            Reset
-          </button> -->
-        </form>
       </section>
     </main>
   </body>

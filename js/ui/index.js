@@ -8,15 +8,25 @@ const { ColsFiles, FilesCols,
 
 class UI {
   constructor() {
-    this.position = new Position();
-    this.playerColor = Colors.WHITE;
     this.ai = new AI();
-    this.currMoves = this.position.generateLegalMoves();
   }
 
   run() {
-    this.drawBoard();
     this.setupButtons();
+    this.reset();
+  }
+
+  reset() {
+    $('#board').empty();
+    $('#move-history').empty();
+    $('.ai-stats-header').text(`AI Stats`);
+    $('.move-stats td').empty();
+    this.position = new Position();
+    const playerColor = $('input[name="color-option"]:checked').val();
+    this.playerColor = parseInt(playerColor);
+    const aiThinkingTime = parseFloat($('#ai-time-val').text()) * 1000;
+    this.ai.setThinkingTime(aiThinkingTime);
+    this.drawBoard();
     this.playNextTurn();
   }
 
@@ -42,10 +52,12 @@ class UI {
       slide: (event, ui) => {
         const val = Math.round(Math.pow(Math.E, ui.value) * 1000);
         $('#ai-time-val').text(Util.formatTime(val));
-      },
-      change: (event, ui) => {
-        const val = Math.round(Math.pow(Math.E, ui.value) * 1000);
-        this.ai.setThinkingTime(val);
+      }
+    });
+
+    $('#new-game').click((event) => {
+      if ($(event.currentTarget).hasClass('active')) {
+        this.reset();
       }
     });
 
@@ -53,11 +65,14 @@ class UI {
   }
 
   deactivateBtns() {
-    $('.btn').removeClass('active');
+    $('.clickable').removeClass('active');
   }
 
   activateBtns() {
-    $('.btn').addClass('active');
+    $('.clickable').addClass('active');
+    if (this.position.prevMoves.length === 0) {
+      $('#unmake').removeClass('active');
+    }
   }
 
   resetStatus() {
@@ -91,8 +106,10 @@ class UI {
   unmakePlayerMove() {
     this.position.unmakePrevMove();
     this.shiftFromMovesList();
-    this.position.unmakePrevMove();
-    this.shiftFromMovesList();
+    if (this.position.turn !== this.playerColor) {
+      this.position.unmakePrevMove();
+      this.shiftFromMovesList();
+    }
   }
 
   determineGameResult() {
@@ -134,7 +151,7 @@ class UI {
     moveItem.append($(`<td class="move-str">${moveStr}</td>`));
 
     if (moveData.stats) {
-      moveItem.addClass('stats-view-link btn');
+      moveItem.addClass('stats-view-link clickable');
       moveItem.click(() => this.populateStatsTable(moveStr, moveData.stats));
     }
 
@@ -149,10 +166,6 @@ class UI {
 
   shiftFromMovesList() {
     $(".move-item:first").remove();
-  }
-
-  reset() {
-
   }
 
   generateFileHeader() {
@@ -181,7 +194,8 @@ class UI {
     const board = $('#board');
 
     let newRankRow;
-    RowsRanks.forEach((rank) => {
+    const rowsRanks = this.playerColor === Colors.WHITE ? RowsRanks : RowsRanks.slice().reverse();
+    rowsRanks.forEach((rank) => {
       newRankRow = $('<tr>');
       newRankRow.append(`<th class="rank">${rank}</th>`);
       ColsFiles.forEach((file) => {
@@ -230,7 +244,6 @@ class UI {
   }
 
   aiMove() {
-    // $('.btn').removeClass('active');
     this.deactivateBtns();
     this.resetStatus();
     if (this.isGameOver()) { return; }

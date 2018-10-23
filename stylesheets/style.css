@@ -96,7 +96,8 @@ tr {
   width: 100%;
 }
 
-.move-options .btn {
+.btn {
+  font-size: 15px;
   height: 80px;
   width: 120px;
   text-align: center;
@@ -107,13 +108,17 @@ tr {
   border-radius: 4px;
 }
 
-.move-options .btn.active {
+.btn.active {
   background-color: #12cac3;
 }
 
-.btn.active:hover {
+.active:hover {
   cursor: pointer;
 }
+/*
+.btn.active:hover {
+  cursor: pointer;
+} */
 
 .data {
   display: flex;
@@ -132,12 +137,10 @@ tr {
 }
 
 .move-list-container {
-  /* height: 300px;
-  width: 100%;
-  overflow-y: scroll */
-  height: 140px;
+  height: 120px;
   overflow-y: scroll;
-  border: 1px solid black;
+  border: 1px solid #3ca1ad;
+  border-radius: 3px;
 }
 
 #move-history {
@@ -187,15 +190,25 @@ tr {
   cursor: pointer;
 }
 
-#ai-time {
-  padding-top: 30px;
-  padding-bottom: 30px;
+.new-game-form {
+  width: 70%;
+  padding: 10px;
+  border: 2px solid #3ca1ad;
+  border-radius: 5px;
+  font-size: 13px;
+  margin: auto;
 }
 
-.ai-thinking-time-label {
-  margin-bottom: 4px;
-}
-
-.ai-thinking-time-label h3 {
+.ai-thinking-time-label h4 {
   display: inline-block;
+}
+
+#color-options h4 {
+  display: inline-block;
+}
+
+#new-game {
+  margin: auto;
+  margin-top: 5px;
+  margin-bottom: 5px;
 }

@@ -753,17 +753,28 @@ var UI = function () {
   function UI() {
     _classCallCheck(this, UI);
 
-    this.position = new Position();
-    this.playerColor = Colors.WHITE;
     this.ai = new AI();
-    this.currMoves = this.position.generateLegalMoves();
   }
 
   _createClass(UI, [{
     key: 'run',
     value: function run() {
-      this.drawBoard();
       this.setupButtons();
+      this.reset();
+    }
+  }, {
+    key: 'reset',
+    value: function reset() {
+      $('#board').empty();
+      $('#move-history').empty();
+      $('.ai-stats-header').text('AI Stats');
+      $('.move-stats td').empty();
+      this.position = new Position();
+      var playerColor = $('input[name="color-option"]:checked').val();
+      this.playerColor = parseInt(playerColor);
+      var aiThinkingTime = parseFloat($('#ai-time-val').text()) * 1000;
+      this.ai.setThinkingTime(aiThinkingTime);
+      this.drawBoard();
       this.playNextTurn();
     }
   }, {
@@ -792,10 +803,12 @@ var UI = function () {
         slide: function slide(event, ui) {
           var val = Math.round(Math.pow(Math.E, ui.value) * 1000);
           $('#ai-time-val').text(Util.formatTime(val));
-        },
-        change: function change(event, ui) {
-          var val = Math.round(Math.pow(Math.E, ui.value) * 1000);
-          _this.ai.setThinkingTime(val);
+        }
+      });
+
+      $('#new-game').click(function (event) {
+        if ($(event.currentTarget).hasClass('active')) {
+          _this.reset();
         }
       });
 
@@ -804,12 +817,15 @@ var UI = function () {
   }, {
     key: 'deactivateBtns',
     value: function deactivateBtns() {
-      $('.btn').removeClass('active');
+      $('.clickable').removeClass('active');
     }
   }, {
     key: 'activateBtns',
     value: function activateBtns() {
-      $('.btn').addClass('active');
+      $('.clickable').addClass('active');
+      if (this.position.prevMoves.length === 0) {
+        $('#unmake').removeClass('active');
+      }
     }
   }, {
     key: 'resetStatus',
@@ -845,8 +861,10 @@ var UI = function () {
     value: function unmakePlayerMove() {
       this.position.unmakePrevMove();
       this.shiftFromMovesList();
-      this.position.unmakePrevMove();
-      this.shiftFromMovesList();
+      if (this.position.turn !== this.playerColor) {
+        this.position.unmakePrevMove();
+        this.shiftFromMovesList();
+      }
     }
   }, {
     key: 'determineGameResult',
@@ -894,7 +912,7 @@ var UI = function () {
       moveItem.append($('<td class="move-str">' + moveStr + '</td>'));
 
       if (moveData.stats) {
-        moveItem.addClass('stats-view-link btn');
+        moveItem.addClass('stats-view-link clickable');
         moveItem.click(function () {
           return _this2.populateStatsTable(moveStr, moveData.stats);
         });
@@ -914,9 +932,6 @@ var UI = function () {
     value: function shiftFromMovesList() {
       $(".move-item:first").remove();
     }
-  }, {
-    key: 'reset',
-    value: function reset() {}
   }, {
     key: 'generateFileHeader',
     value: function generateFileHeader() {
@@ -949,7 +964,8 @@ var UI = function () {
       var board = $('#board');
 
       var newRankRow = void 0;
-      RowsRanks.forEach(function (rank) {
+      var rowsRanks = this.playerColor === Colors.WHITE ? RowsRanks : RowsRanks.slice().reverse();
+      rowsRanks.forEach(function (rank) {
         newRankRow = $('<tr>');
         newRankRow.append('<th class="rank">' + rank + '</th>');
         ColsFiles.forEach(function (file) {
@@ -1004,7 +1020,6 @@ var UI = function () {
     value: function aiMove() {
       var _this4 = this;
 
-      // $('.btn').removeClass('active');
       this.deactivateBtns();
       this.resetStatus();
       if (this.isGameOver()) {
