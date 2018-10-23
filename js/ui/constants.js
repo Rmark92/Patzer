@@ -18,7 +18,7 @@ const RanksRows = function() {
 
 const GameStatus = {
   ThreeFoldRep: 'Draw - Threefold Repition',
-  MoveLimitExc: 'Draw - Move Limit Exceeded (100)',
+  // MoveLimitExc: 'Draw - Move Limit Exceeded (100)',
   Checkmate: 'Checkmate',
   Stalemate: 'Stalemate',
   PlayerTurn: 'Player Turn',
@@ -32,11 +32,5 @@ const Selectors = {
   RANK_CLASS: 'rank',
   FILE_CLASS: 'file'
 };
-
-// const PieceCharsToHTML = []{
-//   'k': '&#9812;',
-//   'q':
-//
-// };
 
 module.exports = { ColsFiles, FilesCols, RowsRanks, RanksRows, Selectors, GameStatus };

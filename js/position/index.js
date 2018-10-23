@@ -613,15 +613,16 @@ class Position {
     this.pPosHash ^= piecePosHashKeys[pos][pieceType][color];
   }
 
-  //
   isNonStalemateDraw() {
-    return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
+    return this.isThreefoldRepetition();
+    // return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
   }
 
   isThreefoldRepetition() {
     return this.positionCounts[this.getHash()] === 3;
   }
 
+  // need to refactor this to start count after pawn movement...
   isMoveLimitExceeded() {
     return this.prevMoves.length >= 100;
   }

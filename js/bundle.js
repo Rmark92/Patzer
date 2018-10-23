@@ -683,7 +683,7 @@ var RanksRows = function () {
 
 var GameStatus = {
   ThreeFoldRep: 'Draw - Threefold Repition',
-  MoveLimitExc: 'Draw - Move Limit Exceeded (100)',
+  // MoveLimitExc: 'Draw - Move Limit Exceeded (100)',
   Checkmate: 'Checkmate',
   Stalemate: 'Stalemate',
   PlayerTurn: 'Player Turn',
@@ -697,12 +697,6 @@ var Selectors = {
   RANK_CLASS: 'rank',
   FILE_CLASS: 'file'
 };
-
-// const PieceCharsToHTML = []{
-//   'k': '&#9812;',
-//   'q':
-//
-// };
 
 module.exports = { ColsFiles: ColsFiles, FilesCols: FilesCols, RowsRanks: RowsRanks, RanksRows: RanksRows, Selectors: Selectors, GameStatus: GameStatus };
 
@@ -1920,19 +1914,20 @@ var Position = function () {
       this.pTypesLocations[pos] = null;
       this.pPosHash ^= piecePosHashKeys[pos][pieceType][color];
     }
-
-    //
-
   }, {
     key: 'isNonStalemateDraw',
     value: function isNonStalemateDraw() {
-      return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
+      return this.isThreefoldRepetition();
+      // return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
     }
   }, {
     key: 'isThreefoldRepetition',
     value: function isThreefoldRepetition() {
       return this.positionCounts[this.getHash()] === 3;
     }
+
+    // need to refactor this to start count after pawn movement...
+
   }, {
     key: 'isMoveLimitExceeded',
     value: function isMoveLimitExceeded() {
