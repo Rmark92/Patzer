@@ -1339,30 +1339,39 @@ var _require5 = __webpack_require__(25),
     pieceSetsToArray = _require5.pieceSetsToArray,
     pieceSetsFromArray = _require5.pieceSetsFromArray;
 
-var Position = function () {
-  function Position() {
-    var pieces = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : pieceSetsFromArray();
-    var turn = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : Colors.WHITE;
-    var prevMoves = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+var defaultInitVals = {
+  pieces: pieceSetsFromArray(),
+  turn: Colors.WHITE,
+  prevMoves: [],
+  // castling rights represented by 4bit int
+  // in the following order (left bit to right):
+  // bKing bQueen wKing wQueen
+  castleRights: 0xf,
+  // the en passant BB will either be empty
+  // or have one position marked that indicates
+  // the destination of an en passant attack
+  epBB: new BitBoard(),
+  // holds previous state info (castling rights, en passant)
+  // for move reversal purposes
+  prevStates: [],
+  positionCounts: {}
+};
 
+var Position = function () {
+  function Position(initVals) {
     _classCallCheck(this, Position);
 
-    this.pieces = pieces;
-    this.prevMoves = prevMoves;
+    initVals = initVals || defaultInitVals;
 
-    // castling rights represented by 4bit int
-    // in the following order (left bit to right):
-    // bKing bQueen wKing wQueen
-    this.castleRights = 0xf;
+    this.pieces = initVals.pieces;
 
-    // the en passant BB will either be empty
-    // or have one position marked that indicates
-    // the destination of an en passant attack
-    this.epBB = new BitBoard();
+    this.prevMoves = initVals.prevMoves;
 
-    // holds previous state info (castling rights, en passant)
-    // for move reversal purposes
-    this.prevStates = [];
+    this.castleRights = initVals.castleRights;
+
+    this.epBB = initVals.epBB;
+
+    this.prevStates = initVals.prevStates;
 
     this.pTypesLocations = this.createPTypesLocations();
 
@@ -1372,10 +1381,10 @@ var Position = function () {
     this.pPosHash = this.createPiecesPosHash();
     this.stateHash = this.createStateHash();
 
-    this.setTurn(turn, this.getOtherColor(turn));
-    this.positionCounts = {};
+    this.setTurn(initVals.turn, this.getOtherColor(initVals.turn));
+
+    this.positionCounts = initVals.positionCounts;
     this.addPositionCount();
-    // this.positionCounts[this.getHash()] = 1;
   }
 
   _createClass(Position, [{
@@ -1611,12 +1620,6 @@ var Position = function () {
         queenMoves = PUtils[PTypes.QUEENS].moves(pos, occupied, notOwnPieces);
         _this4.addNormalMoveSet(queenMoves, pos, PTypes.QUEENS, moves, includeQuiet);
       });
-      //
-      // const queenPos = this.getColorPieceSet(this.turn, PTypes.QUEENS).bitScanForward();
-      // if (queenPos !== null) {
-      //   const queenMoves = PUtils[PTypes.QUEENS].moves(queenPos, occupied, notOwnPieces);
-      //   this.addNormalMoveSet(queenMoves, queenPos, PTypes.QUEENS, moves, includeQuiet);
-      // }
     }
 
     // adds available king moves to the moves array
@@ -2695,11 +2698,7 @@ var BR = PieceConv.pieceToLetter(PTypes.ROOKS, Colors.BLACK);
 var BQ = PieceConv.pieceToLetter(PTypes.QUEENS, Colors.BLACK);
 var BK = PieceConv.pieceToLetter(PTypes.KINGS, Colors.BLACK);
 
-var defaultBoardArr = [WR, WN, WB, WQ, WK, WB, WN, WR, WP, WP, WP, WP, WP, WP, WP, WP, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx,
-// BP, BP, BP, BP, BP, BP, BP, BP,
-WP, WP, WP, xx, xx, xx, WP, WP, xx, xx, xx, xx, BK, xx, xx, xx
-// BR, BN, BB, BQ, BK, BB, BN, BR
-];
+var defaultBoardArr = [WR, WN, WB, WQ, WK, WB, WN, WR, WP, WP, WP, WP, WP, WP, WP, WP, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, BP, BP, BP, BP, BP, BP, BP, BP, BR, BN, BB, BQ, BK, BB, BN, BR];
 
 function createEmptyBoardArr() {
   var res = [];

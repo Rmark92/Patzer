@@ -13,24 +13,38 @@ const { piecePosHashKeys,
 const { pieceSetsToArray,
         pieceSetsFromArray } = require('./utils/array_conversions.js');
 
+
+const defaultInitVals = {
+  pieces: pieceSetsFromArray(),
+  turn: Colors.WHITE,
+  prevMoves: [],
+  // castling rights represented by 4bit int
+  // in the following order (left bit to right):
+  // bKing bQueen wKing wQueen
+  castleRights: 0xf,
+  // the en passant BB will either be empty
+  // or have one position marked that indicates
+  // the destination of an en passant attack
+  epBB: new BitBoard(),
+  // holds previous state info (castling rights, en passant)
+  // for move reversal purposes
+  prevStates: [],
+  positionCounts: {}
+};
+
 class Position {
-  constructor(pieces = pieceSetsFromArray(), turn = Colors.WHITE, prevMoves = []) {
-    this.pieces = pieces;
-    this.prevMoves = prevMoves;
+  constructor(initVals) {
+    initVals = initVals || defaultInitVals;
 
-    // castling rights represented by 4bit int
-    // in the following order (left bit to right):
-    // bKing bQueen wKing wQueen
-    this.castleRights = 0xf;
+    this.pieces = initVals.pieces;
 
-    // the en passant BB will either be empty
-    // or have one position marked that indicates
-    // the destination of an en passant attack
-    this.epBB = new BitBoard();
+    this.prevMoves = initVals.prevMoves;
 
-    // holds previous state info (castling rights, en passant)
-    // for move reversal purposes
-    this.prevStates = [];
+    this.castleRights = initVals.castleRights;
+
+    this.epBB = initVals.epBB;
+
+    this.prevStates = initVals.prevStates;
 
     this.pTypesLocations = this.createPTypesLocations();
 
@@ -40,11 +54,10 @@ class Position {
     this.pPosHash = this.createPiecesPosHash();
     this.stateHash = this.createStateHash();
 
+    this.setTurn(initVals.turn, this.getOtherColor(initVals.turn));
 
-    this.setTurn(turn, this.getOtherColor(turn));
-    this.positionCounts = {};
+    this.positionCounts = initVals.positionCounts;
     this.addPositionCount();
-    // this.positionCounts[this.getHash()] = 1;
   }
 
   createPTypesLocations() {
@@ -241,12 +254,6 @@ class Position {
       queenMoves = PUtils[PTypes.QUEENS].moves(pos, occupied, notOwnPieces);
       this.addNormalMoveSet(queenMoves, pos, PTypes.QUEENS, moves, includeQuiet);
     });
-    //
-    // const queenPos = this.getColorPieceSet(this.turn, PTypes.QUEENS).bitScanForward();
-    // if (queenPos !== null) {
-    //   const queenMoves = PUtils[PTypes.QUEENS].moves(queenPos, occupied, notOwnPieces);
-    //   this.addNormalMoveSet(queenMoves, queenPos, PTypes.QUEENS, moves, includeQuiet);
-    // }
   }
 
   // adds available king moves to the moves array

@@ -24,10 +24,8 @@ xx, xx, xx, xx, xx, xx, xx, xx,
 xx, xx, xx, xx, xx, xx, xx, xx,
 xx, xx, xx, xx, xx, xx, xx, xx,
 xx, xx, xx, xx, xx, xx, xx, xx,
-// BP, BP, BP, BP, BP, BP, BP, BP,
-WP, WP, WP, xx, xx, xx, WP, WP,
-xx, xx, xx, xx, BK, xx, xx, xx
-// BR, BN, BB, BQ, BK, BB, BN, BR
+BP, BP, BP, BP, BP, BP, BP, BP,
+BR, BN, BB, BQ, BK, BB, BN, BR
 ];
 
 function createEmptyBoardArr() {
