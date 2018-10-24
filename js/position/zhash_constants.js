@@ -1,7 +1,7 @@
 const { PTypes, PUtils, Colors, eachPieceType } = require('../pieces');
 
 // we store zobrist hash values as signed 32bit integers
-// if we limited the range of values to signed 32bits,
+// if we limited the range of values to unsigned 32bits,
 // there likely wouldn't be enough variation to mitigate hashing collisions
 
 function randSigned32Bit() {

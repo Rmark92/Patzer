@@ -2595,7 +2595,7 @@ var _require = __webpack_require__(1),
     eachPieceType = _require.eachPieceType;
 
 // we store zobrist hash values as signed 32bit integers
-// if we limited the range of values to signed 32bits,
+// if we limited the range of values to unsigned 32bits,
 // there likely wouldn't be enough variation to mitigate hashing collisions
 
 function randSigned32Bit() {
