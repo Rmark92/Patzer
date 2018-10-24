@@ -58,7 +58,7 @@ function pieceSetsToArray(pieces) {
 }
 
 function pieceSetsFromArray(array = defaultBoardArr) {
-  const pieces = {};
+  const pieces = [];
 
   Object.values(PTypes).forEach((type) => {
     pieces[type] = new BitBoard();

@@ -1356,20 +1356,22 @@ var defaultInitVals = {
 };
 
 var Position = function () {
-  function Position(initVals) {
+  function Position() {
+    var initVals = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultInitVals;
+
     _classCallCheck(this, Position);
 
-    initVals = initVals || defaultInitVals;
+    this.pieces = initVals.pieces.map(function (pieceBB) {
+      return pieceBB.dup();
+    });
 
-    this.pieces = initVals.pieces;
-
-    this.prevMoves = initVals.prevMoves;
+    this.prevMoves = initVals.prevMoves.slice();
 
     this.castleRights = initVals.castleRights;
 
-    this.epBB = initVals.epBB;
+    this.epBB = initVals.epBB.dup();
 
-    this.prevStates = initVals.prevStates;
+    this.prevStates = initVals.prevStates.slice();
 
     this.pTypesLocations = this.createPTypesLocations();
 
@@ -1381,7 +1383,7 @@ var Position = function () {
 
     this.setTurn(initVals.turn, this.getOtherColor(initVals.turn));
 
-    this.positionCounts = initVals.positionCounts;
+    this.positionCounts = Object.assign({}, initVals.positionCounts);
     this.addPositionCount();
   }
 
@@ -2730,7 +2732,7 @@ function pieceSetsToArray(pieces) {
 function pieceSetsFromArray() {
   var array = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultBoardArr;
 
-  var pieces = {};
+  var pieces = [];
 
   Object.values(PTypes).forEach(function (type) {
     pieces[type] = new BitBoard();
