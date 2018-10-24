@@ -1081,6 +1081,7 @@ var UI = function () {
         this.populateStatsTable(Util.formatMove(move, this.position.turn), stats);
       }
       this.position.makeMove(move);
+      this.playNextTurn();
     }
   }, {
     key: 'isGameOver',
@@ -1102,7 +1103,6 @@ var UI = function () {
         var aiMoveData = _this4.ai.chooseMove(_this4.position, _this4.currMoves);
         _this4.animateMove(aiMoveData.move, function () {
           _this4.makeMove(aiMoveData.move, aiMoveData.performance);
-          _this4.playNextTurn();
         });
       }, 0);
     }
@@ -1245,8 +1245,7 @@ var UI = function () {
         this.createPromoWindow(destSq, selectedMoves, color);
       } else {
         var selectedMove = selectedMoves[0];
-        this.position.makeMove(selectedMove);
-        this.playNextTurn();
+        this.makeMove(selectedMove);
       }
     }
   }, {
@@ -1257,8 +1256,7 @@ var UI = function () {
       var promoPiece = $('<div class=\'promo-piece piece ' + color + '\'">' + PieceTypeHTML[pType] + '</div>');
       promoPiece.click(function () {
         $('.promo-window').remove();
-        _this6.position.makeMove(move);
-        _this6.playNextTurn();
+        _this6.makeMove(move);
       });
 
       return promoPiece;

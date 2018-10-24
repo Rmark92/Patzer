@@ -226,6 +226,7 @@ class UI {
       this.populateStatsTable(Util.formatMove(move, this.position.turn), stats);
     }
     this.position.makeMove(move);
+    this.playNextTurn();
   }
 
   isGameOver() {
@@ -241,7 +242,6 @@ class UI {
       const aiMoveData = this.ai.chooseMove(this.position, this.currMoves);
       this.animateMove(aiMoveData.move, () => {
         this.makeMove(aiMoveData.move, aiMoveData.performance);
-        this.playNextTurn();
       });
     }, 0);
   }
@@ -372,8 +372,7 @@ class UI {
       this.createPromoWindow(destSq, selectedMoves, color);
     } else {
       let selectedMove = selectedMoves[0];
-      this.position.makeMove(selectedMove);
-      this.playNextTurn();
+      this.makeMove(selectedMove);
     }
   }
 
@@ -381,8 +380,7 @@ class UI {
     const promoPiece = $(`<div class='promo-piece piece ${color}'">${PieceTypeHTML[pType]}</div>`);
     promoPiece.click(() => {
       $('.promo-window').remove();
-      this.position.makeMove(move);
-      this.playNextTurn();
+      this.makeMove(move);
     });
 
     return promoPiece;
