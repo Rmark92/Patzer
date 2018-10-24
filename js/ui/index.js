@@ -1,6 +1,7 @@
 const Position = require('../position');
 const AI = require('../ai');
 const { PTypes, Colors, PieceTypeHTML } = require('../pieces');
+const { MoveTypes } = require('../move');
 const Util = require('./util.js');
 const { ColsFiles, FilesCols,
         RowsRanks, RanksRows,
@@ -199,7 +200,7 @@ class UI {
 
   updatePieces() {
     $('.piece').remove();
-    $('.square').removeClass('ui-droppable ui-draggable can-move-to');
+    // $('.square').removeClass('ui-droppable ui-draggable can-move-to');
     const pieceTypes = Object.values(PTypes);
     const pieces = this.position.pieces;
     let fileRank;
@@ -315,9 +316,11 @@ class UI {
       });
 
       pieceEl.mouseenter(() => {
-        moveFromTos[fromPos].forEach((toPos) => {
-          $(`#${Util.fileRankFromPos(toPos)}`).addClass('can-move-to');
-        });
+        if (pieceEl.hasClass('ui-draggable')) {
+          moveFromTos[fromPos].forEach((toPos) => {
+            $(`#${Util.fileRankFromPos(toPos)}`).addClass('can-move-to');
+          });
+        }
       });
 
       pieceEl.mouseleave(() => {
@@ -342,17 +345,82 @@ class UI {
           return moveToFroms[toPos].includes(originPos);
         },
         drop: (event, ui) => {
-          originSquare = $(ui.draggable).parent().attr('id');
-          originPos = Util.posFromFileRank(originSquare);
-          selectedMove = this.currMoves.filter((move) => {
-            return move.getFrom() === originPos &&
-                   move.getTo() === parseInt(toPos);
-          })[0];
-          this.makeMove(selectedMove);
-          this.playNextTurn();
+          this.makePlayerMove(ui.draggable, parseInt(toPos));
         }
       });
     });
+  }
+
+  makePlayerMove(piece, toPos) {
+    const originSquare = $(piece).parent();
+    piece.remove();
+
+    $('.ui-draggable').draggable('destroy');
+    $('.ui-droppable').droppable('destroy');
+    $('.square').removeClass('can-move-to');
+
+    this.deactivateBtns();
+
+    const originPos = Util.posFromFileRank($(originSquare).attr('id'));
+    const destSq = $(`#${Util.fileRankFromPos(toPos)}`);
+    const selectedMoves = this.currMoves.filter((move) => {
+      return move.getFrom() === originPos &&
+             move.getTo() === toPos;
+    });
+    let selectedMove;
+
+    if (selectedMoves.length > 1) {
+      const color = this.playerColor === Colors.WHITE ? 'white' : 'black';
+      this.createPromoWindow(destSq, selectedMoves, color);
+    } else {
+      selectedMove = selectedMoves[0];
+      this.position.makeMove(selectedMove);
+      this.playNextTurn();
+    }
+  }
+
+  createPromoPiece(move, pType, color) {
+    const promoPiece = $(`<div class='promo-piece piece ${color}'">${PieceTypeHTML[pType]}</div>`);
+    promoPiece.click(() => {
+      $('.promo-window').remove();
+      this.position.makeMove(move);
+      this.playNextTurn();
+    });
+
+    return promoPiece;
+  }
+
+  createPromoPieces(promoMoves, color) {
+    console.log(color);
+    const PromosPTypes = {
+      [MoveTypes.NPROMO]: PTypes.KNIGHTS,
+      [MoveTypes.BPROMO]: PTypes.BISHOPS,
+      [MoveTypes.RPROMO]: PTypes.ROOKS,
+      [MoveTypes.QPROMO]: PTypes.QUEENS
+    };
+    let promoMove;
+    const promoPieces = [];
+    let newPromoPiece;
+
+    Object.keys(PromosPTypes).forEach((promoMoveType) => {
+      promoMove = promoMoves.filter((move) => move.getType() === parseInt(promoMoveType))[0];
+      newPromoPiece = this.createPromoPiece(promoMove, PromosPTypes[promoMoveType], color);
+      promoPieces.push(newPromoPiece);
+    });
+
+    return promoPieces;
+  }
+
+  createPromoWindow(destSq, promoMoves, color) {
+    const promoDiv = $("<div class='promo-window'></div>");
+    const promoPieces = this.createPromoPieces(promoMoves, color);
+    let promoWinRow = $("<div class='promo-window-row'></div>");
+    promoWinRow.append(promoPieces.slice(0, 2));
+    promoDiv.append(promoWinRow);
+    promoWinRow = $("<div class='promo-window-row'></div>");
+    promoWinRow.append(promoPieces.slice(2));
+    promoDiv.append(promoWinRow);
+    destSq.append(promoDiv);
   }
 }
 

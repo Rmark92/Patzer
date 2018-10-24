@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 9);
+/******/ 	return __webpack_require__(__webpack_require__.s = 10);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -71,7 +71,7 @@
 
 
 var BitBoard = __webpack_require__(6);
-var Masks = __webpack_require__(13);
+var Masks = __webpack_require__(14);
 
 module.exports = {
   BitBoard: BitBoard,
@@ -176,7 +176,7 @@ var _require = __webpack_require__(0),
     BBMasks = _require.BBMasks;
 
 var Dirs = __webpack_require__(3);
-var stepMove = __webpack_require__(7);
+var stepMove = __webpack_require__(8);
 
 function generateStepBitBoards(dirs) {
   var res = [];
@@ -316,7 +316,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Utils = __webpack_require__(12);
+var Utils = __webpack_require__(13);
 // A standard 8x8 chess board can be represented by a 64bit integer (bitboard),
 // in which a 1 means the position is occupied, a 0 means it's empty
 
@@ -632,6 +632,92 @@ module.exports = BitBoard;
 "use strict";
 
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var _require = __webpack_require__(15),
+    Types = _require.Types;
+
+var Move = function () {
+  function Move(from, to, type, piece, captPiece) {
+    _classCallCheck(this, Move);
+
+    this.val = (type & 0xf) << 18 >>> 0 | ((captPiece || 0) & 0x7) << 15 >>> 0 | (piece & 0x7) << 12 >>> 0 | (from & 0x3f) << 6 >>> 0 | (to & 0x3f) >>> 0 >>> 0;
+  }
+
+  // for testing purposes
+
+
+  _createClass(Move, [{
+    key: 'getData',
+    value: function getData() {
+      return {
+        from: this.getFrom(),
+        to: this.getTo(),
+        type: this.getType(),
+        pieceType: this.getPiece(),
+        captPieceType: this.getCaptPiece(),
+        isPromo: this.isPromo(),
+        isCastle: this.isCastle()
+      };
+    }
+  }, {
+    key: 'getFrom',
+    value: function getFrom() {
+      return this.val >>> 6 & 0x3f;
+    }
+  }, {
+    key: 'getTo',
+    value: function getTo() {
+      return this.val & 0x3f;
+    }
+  }, {
+    key: 'getPiece',
+    value: function getPiece() {
+      return this.val >>> 12 & 0x7;
+    }
+  }, {
+    key: 'getCaptPiece',
+    value: function getCaptPiece() {
+      return this.val >>> 15 & 0x7;
+    }
+  }, {
+    key: 'getType',
+    value: function getType() {
+      return this.val >>> 18;
+    }
+  }, {
+    key: 'isPromo',
+    value: function isPromo() {
+      return [Types.NPROMO, Types.BPROMO, Types.RPROMO, Types.QPROMO].includes(this.getType());
+    }
+  }, {
+    key: 'isCastle',
+    value: function isCastle() {
+      return [Types.CSTL_KING, Types.CSTL_QUEEN].includes(this.getType());
+    }
+  }], [{
+    key: 'fromVal',
+    value: function fromVal(val) {
+      var newMove = new Move(0, 0, 0, 0, 0);
+      newMove.val = val;
+      return newMove;
+    }
+  }]);
+
+  return Move;
+}();
+
+module.exports = { Move: Move, MoveTypes: Types };
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
 var _require = __webpack_require__(0),
     BitBoard = _require.BitBoard,
     BBMasks = _require.BBMasks;
@@ -657,7 +743,7 @@ function stepMove(initial, noSo, eaWe) {
 module.exports = stepMove;
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -701,13 +787,13 @@ var Selectors = {
 module.exports = { ColsFiles: ColsFiles, FilesCols: FilesCols, RowsRanks: RowsRanks, RanksRows: RanksRows, Selectors: Selectors, GameStatus: GameStatus };
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var UI = __webpack_require__(10);
+var UI = __webpack_require__(11);
 
 $(document).ready(function () {
   var ui = new UI();
@@ -715,7 +801,7 @@ $(document).ready(function () {
 });
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -723,9 +809,11 @@ $(document).ready(function () {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Position = __webpack_require__(11);
+var Position = __webpack_require__(12);
 var AI = __webpack_require__(26);
 
 var _require = __webpack_require__(1),
@@ -733,15 +821,18 @@ var _require = __webpack_require__(1),
     Colors = _require.Colors,
     PieceTypeHTML = _require.PieceTypeHTML;
 
+var _require2 = __webpack_require__(7),
+    MoveTypes = _require2.MoveTypes;
+
 var Util = __webpack_require__(30);
 
-var _require2 = __webpack_require__(8),
-    ColsFiles = _require2.ColsFiles,
-    FilesCols = _require2.FilesCols,
-    RowsRanks = _require2.RowsRanks,
-    RanksRows = _require2.RanksRows,
-    Selectors = _require2.Selectors,
-    GameStatus = _require2.GameStatus;
+var _require3 = __webpack_require__(9),
+    ColsFiles = _require3.ColsFiles,
+    FilesCols = _require3.FilesCols,
+    RowsRanks = _require3.RowsRanks,
+    RanksRows = _require3.RanksRows,
+    Selectors = _require3.Selectors,
+    GameStatus = _require3.GameStatus;
 
 var UI = function () {
   function UI() {
@@ -963,7 +1054,7 @@ var UI = function () {
     key: 'updatePieces',
     value: function updatePieces() {
       $('.piece').remove();
-      $('.square').removeClass('ui-droppable ui-draggable can-move-to');
+      // $('.square').removeClass('ui-droppable ui-draggable can-move-to');
       var pieceTypes = Object.values(PTypes);
       var pieces = this.position.pieces;
       var fileRank = void 0;
@@ -1093,9 +1184,11 @@ var UI = function () {
         });
 
         pieceEl.mouseenter(function () {
-          moveFromTos[fromPos].forEach(function (toPos) {
-            $('#' + Util.fileRankFromPos(toPos)).addClass('can-move-to');
-          });
+          if (pieceEl.hasClass('ui-draggable')) {
+            moveFromTos[fromPos].forEach(function (toPos) {
+              $('#' + Util.fileRankFromPos(toPos)).addClass('can-move-to');
+            });
+          }
         });
 
         pieceEl.mouseleave(function () {
@@ -1125,16 +1218,87 @@ var UI = function () {
             return moveToFroms[toPos].includes(originPos);
           },
           drop: function drop(event, ui) {
-            originSquare = $(ui.draggable).parent().attr('id');
-            originPos = Util.posFromFileRank(originSquare);
-            selectedMove = _this5.currMoves.filter(function (move) {
-              return move.getFrom() === originPos && move.getTo() === parseInt(toPos);
-            })[0];
-            _this5.makeMove(selectedMove);
-            _this5.playNextTurn();
+            _this5.makePlayerMove(ui.draggable, parseInt(toPos));
           }
         });
       });
+    }
+  }, {
+    key: 'makePlayerMove',
+    value: function makePlayerMove(piece, toPos) {
+      var originSquare = $(piece).parent();
+      piece.remove();
+
+      $('.ui-draggable').draggable('destroy');
+      $('.ui-droppable').droppable('destroy');
+      $('.square').removeClass('can-move-to');
+
+      this.deactivateBtns();
+
+      var originPos = Util.posFromFileRank($(originSquare).attr('id'));
+      var destSq = $('#' + Util.fileRankFromPos(toPos));
+      var selectedMoves = this.currMoves.filter(function (move) {
+        return move.getFrom() === originPos && move.getTo() === toPos;
+      });
+      var selectedMove = void 0;
+
+      if (selectedMoves.length > 1) {
+        var color = this.playerColor === Colors.WHITE ? 'white' : 'black';
+        this.createPromoWindow(destSq, selectedMoves, color);
+      } else {
+        selectedMove = selectedMoves[0];
+        this.position.makeMove(selectedMove);
+        this.playNextTurn();
+      }
+    }
+  }, {
+    key: 'createPromoPiece',
+    value: function createPromoPiece(move, pType, color) {
+      var _this6 = this;
+
+      var promoPiece = $('<div class=\'promo-piece piece ' + color + '\'">' + PieceTypeHTML[pType] + '</div>');
+      promoPiece.click(function () {
+        $('.promo-window').remove();
+        _this6.position.makeMove(move);
+        _this6.playNextTurn();
+      });
+
+      return promoPiece;
+    }
+  }, {
+    key: 'createPromoPieces',
+    value: function createPromoPieces(promoMoves, color) {
+      var _PromosPTypes,
+          _this7 = this;
+
+      console.log(color);
+      var PromosPTypes = (_PromosPTypes = {}, _defineProperty(_PromosPTypes, MoveTypes.NPROMO, PTypes.KNIGHTS), _defineProperty(_PromosPTypes, MoveTypes.BPROMO, PTypes.BISHOPS), _defineProperty(_PromosPTypes, MoveTypes.RPROMO, PTypes.ROOKS), _defineProperty(_PromosPTypes, MoveTypes.QPROMO, PTypes.QUEENS), _PromosPTypes);
+      var promoMove = void 0;
+      var promoPieces = [];
+      var newPromoPiece = void 0;
+
+      Object.keys(PromosPTypes).forEach(function (promoMoveType) {
+        promoMove = promoMoves.filter(function (move) {
+          return move.getType() === parseInt(promoMoveType);
+        })[0];
+        newPromoPiece = _this7.createPromoPiece(promoMove, PromosPTypes[promoMoveType], color);
+        promoPieces.push(newPromoPiece);
+      });
+
+      return promoPieces;
+    }
+  }, {
+    key: 'createPromoWindow',
+    value: function createPromoWindow(destSq, promoMoves, color) {
+      var promoDiv = $("<div class='promo-window'></div>");
+      var promoPieces = this.createPromoPieces(promoMoves, color);
+      var promoWinRow = $("<div class='promo-window-row'></div>");
+      promoWinRow.append(promoPieces.slice(0, 2));
+      promoDiv.append(promoWinRow);
+      promoWinRow = $("<div class='promo-window-row'></div>");
+      promoWinRow.append(promoPieces.slice(2));
+      promoDiv.append(promoWinRow);
+      destSq.append(promoDiv);
     }
   }]);
 
@@ -1144,7 +1308,7 @@ var UI = function () {
 module.exports = UI;
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1158,7 +1322,7 @@ var _require = __webpack_require__(0),
     BitBoard = _require.BitBoard,
     BBMasks = _require.BBMasks;
 
-var _require2 = __webpack_require__(14),
+var _require2 = __webpack_require__(7),
     Move = _require2.Move,
     MoveTypes = _require2.MoveTypes;
 
@@ -1966,7 +2130,7 @@ var Position = function () {
 module.exports = Position;
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2021,7 +2185,7 @@ module.exports = {
 };
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2162,92 +2326,6 @@ module.exports = {
 };
 
 /***/ }),
-/* 14 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var _require = __webpack_require__(15),
-    Types = _require.Types;
-
-var Move = function () {
-  function Move(from, to, type, piece, captPiece) {
-    _classCallCheck(this, Move);
-
-    this.val = (type & 0xf) << 18 >>> 0 | ((captPiece || 0) & 0x7) << 15 >>> 0 | (piece & 0x7) << 12 >>> 0 | (from & 0x3f) << 6 >>> 0 | (to & 0x3f) >>> 0 >>> 0;
-  }
-
-  // for testing purposes
-
-
-  _createClass(Move, [{
-    key: 'getData',
-    value: function getData() {
-      return {
-        from: this.getFrom(),
-        to: this.getTo(),
-        type: this.getType(),
-        pieceType: this.getPiece(),
-        captPieceType: this.getCaptPiece(),
-        isPromo: this.isPromo(),
-        isCastle: this.isCastle()
-      };
-    }
-  }, {
-    key: 'getFrom',
-    value: function getFrom() {
-      return this.val >>> 6 & 0x3f;
-    }
-  }, {
-    key: 'getTo',
-    value: function getTo() {
-      return this.val & 0x3f;
-    }
-  }, {
-    key: 'getPiece',
-    value: function getPiece() {
-      return this.val >>> 12 & 0x7;
-    }
-  }, {
-    key: 'getCaptPiece',
-    value: function getCaptPiece() {
-      return this.val >>> 15 & 0x7;
-    }
-  }, {
-    key: 'getType',
-    value: function getType() {
-      return this.val >>> 18;
-    }
-  }, {
-    key: 'isPromo',
-    value: function isPromo() {
-      return [Types.NPROMO, Types.BPROMO, Types.RPROMO, Types.QPROMO].includes(this.getType());
-    }
-  }, {
-    key: 'isCastle',
-    value: function isCastle() {
-      return [Types.CSTL_KING, Types.CSTL_QUEEN].includes(this.getType());
-    }
-  }], [{
-    key: 'fromVal',
-    value: function fromVal(val) {
-      var newMove = new Move(0, 0, 0, 0, 0);
-      newMove.val = val;
-      return newMove;
-    }
-  }]);
-
-  return Move;
-}();
-
-module.exports = { Move: Move, MoveTypes: Types };
-
-/***/ }),
 /* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2277,7 +2355,7 @@ var _DIRS, _INIT_MASKS, _PROMO_MASKS;
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var stepMove = __webpack_require__(7);
+var stepMove = __webpack_require__(8);
 
 var _require = __webpack_require__(0),
     BBMasks = _require.BBMasks;
@@ -2613,7 +2691,11 @@ var BR = PieceConv.pieceToLetter(PTypes.ROOKS, Colors.BLACK);
 var BQ = PieceConv.pieceToLetter(PTypes.QUEENS, Colors.BLACK);
 var BK = PieceConv.pieceToLetter(PTypes.KINGS, Colors.BLACK);
 
-var defaultBoardArr = [WR, WN, WB, WQ, WK, WB, WN, WR, WP, WP, WP, WP, WP, WP, WP, WP, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, BP, BP, BP, BP, BP, BP, BP, BP, BR, BN, BB, BQ, BK, BB, BN, BR];
+var defaultBoardArr = [WR, WN, WB, WQ, WK, WB, WN, WR, WP, WP, WP, WP, WP, WP, WP, WP, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx,
+// BP, BP, BP, BP, BP, BP, BP, BP,
+WP, WP, WP, xx, xx, xx, WP, WP, xx, xx, xx, xx, BK, xx, xx, xx
+// BR, BN, BB, BQ, BK, BB, BN, BR
+];
 
 function createEmptyBoardArr() {
   var res = [];
@@ -3123,7 +3205,7 @@ var _require = __webpack_require__(1),
     PieceConv = _require.PieceConv,
     Colors = _require.Colors;
 
-var _require2 = __webpack_require__(8),
+var _require2 = __webpack_require__(9),
     ColsFiles = _require2.ColsFiles,
     FilesCols = _require2.FilesCols,
     RowsRanks = _require2.RowsRanks,
