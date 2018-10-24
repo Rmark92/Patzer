@@ -1232,7 +1232,6 @@ var UI = function () {
       $('.ui-draggable').draggable('destroy');
       $('.ui-droppable').droppable('destroy');
       $('.square').removeClass('can-move-to');
-
       this.deactivateBtns();
 
       var originPos = Util.posFromFileRank($(originSquare).attr('id'));
@@ -1240,13 +1239,12 @@ var UI = function () {
       var selectedMoves = this.currMoves.filter(function (move) {
         return move.getFrom() === originPos && move.getTo() === toPos;
       });
-      var selectedMove = void 0;
 
       if (selectedMoves.length > 1) {
         var color = this.playerColor === Colors.WHITE ? 'white' : 'black';
         this.createPromoWindow(destSq, selectedMoves, color);
       } else {
-        selectedMove = selectedMoves[0];
+        var selectedMove = selectedMoves[0];
         this.position.makeMove(selectedMove);
         this.playNextTurn();
       }
@@ -1271,17 +1269,13 @@ var UI = function () {
       var _PromosPTypes,
           _this7 = this;
 
-      console.log(color);
       var PromosPTypes = (_PromosPTypes = {}, _defineProperty(_PromosPTypes, MoveTypes.NPROMO, PTypes.KNIGHTS), _defineProperty(_PromosPTypes, MoveTypes.BPROMO, PTypes.BISHOPS), _defineProperty(_PromosPTypes, MoveTypes.RPROMO, PTypes.ROOKS), _defineProperty(_PromosPTypes, MoveTypes.QPROMO, PTypes.QUEENS), _PromosPTypes);
-      var promoMove = void 0;
+
       var promoPieces = [];
       var newPromoPiece = void 0;
 
-      Object.keys(PromosPTypes).forEach(function (promoMoveType) {
-        promoMove = promoMoves.filter(function (move) {
-          return move.getType() === parseInt(promoMoveType);
-        })[0];
-        newPromoPiece = _this7.createPromoPiece(promoMove, PromosPTypes[promoMoveType], color);
+      promoMoves.forEach(function (promoMove) {
+        newPromoPiece = _this7.createPromoPiece(promoMove, PromosPTypes[promoMove.getType()], color);
         promoPieces.push(newPromoPiece);
       });
 
@@ -1292,12 +1286,15 @@ var UI = function () {
     value: function createPromoWindow(destSq, promoMoves, color) {
       var promoDiv = $("<div class='promo-window'></div>");
       var promoPieces = this.createPromoPieces(promoMoves, color);
+
       var promoWinRow = $("<div class='promo-window-row'></div>");
       promoWinRow.append(promoPieces.slice(0, 2));
       promoDiv.append(promoWinRow);
+
       promoWinRow = $("<div class='promo-window-row'></div>");
       promoWinRow.append(promoPieces.slice(2));
       promoDiv.append(promoWinRow);
+
       destSq.append(promoDiv);
     }
   }]);
@@ -1608,11 +1605,18 @@ var Position = function () {
         _this4.addNormalMoveSet(rookMoves, pos, PTypes.ROOKS, moves, includeQuiet);
       });
 
-      var queenPos = this.getColorPieceSet(this.turn, PTypes.QUEENS).bitScanForward();
-      if (queenPos !== null) {
-        var queenMoves = PUtils[PTypes.QUEENS].moves(queenPos, occupied, notOwnPieces);
-        this.addNormalMoveSet(queenMoves, queenPos, PTypes.QUEENS, moves, includeQuiet);
-      }
+      var queensPos = this.getColorPieceSet(this.turn, PTypes.QUEENS);
+      var queenMoves = void 0;
+      queensPos.dup().pop1Bits(function (pos) {
+        queenMoves = PUtils[PTypes.QUEENS].moves(pos, occupied, notOwnPieces);
+        _this4.addNormalMoveSet(queenMoves, pos, PTypes.QUEENS, moves, includeQuiet);
+      });
+      //
+      // const queenPos = this.getColorPieceSet(this.turn, PTypes.QUEENS).bitScanForward();
+      // if (queenPos !== null) {
+      //   const queenMoves = PUtils[PTypes.QUEENS].moves(queenPos, occupied, notOwnPieces);
+      //   this.addNormalMoveSet(queenMoves, queenPos, PTypes.QUEENS, moves, includeQuiet);
+      // }
     }
 
     // adds available king moves to the moves array

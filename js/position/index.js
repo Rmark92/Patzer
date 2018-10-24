@@ -235,11 +235,18 @@ class Position {
       this.addNormalMoveSet(rookMoves, pos, PTypes.ROOKS, moves, includeQuiet);
     });
 
-    const queenPos = this.getColorPieceSet(this.turn, PTypes.QUEENS).bitScanForward();
-    if (queenPos !== null) {
-      const queenMoves = PUtils[PTypes.QUEENS].moves(queenPos, occupied, notOwnPieces);
-      this.addNormalMoveSet(queenMoves, queenPos, PTypes.QUEENS, moves, includeQuiet);
-    }
+    const queensPos = this.getColorPieceSet(this.turn, PTypes.QUEENS);
+    let queenMoves;
+    queensPos.dup().pop1Bits((pos) => {
+      queenMoves = PUtils[PTypes.QUEENS].moves(pos, occupied, notOwnPieces);
+      this.addNormalMoveSet(queenMoves, pos, PTypes.QUEENS, moves, includeQuiet);
+    });
+    //
+    // const queenPos = this.getColorPieceSet(this.turn, PTypes.QUEENS).bitScanForward();
+    // if (queenPos !== null) {
+    //   const queenMoves = PUtils[PTypes.QUEENS].moves(queenPos, occupied, notOwnPieces);
+    //   this.addNormalMoveSet(queenMoves, queenPos, PTypes.QUEENS, moves, includeQuiet);
+    // }
   }
 
   // adds available king moves to the moves array

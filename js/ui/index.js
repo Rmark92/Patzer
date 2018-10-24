@@ -358,7 +358,6 @@ class UI {
     $('.ui-draggable').draggable('destroy');
     $('.ui-droppable').droppable('destroy');
     $('.square').removeClass('can-move-to');
-
     this.deactivateBtns();
 
     const originPos = Util.posFromFileRank($(originSquare).attr('id'));
@@ -367,13 +366,12 @@ class UI {
       return move.getFrom() === originPos &&
              move.getTo() === toPos;
     });
-    let selectedMove;
 
     if (selectedMoves.length > 1) {
       const color = this.playerColor === Colors.WHITE ? 'white' : 'black';
       this.createPromoWindow(destSq, selectedMoves, color);
     } else {
-      selectedMove = selectedMoves[0];
+      let selectedMove = selectedMoves[0];
       this.position.makeMove(selectedMove);
       this.playNextTurn();
     }
@@ -391,20 +389,18 @@ class UI {
   }
 
   createPromoPieces(promoMoves, color) {
-    console.log(color);
     const PromosPTypes = {
       [MoveTypes.NPROMO]: PTypes.KNIGHTS,
       [MoveTypes.BPROMO]: PTypes.BISHOPS,
       [MoveTypes.RPROMO]: PTypes.ROOKS,
       [MoveTypes.QPROMO]: PTypes.QUEENS
     };
-    let promoMove;
+
     const promoPieces = [];
     let newPromoPiece;
 
-    Object.keys(PromosPTypes).forEach((promoMoveType) => {
-      promoMove = promoMoves.filter((move) => move.getType() === parseInt(promoMoveType))[0];
-      newPromoPiece = this.createPromoPiece(promoMove, PromosPTypes[promoMoveType], color);
+    promoMoves.forEach((promoMove) => {
+      newPromoPiece = this.createPromoPiece(promoMove, PromosPTypes[promoMove.getType()], color);
       promoPieces.push(newPromoPiece);
     });
 
@@ -414,12 +410,15 @@ class UI {
   createPromoWindow(destSq, promoMoves, color) {
     const promoDiv = $("<div class='promo-window'></div>");
     const promoPieces = this.createPromoPieces(promoMoves, color);
+
     let promoWinRow = $("<div class='promo-window-row'></div>");
     promoWinRow.append(promoPieces.slice(0, 2));
     promoDiv.append(promoWinRow);
+
     promoWinRow = $("<div class='promo-window-row'></div>");
     promoWinRow.append(promoPieces.slice(2));
     promoDiv.append(promoWinRow);
+
     destSq.append(promoDiv);
   }
 }
