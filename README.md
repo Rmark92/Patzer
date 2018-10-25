@@ -21,7 +21,7 @@ Todo: [Magic Bitboards](https://www.chessprogramming.org/Magic_Bitboards)
 
 The move search implements the [negamax algorithm](https://www.chessprogramming.org/Negamax) with [Alpha-Beta pruning](https://www.chessprogramming.org/Alpha-Beta). In order to mitigate the [horizon effect](https://www.chessprogramming.org/Horizon_Effect), the main search is followed by a [quiescence search](https://www.chessprogramming.org/Quiescence_Search) that exhausts all tactical moves so that only quiet positions are evaluated. A [transposition table](https://www.chessprogramming.org/Transposition_Table) is used to store the results of previously explored positions, which are uniquely identified by a signed 32-bit [zobrist hash](https://www.chessprogramming.org/Zobrist_Hashing). The search is time-limited through an [iterative deepening](https://www.chessprogramming.org/Iterative_Deepening) process that increments the max search depth for each iteration. In addition to the obvious benefits of adjusting the search for UI preferences and complexity of the current position, iterative deepening delivers the large advantage of better [move ordering](https://www.chessprogramming.org/Move_Ordering) for higher and more costly max depths.
 
-Todo: [Killer Hueristic](https://www.chessprogramming.org/Killer_Heuristic), [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
+Todo: [Killer Heuristic](https://www.chessprogramming.org/Killer_Heuristic), [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
 
 ### Move Evaluation
 
