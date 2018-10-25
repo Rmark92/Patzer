@@ -11,7 +11,7 @@ Patzer adheres to most standard chess rules, including promotions, castling, en 
 **Board Representation**
 
 The board is represented by a set of 8 [bitboards](https://www.chessprogramming.org/Bitboards),
-one for each piece type and color. Compared to an array-based representation, bitboards use less memory and typically allow for faster board manipulation and analysis via bitwise operations. Since Javascript doesn't support bitwise operations for 64-bit integers, each [bitboard object](./master/js/bitboard/bitboard.js) consists of high 32 bits and low 32 bits.
+one for each piece type and color. Compared to an array-based representation, bitboards use less memory and typically allow for faster board manipulation and analysis via bitwise operations. Since Javascript doesn't support bitwise operations for 64-bit integers, each [bitboard object](./js/bitboard/bitboard.js) consists of high 32 bits and low 32 bits.
 
 **Move Search**
 
