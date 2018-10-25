@@ -937,7 +937,7 @@ var UI = function () {
         }
       }
 
-      var statusEl = $('#status');
+      var statusEl = $('.status-header');
 
       statusEl.text(this.status);
     }

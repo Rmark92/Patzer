@@ -1,6 +1,6 @@
 body {
   font-family: 'Ubuntu Condensed', sans-serif;
-  background-color: #d4efff;
+  background-color: #f6f9d7;
 }
 
 header {
@@ -102,20 +102,40 @@ tr {
   height: 700px;
   width: 30%;
   margin-left: 2%;
+  padding: 15px;
 }
-
+/*
 #side-panel > * {
   margin-bottom: 10px;
   margin-top: 10px;
+} */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  padding: 0px 15px 0px 15px;
+  border: 2px solid #3ca1ad;
+  border-radius: 3px;
+  background-color: #a5e2fb;
+}
+
+.controls > * {
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+.status-header {
+  font-size: 18px;
+  margin: auto;
+  font-weight: 600;
+  color: #363e36;
 }
 
 .main-header {
   text-align: center;
   font-size: 50px;
-}
-
-.status-header > h3 {
-  display: inline-block;
+  margin-bottom: 15px;
 }
 
 .move-options {
@@ -162,7 +182,7 @@ tr {
 }
 
 .move-list-header {
-
+  color: #363e36;
 }
 
 .move-list-container {
@@ -189,12 +209,17 @@ tr {
 
 .ai-stats-header {
   text-align: center;
+  color: #363e36;
 }
 
 .move-stats {
   font-size: 12px;
   border-spacing: 0px;
   width: 100%;
+  background-color: white;
+  padding: 3px;
+  border: 1px solid #3ca1ad;
+  border-radius: 3px;
 }
 
 .stat-header {
@@ -227,6 +252,7 @@ tr {
   border-radius: 5px;
   font-size: 13px;
   margin: auto;
+  background-color: white;
 }
 
 .ai-thinking-time-label h4 {

@@ -99,7 +99,7 @@ class UI {
       }
     }
 
-    const statusEl = $('#status');
+    const statusEl = $('.status-header');
 
     statusEl.text(this.status);
   }

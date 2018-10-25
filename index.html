@@ -16,50 +16,52 @@
       <table id="board"></table>
       <section id="side-panel">
         <div class="main-header">Patzer</div>
-        <div class="status-header">
-          <h3>Status: </h3> <span id="status">Player Turn</span>
-        </div>
-        <div class="move-options">
-          <div class="btn clickable" id="auto">Choose AI Move</div>
-          <div class="btn clickable" id="unmake">Unmake Move</div>
-        </div>
-        <div class="data">
-          <div class="move-list">
-            <h4 class="move-list-header">Moves</h4>
-            <div class="move-list-container">
-              <table id="move-history"></table>
+        <div class="controls">
+          <div class="status-header">
+            Player Turn
+          </div>
+          <div class="move-options">
+            <div class="btn clickable" id="auto">Choose AI Move</div>
+            <div class="btn clickable" id="unmake">Unmake Move</div>
+          </div>
+          <div class="data">
+            <div class="move-list">
+              <h4 class="move-list-header">Moves</h4>
+              <div class="move-list-container">
+                <table id="move-history"></table>
+              </div>
+            </div>
+            <div class="ai-stats">
+              <h4 class="ai-stats-header">AI Stats</h4>
+              <table class="move-stats">
+                <tr><th class="stat-header">Run Time (ms):</th><td class="runtime-stat"></td></tr>
+                <tr><th class="stat-header">Explored Nodes:</th><td class="explored-stat"></td></tr>
+                <tr><th class="stat-header">Main Search Depth:</th><td class="depth-stat"></td></tr>
+                <tr><th class="stat-header">Main Search Nodes:</th><td class="main-search-stat"></td></tr>
+                <tr><th class="stat-header">Quiescence Search Nodes:</th><td class="qsearch-stat"></td></tr>
+                <tr><th class="stat-header">Transposition Table Hits:</th><td class="ttable-hit-stat"></td></tr>
+              </table>
             </div>
           </div>
-          <div class="ai-stats">
-            <h4 class="ai-stats-header">AI Stats</h4>
-            <table class="move-stats">
-              <tr><th class="stat-header">Run Time (ms):</th><td class="runtime-stat"></td></tr>
-              <tr><th class="stat-header">Explored Nodes:</th><td class="explored-stat"></td></tr>
-              <tr><th class="stat-header">Main Search Depth:</th><td class="depth-stat"></td></tr>
-              <tr><th class="stat-header">Main Search Nodes:</th><td class="main-search-stat"></td></tr>
-              <tr><th class="stat-header">Quiescence Search Nodes:</th><td class="qsearch-stat"></td></tr>
-              <tr><th class="stat-header">Transposition Table Hits:</th><td class="ttable-hit-stat"></td></tr>
-            </table>
-          </div>
-        </div>
-        <div class="new-game-form">
-          <div id="ai-time">
-            <div class="ai-thinking-time-label">
-              <h4>AI Thinking Time : </h4> <span id="ai-time-val"></span> seconds
+          <div class="new-game-form">
+            <div id="ai-time">
+              <div class="ai-thinking-time-label">
+                <h4>AI Thinking Time : </h4> <span id="ai-time-val"></span> seconds
+              </div>
+              <div class="ai-time-control">
+                <div id="ai-time-slider"></div>
+              </div>
             </div>
-            <div class="ai-time-control">
-              <div id="ai-time-slider"></div>
+            <div id="color-options">
+              <h4>Color: </h4>
+              <input type="radio" id="white" value="0" name="color-option" checked></input>
+              <label for="white">White</label>
+              <input type="radio" id="black" value="1" name="color-option"></input>
+              <label for="black">Black</label>
             </div>
-          </div>
-          <div id="color-options">
-            <h4>Color: </h4>
-            <input type="radio" id="white" value="0" name="color-option" checked></input>
-            <label for="white">White</label>
-            <input type="radio" id="black" value="1" name="color-option"></input>
-            <label for="black">Black</label>
-          </div>
-          <div class="btn clickable" id="new-game">
-            New Game
+            <div class="btn clickable" id="new-game">
+              New Game
+            </div>
           </div>
         </div>
       </section>
