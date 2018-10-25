@@ -1,5 +1,6 @@
 body {
   font-family: 'Ubuntu Condensed', sans-serif;
+  background-color: #d4efff;
 }
 
 header {
@@ -164,6 +165,7 @@ tr {
   overflow-y: scroll;
   border: 1px solid #3ca1ad;
   border-radius: 3px;
+  background-color: white;
 }
 
 #move-history {

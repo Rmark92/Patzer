@@ -2850,7 +2850,7 @@ var MoveSearch = function () {
         console.log('Approaching draw...');
       } else {
         if (!this.perfMonitor.depth) {
-          this.perfMonitor.setDepth(this.maxDepth);
+          this.perfMonitor.setDepth(this.maxDepth - 1);
         }
         this.perfMonitor.setEndTime();
         this.perfMonitor.printResults();
@@ -3063,35 +3063,24 @@ var TransposTable = function () {
   function TransposTable() {
     _classCallCheck(this, TransposTable);
 
-    this.size = 10000;
-    this.table = new Array(this.size);
+    this.table = {};
   }
 
   _createClass(TransposTable, [{
     key: 'getEntry',
     value: function getEntry(key) {
-      var index = key % this.size;
-      if (this.table[index] && this.table[index].key === key) {
-        return this.table[index];
-      } else {
-        return null;
-      }
+      return this.table[key] || null;
     }
   }, {
     key: 'storeEntry',
     value: function storeEntry(score, bestMove, alpha, beta, depth, key) {
-      var index = key % this.size;
-      if (this.table[index] && this.table[index].depth > depth) {
-        return;
-      } else {
-        this.table[index] = {
-          score: score,
-          bestMove: bestMove,
-          type: this.determineScoreType(score, alpha, beta),
-          depth: depth,
-          key: key
-        };
-      }
+      this.table[key] = {
+        score: score,
+        bestMove: bestMove,
+        type: this.determineScoreType(score, alpha, beta),
+        depth: depth,
+        key: key
+      };
     }
   }, {
     key: 'determineScoreType',

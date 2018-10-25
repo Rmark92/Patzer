@@ -25,7 +25,7 @@ class MoveSearch {
     if (this.maxDepth >= 30) {
       console.log('Approaching draw...');
     } else {
-      if (!this.perfMonitor.depth) { this.perfMonitor.setDepth(this.maxDepth); }
+      if (!this.perfMonitor.depth) { this.perfMonitor.setDepth(this.maxDepth - 1); }
       this.perfMonitor.setEndTime();
       this.perfMonitor.printResults();
     }
