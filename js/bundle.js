@@ -1236,6 +1236,8 @@ var UI = function () {
 
       var originPos = Util.posFromFileRank($(originSquare).attr('id'));
       var destSq = $('#' + Util.fileRankFromPos(toPos));
+      destSq.children().remove();
+
       var selectedMoves = this.currMoves.filter(function (move) {
         return move.getFrom() === originPos && move.getTo() === toPos;
       });
@@ -1247,37 +1249,6 @@ var UI = function () {
         var selectedMove = selectedMoves[0];
         this.makeMove(selectedMove);
       }
-    }
-  }, {
-    key: 'createPromoPiece',
-    value: function createPromoPiece(move, pType, color) {
-      var _this6 = this;
-
-      var promoPiece = $('<div class=\'promo-piece piece ' + color + '\'">' + PieceTypeHTML[pType] + '</div>');
-      promoPiece.click(function () {
-        $('.promo-window').remove();
-        _this6.makeMove(move);
-      });
-
-      return promoPiece;
-    }
-  }, {
-    key: 'createPromoPieces',
-    value: function createPromoPieces(promoMoves, color) {
-      var _PromosPTypes,
-          _this7 = this;
-
-      var PromosPTypes = (_PromosPTypes = {}, _defineProperty(_PromosPTypes, MoveTypes.NPROMO, PTypes.KNIGHTS), _defineProperty(_PromosPTypes, MoveTypes.BPROMO, PTypes.BISHOPS), _defineProperty(_PromosPTypes, MoveTypes.RPROMO, PTypes.ROOKS), _defineProperty(_PromosPTypes, MoveTypes.QPROMO, PTypes.QUEENS), _PromosPTypes);
-
-      var promoPieces = [];
-      var newPromoPiece = void 0;
-
-      promoMoves.forEach(function (promoMove) {
-        newPromoPiece = _this7.createPromoPiece(promoMove, PromosPTypes[promoMove.getType()], color);
-        promoPieces.push(newPromoPiece);
-      });
-
-      return promoPieces;
     }
   }, {
     key: 'createPromoWindow',
@@ -1294,6 +1265,37 @@ var UI = function () {
       promoDiv.append(promoWinRow);
 
       destSq.append(promoDiv);
+    }
+  }, {
+    key: 'createPromoPieces',
+    value: function createPromoPieces(promoMoves, color) {
+      var _PromosPTypes,
+          _this6 = this;
+
+      var PromosPTypes = (_PromosPTypes = {}, _defineProperty(_PromosPTypes, MoveTypes.NPROMO, PTypes.KNIGHTS), _defineProperty(_PromosPTypes, MoveTypes.BPROMO, PTypes.BISHOPS), _defineProperty(_PromosPTypes, MoveTypes.RPROMO, PTypes.ROOKS), _defineProperty(_PromosPTypes, MoveTypes.QPROMO, PTypes.QUEENS), _PromosPTypes);
+
+      var promoPieces = [];
+      var newPromoPiece = void 0;
+
+      promoMoves.forEach(function (promoMove) {
+        newPromoPiece = _this6.createPromoPiece(promoMove, PromosPTypes[promoMove.getType()], color);
+        promoPieces.push(newPromoPiece);
+      });
+
+      return promoPieces;
+    }
+  }, {
+    key: 'createPromoPiece',
+    value: function createPromoPiece(move, pType, color) {
+      var _this7 = this;
+
+      var promoPiece = $('<div class=\'promo-piece piece ' + color + '\'">' + PieceTypeHTML[pType] + '</div>');
+      promoPiece.click(function () {
+        $('.promo-window').remove();
+        _this7.makeMove(move);
+      });
+
+      return promoPiece;
     }
   }]);
 

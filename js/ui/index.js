@@ -362,6 +362,8 @@ class UI {
 
     const originPos = Util.posFromFileRank($(originSquare).attr('id'));
     const destSq = $(`#${Util.fileRankFromPos(toPos)}`);
+    destSq.children().remove();
+
     const selectedMoves = this.currMoves.filter((move) => {
       return move.getFrom() === originPos &&
              move.getTo() === toPos;
@@ -376,14 +378,19 @@ class UI {
     }
   }
 
-  createPromoPiece(move, pType, color) {
-    const promoPiece = $(`<div class='promo-piece piece ${color}'">${PieceTypeHTML[pType]}</div>`);
-    promoPiece.click(() => {
-      $('.promo-window').remove();
-      this.makeMove(move);
-    });
+  createPromoWindow(destSq, promoMoves, color) {
+    const promoDiv = $("<div class='promo-window'></div>");
+    const promoPieces = this.createPromoPieces(promoMoves, color);
 
-    return promoPiece;
+    let promoWinRow = $("<div class='promo-window-row'></div>");
+    promoWinRow.append(promoPieces.slice(0, 2));
+    promoDiv.append(promoWinRow);
+
+    promoWinRow = $("<div class='promo-window-row'></div>");
+    promoWinRow.append(promoPieces.slice(2));
+    promoDiv.append(promoWinRow);
+
+    destSq.append(promoDiv);
   }
 
   createPromoPieces(promoMoves, color) {
@@ -405,19 +412,14 @@ class UI {
     return promoPieces;
   }
 
-  createPromoWindow(destSq, promoMoves, color) {
-    const promoDiv = $("<div class='promo-window'></div>");
-    const promoPieces = this.createPromoPieces(promoMoves, color);
+  createPromoPiece(move, pType, color) {
+    const promoPiece = $(`<div class='promo-piece piece ${color}'">${PieceTypeHTML[pType]}</div>`);
+    promoPiece.click(() => {
+      $('.promo-window').remove();
+      this.makeMove(move);
+    });
 
-    let promoWinRow = $("<div class='promo-window-row'></div>");
-    promoWinRow.append(promoPieces.slice(0, 2));
-    promoDiv.append(promoWinRow);
-
-    promoWinRow = $("<div class='promo-window-row'></div>");
-    promoWinRow.append(promoPieces.slice(2));
-    promoDiv.append(promoWinRow);
-
-    destSq.append(promoDiv);
+    return promoPiece;
   }
 }
 
