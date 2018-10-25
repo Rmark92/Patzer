@@ -24,5 +24,3 @@ Leaf node positions are evaluated with a relatively simple heuristic that accoun
 **UI**
 
 The jQuery-based UI allows the user to make a move by dragging a piece to its destination and renders an animation for AI moves. It also provides options for player color, AI thinking time, unmaking moves, and choosing the AI move on the player's turn.
-
-### js Dir Layout
