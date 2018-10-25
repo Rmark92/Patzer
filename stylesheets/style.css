@@ -43,9 +43,6 @@ tr {
   background-color: #4b64c5;
 }
 
-.ui-draggable:hover {
-  cursor: pointer;
-}
 
 .piece {
   font-size: 40px;
@@ -58,6 +55,14 @@ tr {
 
 .piece.black {
   color: black;
+}
+
+.piece.ui-draggable:hover {
+  cursor: grab;
+}
+
+.piece.ui-draggable-dragging:hover {
+  cursor: grabbing;
 }
 
 .can-move-to {
