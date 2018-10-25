@@ -2,7 +2,7 @@
 
 Play the live version [here](http://ryan-mark.xyz/Patzer/)
 
-### Features:
+### Implementation Summary:
 
 **Chess Rules**
 
@@ -11,7 +11,7 @@ Patzer adheres to most standard chess rules, including promotions, castling, en 
 **Board Representation**
 
 The board is represented by a set of 8 [bitboards](https://www.chessprogramming.org/Bitboards),
-one for each piece type and color. Compared to an array-based representation, bitboards use less memory and typically allow for faster board manipulation and analysis via bitwise operations. Since Javascript doesn't support bitwise operations for 64-bit integers, each [bitboard object](https://github.com/Rmark92/Patzer/blob/master/js/bitboard/bitboard.js) consists of high 32 bits and low 32 bits.
+one for each piece type and color. Compared to an array-based representation, bitboards use less memory and typically allow for faster board manipulation and analysis via bitwise operations. Since Javascript doesn't support bitwise operations for 64-bit integers, each [bitboard object](../blob/master/js/bitboard/bitboard.js) consists of high 32 bits and low 32 bits.
 
 **Move Search**
 
@@ -19,8 +19,10 @@ The move search implements the [negamax algorithm](https://www.chessprogramming.
 
 **Move Evaluation**
 
-Leaf node positions are evaluated with a relatively simple heuristic that accounts for material and piece location. The material score is a sum of piece-type values for the current board, and piece location is scored based on static [piece-square tables](https://www.chessprogramming.org/Simplified_Evaluation_Function#Piece-Square_Tables).
+Leaf node positions are evaluated with a relatively simple heuristic that accounts for material and piece location. The material score is a sum of existing pieces weighted by type, and piece location is scored based on static [piece-square tables](https://www.chessprogramming.org/Simplified_Evaluation_Function#Piece-Square_Tables).
 
 **UI**
 
-The UI provides options for player color, AI thinking time, unmaking moves, and choosing the AI move on the player's turn.
+The jQuery-based UI allows the user to make a move by dragging a piece to its destination and renders an animation for AI moves. It also provides options for player color, AI thinking time, unmaking moves, and choosing the AI move on the player's turn.
+
+### js Dir Layout
