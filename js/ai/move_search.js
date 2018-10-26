@@ -2,6 +2,7 @@ const { PTypes, PUtils,
         Colors, Dirs,
         eachPieceType } = require('../pieces');
 const TransposTable = require('./transpos_table.js');
+const KillerMoveList = require('./killer_move_list.js');
 const PerfMonitor = require('./perf_monitor.js');
 
 class MoveSearch {
@@ -9,6 +10,7 @@ class MoveSearch {
     this.position = position;
     this.initAvailable = initAvailable;
     this.transPosTable = new TransposTable();
+    this.killerMoveList = new KillerMoveList();
     this.perfMonitor = new PerfMonitor();
   }
 
@@ -18,6 +20,7 @@ class MoveSearch {
 
     this.maxDepth = 1;
     while (Date.now() < this.endTime && this.maxDepth < 30) {
+      this.killerMoveList.addSlot();
       this.negaMax(this.maxDepth, -Infinity, Infinity);
       this.maxDepth++;
     }
@@ -38,7 +41,6 @@ class MoveSearch {
     }
   }
 
-
   getPerformance() {
     return this.perfMonitor.getResults();
   }
@@ -58,8 +60,18 @@ class MoveSearch {
     }
 
     let inCheck = this.position.inCheck(this.position.turn);
+
+    function calculateMoveOrderScore(move) {
+      let score = move.getCaptPiece()? ((1 + move.getCaptPiece()) / (1 + move.getPiece())): 0;
+      score = score * 10 + move.getPiece();
+      score = score * 10 + move.getType();
+
+      return score;
+    }
+
     // include quiet moves (ie non captures) only if the king is in check;
-    const moves = this.sortMoves(this.position.generatePseudoMoves(inCheck));
+    const moves = this.sortMoves(this.position.generatePseudoMoves(inCheck), calculateMoveOrderScore);
+
     let moveIdx;
     let score;
 
@@ -107,8 +119,22 @@ class MoveSearch {
     this.perfMonitor.logMainSearchNode();
 
     let prevBestMove = (entry && entry.bestMove) ? entry.bestMove : null;
+    const siblingKillerMoves = this.killerMoveList.getSiblingMoves(this.maxDepth - depth);
 
-    const moves = this.sortMoves(this.position.generatePseudoMoves(), prevBestMove);
+    function calculateMoveOrderScore(move) {
+      if (prevBestMove && move.val === prevBestMove.val) {
+        return 10000;
+      }
+      let score = move.getCaptPiece() ? ((1 + move.getCaptPiece()) / (1 + move.getPiece()) + 1): 0;
+      score = score * 10 + (siblingKillerMoves.includes(move.val) ? 1 : 0);
+      score = score * 10 + move.getPiece();
+      score = score * 10 + move.getType();
+
+      return score;
+    }
+
+    const moves = this.sortMoves(this.position.generatePseudoMoves(), calculateMoveOrderScore);
+
     let moveIdx;
     let canMove = false;
     let result;
@@ -121,18 +147,25 @@ class MoveSearch {
         canMove = true;
         result = this.negaMax(depth - 1, -beta, -alpha);
         this.position.unmakePrevMove();
+
         if (result === 'early exit') {
           return result;
         }
+
         score = -result;
         if (score > bestScore) {
           bestScore = score;
           bestMove = moves[moveIdx];
-          if (score > alpha) {
-            alpha = score;
+
+          if (bestScore >= beta) {
+            this.killerMoveList.addMove(this.maxDepth - depth, moves[moveIdx]);
+            break;
+          }
+
+          if (bestScore > alpha) {
+            alpha = bestScore;
           }
         }
-        if (alpha >= beta) { break; }
       }
     }
 
@@ -144,29 +177,20 @@ class MoveSearch {
       }
     }
 
-
     this.transPosTable.storeEntry(bestScore, bestMove, prevAlpha, beta, depth, currHash);
     return bestScore;
   }
 
-  sortMoves(moves, prevBestMove) {
-    function calculateScore(move) {
-      if (prevBestMove && move.val === prevBestMove.val) {
-        return 10000000;
-      }
-      let score = move.getCaptPiece()? ((1 + move.getCaptPiece()) / (1 + move.getPiece())): 0;
-      score = score * 6 + move.getPiece();
-      score = score * 16 + move.getType();
-      score = score * 64 + move.getTo();
-      score = score * 64 + move.getFrom();
-
-      return score;
+  sortMoves(moves, calculateScore) {
+    function createMoveScores() {
+      return moves.map((move) => {
+        return { move: move, score: calculateScore(move) };
+      });
     }
 
-    moves.sort((moveA, moveB) => calculateScore(moveB) - calculateScore(moveA));
-    return moves;
+    return createMoveScores().sort((moveA, moveB) => moveB.score - moveA.score)
+                             .map((moveScore) => moveScore.move);
   }
-
 
   evaluate() {
     let materialScore = this.scoreMaterial(this.position.turn) -

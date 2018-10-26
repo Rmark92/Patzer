@@ -2822,6 +2822,7 @@ var _require = __webpack_require__(1),
     eachPieceType = _require.eachPieceType;
 
 var TransposTable = __webpack_require__(28);
+var KillerMoveList = __webpack_require__(31);
 var PerfMonitor = __webpack_require__(29);
 
 var MoveSearch = function () {
@@ -2831,6 +2832,7 @@ var MoveSearch = function () {
     this.position = position;
     this.initAvailable = initAvailable;
     this.transPosTable = new TransposTable();
+    this.killerMoveList = new KillerMoveList();
     this.perfMonitor = new PerfMonitor();
   }
 
@@ -2842,6 +2844,7 @@ var MoveSearch = function () {
 
       this.maxDepth = 1;
       while (Date.now() < this.endTime && this.maxDepth < 30) {
+        this.killerMoveList.addSlot();
         this.negaMax(this.maxDepth, -Infinity, Infinity);
         this.maxDepth++;
       }
@@ -2885,8 +2888,18 @@ var MoveSearch = function () {
       }
 
       var inCheck = this.position.inCheck(this.position.turn);
+
+      function calculateMoveOrderScore(move) {
+        var score = move.getCaptPiece() ? (1 + move.getCaptPiece()) / (1 + move.getPiece()) : 0;
+        score = score * 10 + move.getPiece();
+        score = score * 10 + move.getType();
+
+        return score;
+      }
+
       // include quiet moves (ie non captures) only if the king is in check;
-      var moves = this.sortMoves(this.position.generatePseudoMoves(inCheck));
+      var moves = this.sortMoves(this.position.generatePseudoMoves(inCheck), calculateMoveOrderScore);
+
       var moveIdx = void 0;
       var score = void 0;
 
@@ -2941,8 +2954,22 @@ var MoveSearch = function () {
       this.perfMonitor.logMainSearchNode();
 
       var prevBestMove = entry && entry.bestMove ? entry.bestMove : null;
+      var siblingKillerMoves = this.killerMoveList.getSiblingMoves(this.maxDepth - depth);
 
-      var moves = this.sortMoves(this.position.generatePseudoMoves(), prevBestMove);
+      function calculateMoveOrderScore(move) {
+        if (prevBestMove && move.val === prevBestMove.val) {
+          return 10000;
+        }
+        var score = move.getCaptPiece() ? (1 + move.getCaptPiece()) / (1 + move.getPiece()) + 1 : 0;
+        score = score * 10 + (siblingKillerMoves.includes(move.val) ? 1 : 0);
+        score = score * 10 + move.getPiece();
+        score = score * 10 + move.getType();
+
+        return score;
+      }
+
+      var moves = this.sortMoves(this.position.generatePseudoMoves(), calculateMoveOrderScore);
+
       var moveIdx = void 0;
       var canMove = false;
       var result = void 0;
@@ -2955,19 +2982,24 @@ var MoveSearch = function () {
           canMove = true;
           result = this.negaMax(depth - 1, -beta, -alpha);
           this.position.unmakePrevMove();
+
           if (result === 'early exit') {
             return result;
           }
+
           score = -result;
           if (score > bestScore) {
             bestScore = score;
             bestMove = moves[moveIdx];
-            if (score > alpha) {
-              alpha = score;
+
+            if (bestScore >= beta) {
+              this.killerMoveList.addMove(this.maxDepth - depth, moves[moveIdx]);
+              break;
             }
-          }
-          if (alpha >= beta) {
-            break;
+
+            if (bestScore > alpha) {
+              alpha = bestScore;
+            }
           }
         }
       }
@@ -2985,24 +3017,18 @@ var MoveSearch = function () {
     }
   }, {
     key: 'sortMoves',
-    value: function sortMoves(moves, prevBestMove) {
-      function calculateScore(move) {
-        if (prevBestMove && move.val === prevBestMove.val) {
-          return 10000000;
-        }
-        var score = move.getCaptPiece() ? (1 + move.getCaptPiece()) / (1 + move.getPiece()) : 0;
-        score = score * 6 + move.getPiece();
-        score = score * 16 + move.getType();
-        score = score * 64 + move.getTo();
-        score = score * 64 + move.getFrom();
-
-        return score;
+    value: function sortMoves(moves, calculateScore) {
+      function createMoveScores() {
+        return moves.map(function (move) {
+          return { move: move, score: calculateScore(move) };
+        });
       }
 
-      moves.sort(function (moveA, moveB) {
-        return calculateScore(moveB) - calculateScore(moveA);
+      return createMoveScores().sort(function (moveA, moveB) {
+        return moveB.score - moveA.score;
+      }).map(function (moveScore) {
+        return moveScore.move;
       });
-      return moves;
     }
   }, {
     key: 'evaluate',
@@ -3263,6 +3289,57 @@ module.exports = {
   parseMoveStats: parseMoveStats,
   formatTime: formatTime
 };
+
+/***/ }),
+/* 31 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var KillerMoveList = function () {
+  function KillerMoveList() {
+    _classCallCheck(this, KillerMoveList);
+
+    this.list = [];
+    this.maxPerLevel = 2;
+  }
+
+  _createClass(KillerMoveList, [{
+    key: "addSlot",
+    value: function addSlot() {
+      this.list.push(new Array(this.maxPerLevel));
+    }
+  }, {
+    key: "addMove",
+    value: function addMove(distFromRoot, move) {
+      var siblingKillerMoves = this.list[distFromRoot];
+      if (siblingKillerMoves.includes(move.val)) {
+        return;
+      }
+
+      var idx = void 0;
+      for (idx = siblingKillerMoves.length - 2; idx >= 0; idx--) {
+        siblingKillerMoves[idx + 1] = siblingKillerMoves[idx];
+      }
+
+      siblingKillerMoves[0] = move.val;
+    }
+  }, {
+    key: "getSiblingMoves",
+    value: function getSiblingMoves(distFromRoot) {
+      return this.list[distFromRoot];
+    }
+  }]);
+
+  return KillerMoveList;
+}();
+
+module.exports = KillerMoveList;
 
 /***/ })
 /******/ ]);
