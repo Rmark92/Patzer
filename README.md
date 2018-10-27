@@ -191,7 +191,7 @@ makeMove(move) {
 // if the move is legal, sends a boolean for the legality
 // to the callback and undoes the piece movements if the callback
 // returns true
-// Note: this function is also used to collect fully legal moves, in which case we only want
+// Note: this function is also used as a filter to collect fully legal moves, in which case we only want
 // to test that a move is legal and always undo the piece movements. for this reason, we make the
 // piece movement reversal dependent on a callback
 testMove(moveData, cb) {
@@ -225,6 +225,58 @@ testMove(moveData, cb) {
 #### Main Search
 The move search implements the [negamax algorithm](https://en.wikipedia.org/wiki/Negamax), which is a more concise version of the [minimax algorithm](https://en.wikipedia.org/wiki/Minimax) relying on an evaluation function such that `maximizingPlayerScore = -minimizingPlayerScore`.  It uses [Alpha-Beta pruning](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning) to drastically reduce the number of nodes evaluated, and includes several optimizations to make this pruning mechanism more effective.
 
+```javascript
+negaMax(depth, alpha, beta) {
+
+  ...
+
+  if (depth === 0) {
+    return this.quiescenceSearch(alpha, beta);
+  }
+
+  ...
+
+  for (moveIdx = 0; moveIdx < moves.length; moveIdx++) {
+    if (this.position.makeMove(moves[moveIdx])) {
+      canMove = true;
+      result = this.negaMax(depth - 1, -beta, -alpha);
+      this.position.unmakePrevMove();
+
+      if (result === 'early exit') {
+        return result;
+      }
+
+      score = -result;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = moves[moveIdx];
+
+        if (bestScore >= beta) {
+          this.killerMoveList.addMove(this.maxDepth - depth, moves[moveIdx]);
+          break;
+        }
+
+        if (bestScore > alpha) {
+          alpha = bestScore;
+        }
+      }
+    }
+  }
+
+  if (!canMove) {
+    if (this.position.inCheck(this.position.turn)) {
+      bestScore = -PUtils[PTypes.KINGS].value;
+    } else {
+      bestScore = 0;
+    }
+  }
+
+  this.transPosTable.storeEntry(bestScore, bestMove, prevAlpha, beta, depth, currHash);
+  return bestScore;
+  }
+}
+```
+
 #### Quiescence Search
 If the search were terminated at a fixed depth, we'd run the risk of assigning a positive value to a leaf node position that would clearly prove to be detrimental over the following sequence of moves. For example, if our search concluded with a queen capturing a pawn, all else being equal, a positive value would be assigned to the move. The queen might be captured on the very next move, but this wouldn't be taken into account. In order to mitigate this [horizon effect](https://en.wikipedia.org/wiki/Horizon_effect), the main search is followed by a [quiescence search](https://en.wikipedia.org/wiki/Quiescence_search) that exhausts all sequences of captures and check evasions so that only quiet positions are evaluated.
 
@@ -234,13 +286,61 @@ A [transposition table](https://en.wikipedia.org/wiki/Transposition_table) is us
 #### Iterative Deepening
 The search is time-limited through an [iterative deepening](https://www.chessprogramming.org/Iterative_Deepening) process that increments the max search depth for each iteration. In addition to the obvious benefits of adjusting the search for UI preferences and complexity of the current position, iterative deepening delivers the large advantage of better move ordering for higher and more costly max depths.
 
+```javascript
+findBest(thinkingTime) {
+
+  ...
+
+  this.maxDepth = 1;
+  while (Date.now() < this.endTime && this.maxDepth < 30) {
+    this.killerMoveList.addSlot();
+    this.negaMax(this.maxDepth, -Infinity, Infinity);
+    this.maxDepth++;
+  }
+
+  ...
+}
+
+negaMax(depth, alpha, beta) {
+  if (Date.now() > this.endTime) {
+    this.perfMonitor.setDepth(this.maxDepth - 1);
+    return 'early exit';
+  }
+
+  ...
+}
+quiescenceSearch(alpha, beta) {
+  if (Date.now() > this.endTime) {
+    this.perfMonitor.setDepth(this.maxDepth - 1);
+    return 'early exit';
+  }
+
+  ...
+
+}
+```
+
 #### Move Ordering
 Alpha-Beta pruning is most effective when the best moves are considered first. If we were able to determine the best moves a priori there'd be no need for a search at all, so we make guesses based on available information, including (in order of priority):
 
 1. Transposition table move: if a best move were found for the current position, it's a very strong candidate even if it was evaluated for a lower depth
 2. Captures: captures are ranked based on `capturedPieceValue / capturingPieceValue`
-3. Killer Moves: a killer move is a move that produced a pruning cutoff in a sibling node. If it produced a cutoff in a sibling node, it will likely produce a cutoff in the current node
+3. Killer Moves: a killer move is a move that produced a pruning cutoff at the same distance from the root. If it produced a cutoff in a similar position, it will likely produce a cutoff in the current node
 4. Other heuristics: piece type and move type. Pieces with higher value and move types like promotions, castling, etc take precedence
+
+```javascript
+function calculateMoveOrderScore(move) {
+  if (prevBestMove && move.val === prevBestMove.val) {
+    return 10000;
+  }
+  let score = move.getCaptPiece() ? ((1 + move.getCaptPiece()) / (1 + move.getPiece()) + 1): 0;
+  score = score * 10 + (siblingKillerMoves.includes(move.val) ? 1 : 0);
+  score = score * 10 + move.getPiece();
+  score = score * 10 + move.getType();
+
+  return score;
+}
+```
 
 Todo: [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
 
