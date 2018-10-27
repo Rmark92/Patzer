@@ -337,8 +337,6 @@ var Utils = __webpack_require__(13);
 // 8  9 10 11 12 13 14 15  v
 // 0  1  2  3  4  5  6  7
 
-var POW32 = Math.pow(2, 32);
-
 var BitBoard = function () {
   function BitBoard(low, high) {
     _classCallCheck(this, BitBoard);

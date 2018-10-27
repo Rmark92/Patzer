@@ -18,13 +18,86 @@ Todo: mobile compatibility
 The board is represented by a set of 8 [bitboards](https://en.wikipedia.org/wiki/Bitboard),
 one for each piece type and color. Compared to an array-based representation, bitboards use less memory and typically allow for faster board manipulation and analysis via bitwise operations. Since Javascript doesn't support bitwise operations for 64-bit integers, each [bitboard object](./js/bitboard/bitboard.js) consists of high 32 bits and low 32 bits.
 
+Here's the BitBoard class with some of its functionality:
+
+```javascript
+//56 57 58 59 60 61 62 63
+//48 49 50 51 52 53 54 55  ^
+//40 41 42 43 44 45 46 47  |
+//32 33 34 35 36 37 38 39 HIGH
+//24 25 26 27 28 29 30 31 LOW
+//16 17 18 19 20 21 22 23  |
+// 8  9 10 11 12 13 14 15  v
+// 0  1  2  3  4  5  6  7
+
+class BitBoard {
+  constructor(low, high) {
+    this.low = (low || 0) >>> 0;
+    this.high = (high || 0) >>> 0;
+  }
+
+  and(other) {
+    return new BitBoard(this.low & other.low, this.high & other.high);
+  }
+
+  or(other) {
+    return new BitBoard(this.low | other.low, this.high | other.high);
+  }
+
+  xor(other) {
+    return new BitBoard(this.low ^ other.low, this.high ^ other.high);
+  }
+
+  not() {
+    return new BitBoard(~this.low, ~this.high);
+  }
+
+  equals(other) {
+    return (this.low === other.low && this.high === other.high);
+  }
+
+  shiftRight(numBits) {
+    let newLowBits, newHighBits;
+
+    if (numBits <= 0) {
+      return new BitBoard(this.low, this.high);
+    } else if (numBits > 63) {
+      return new BitBoard();
+    } else if (numBits >= 32) {
+      newLowBits = this.high >>> (numBits - 32);
+      newHighBits = 0;
+    } else {
+      newLowBits = (this.low >>> numBits) | (this.high << (32 - numBits));
+      newHighBits = this.high >>> numBits;
+    }
+
+    return new BitBoard(newLowBits, newHighBits);
+  }
+
+  // iteration that sends the position (0-63) to the callback
+  pop1Bits(cb) {
+    while (this.low) {
+      cb(Utils.bitScanForward32(this.low));
+      this.low = Utils.clearLeastSigBit32(this.low);
+    }
+
+    while (this.high) {
+      cb(Utils.bitScanForward32(this.high) + 32);
+      this.high = Utils.clearLeastSigBit32(this.high);
+    }
+  }
+```
+
 Todo: [Magic Bitboards](https://www.chessprogramming.org/Magic_Bitboards)
 
 #### Move Generation
 Using bitboards, pawn move destinations can be generated on the set of all existing pawns with just one bitwise operation. Other pieces make use of precomputed arrays that map their position to a bitboard of possible destinations. We then make minor adjustments to these destination bitboards based on other pieces on the board. As an example, below is the code for sliding move generation:
 
 ```javascript
-// Note: SLIDE_MOVES is a precomputed array of objects, with the array index corresponding to the board position. The objects contain keys for each direction, and the values are bitboards identifying sliding destinations in that direction.
+// Note: SLIDE_MOVES is a precomputed array of objects,
+// with the array index corresponding to the board position.
+// The objects contain keys for each direction, and the values
+// are bitboards identifying sliding destinations in that direction.
 // For example, this would be the bitboard for northeast from position 27:
 
 // 00000001
