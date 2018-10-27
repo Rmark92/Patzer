@@ -275,7 +275,6 @@ var Dirs = __webpack_require__(3);
 var isPosRay = (_isPosRay = {}, _defineProperty(_isPosRay, Dirs.NORTH, true), _defineProperty(_isPosRay, Dirs.EAST, true), _defineProperty(_isPosRay, Dirs.NOEA, true), _defineProperty(_isPosRay, Dirs.NOWE, true), _defineProperty(_isPosRay, Dirs.SOUTH, false), _defineProperty(_isPosRay, Dirs.WEST, false), _defineProperty(_isPosRay, Dirs.SOEA, false), _defineProperty(_isPosRay, Dirs.SOWE, false), _isPosRay);
 
 function findUnblocked(pos, occupied, dir) {
-  var posBB = new BitBoard();
   var dirBB = SLIDE_MOVES[pos][dir];
   var blocking = dirBB.and(occupied);
   var blockingPos = void 0;

@@ -14,7 +14,6 @@ const isPosRay = {
 };
 
 function findUnblocked(pos, occupied, dir) {
-  const posBB = new BitBoard();
   const dirBB = SLIDE_MOVES[pos][dir];
   const blocking = dirBB.and(occupied);
   let blockingPos;
