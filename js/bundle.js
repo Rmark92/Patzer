@@ -1756,11 +1756,7 @@ var Position = function () {
       this.addPrevState();
 
       this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
-      var epPos = this.epBB.bitScanForward();
-      if (epPos !== null) {
-        this.stateHash ^= epPosHashKeys[epPos];
-      }
-      this.epBB = new BitBoard();
+      this.setNewEpState();
 
       this.execMoveType(moveData.from, moveData.to, moveData.type);
 
@@ -1936,6 +1932,15 @@ var Position = function () {
         dir = to > PUtils[PTypes.KINGS].INIT_POS[this.opp] ? Dirs.EAST : Dirs.WEST;
         this.clearCastleRights(this.opp, dir);
       }
+    }
+  }, {
+    key: 'setNewEpState',
+    value: function setNewEpState() {
+      var epPos = this.epBB.bitScanForward();
+      if (epPos !== null) {
+        this.stateHash ^= epPosHashKeys[epPos];
+      }
+      this.epBB = new BitBoard();
     }
 
     // adds the current state values to the prevStates array

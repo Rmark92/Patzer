@@ -174,11 +174,9 @@ makeMove(move) {
   this.addPrevState();
 
   this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
-  const epPos = this.epBB.bitScanForward();
-  if (epPos !== null) { this.stateHash ^= epPosHashKeys[epPos]; }
-  this.epBB = new BitBoard();
+  this.setNewEpState();
 
-  // handles special move types like castling, promotions, etc.
+  // handles special move types, like castling and en passant
   this.execMoveType(moveData.from, moveData.to, moveData.type);
 
   this.prevMoves.push(move);
