@@ -101,7 +101,7 @@ Using bitboards, pawn move destinations can be generated on the set of all exist
 // with the array index corresponding to the board position.
 // The objects contain keys for each direction, and the values
 // are bitboards identifying sliding destinations in that direction.
-// For example, this would be the bitboard for northeast from position 27:
+// For example, this would be the bitboard for northeast from position 18:
 
 // 00000001
 // 00000010
@@ -346,5 +346,40 @@ Todo: [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
 
 #### Move Evaluation
 Leaf node positions are evaluated with a relatively simple heuristic that accounts for material and piece location. The material score is a sum of existing pieces weighted by type, and piece location is scored based on static [piece-square tables](https://www.chessprogramming.org/Simplified_Evaluation_Function#Piece-Square_Tables).
+
+```javascript
+evaluate() {
+  let materialScore = this.scoreMaterial(this.position.turn) -
+                      this.scoreMaterial(this.position.opp);
+
+  let piecePositionScore = this.scorePiecePositions(this.position.turn) -
+                           this.scorePiecePositions(this.position.opp);
+
+  return materialScore + piecePositionScore;
+}
+
+scoreMaterial(color) {
+  let score = 0;
+  eachPieceType((pieceType) => {
+    score += this.position.getColorPieceSet(color, pieceType).popCount() *
+             PUtils[pieceType].value;
+  });
+
+  return score;
+}
+
+scorePiecePositions(color) {
+  let score = 0;
+  let piecePositions;
+  eachPieceType((pieceType) => {
+    piecePositions = this.position.getColorPieceSet(color, pieceType);
+    piecePositions.dup().pop1Bits((pos) => {
+      score += PUtils[pieceType].positionValues[color ? pos : 56 ^ pos];
+    });
+  });
+
+  return score;
+}
+```
 
 Todo: [Pawn Structure](https://www.chessprogramming.org/Pawn_Structure), [Mobility](https://www.chessprogramming.org/Mobility), different heuristics for each [game phase](https://www.chessprogramming.org/Game_Phases)
