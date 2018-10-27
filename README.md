@@ -24,39 +24,17 @@ Todo: [Magic Bitboards](https://www.chessprogramming.org/Magic_Bitboards)
 Using bitboards, pawn move destinations can be generated on the set of all existing pawns with just one bitwise operation. Other pieces make use of precomputed arrays that map their position to a bitboard of possible destinations. We then make minor adjustments to these destination bitboards based on other pieces on the board. As an example, below is the code for sliding move generation:
 
 ```javascript
-const SLIDE_MOVES = function() {
-  let pos = 0;
-  const res = [];
-  let moves;
-  let colIdx;
-  let rowIdx;
-  let diagIdx;
-  let antiDiagIdx;
+// Note: SLIDE_MOVES is a precomputed array of objects, with the array index corresponding to the board position. The objects contain keys for each direction, and the values are bitboards identifying sliding destinations in that direction.
+// For example, this would be the bitboard for northeast from position 27
 
-  while (pos < 64) {
-    moves = {};
-    rowIdx = Math.floor(pos / 8);
-    colIdx = pos % 8;
-    diagIdx = (pos < rowIdx * 9) ? (pos % 9) - 2 : (pos % 9) + 7;
-    if (pos === 63) {
-      antiDiagIdx = 14;
-    } else {
-      antiDiagIdx = (pos < (rowIdx + 1) * 7) ? (pos % 7) : (pos % 7) + 7;
-    }
-    moves[Dirs.NORTH] = BBMasks.COLS[colIdx].and(BBMasks.NORTH_OF_ROW[rowIdx]);
-    moves[Dirs.SOUTH] = BBMasks.COLS[colIdx].and(BBMasks.SOUTH_OF_ROW[rowIdx]);
-    moves[Dirs.EAST] = BBMasks.ROWS[rowIdx].and(BBMasks.EAST_OF_COL[colIdx]);
-    moves[Dirs.WEST] = BBMasks.ROWS[rowIdx].and(BBMasks.WEST_OF_COL[colIdx]);
-    moves[Dirs.NOEA] = BBMasks.DIAGS[diagIdx].and(BBMasks.NORTH_OF_ROW[rowIdx]);
-    moves[Dirs.SOWE] = BBMasks.DIAGS[diagIdx].and(BBMasks.SOUTH_OF_ROW[rowIdx]);
-    moves[Dirs.NOWE] = BBMasks.ANTI_DIAGS[antiDiagIdx].and(BBMasks.NORTH_OF_ROW[rowIdx]);
-    moves[Dirs.SOEA] = BBMasks.ANTI_DIAGS[antiDiagIdx].and(BBMasks.SOUTH_OF_ROW[rowIdx]);
-    res.push(moves);
-    pos++;
-  }
-
-  return res;
-}();
+// 00000001
+// 00000010
+// 00000100
+// 00001000
+// 00010000
+// 00000000
+// 00000000
+// 00000000
 
 const isPosRay = {
   [Dirs.NORTH]: true,
