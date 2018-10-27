@@ -18,7 +18,7 @@ Todo: mobile compatibility
 The board is represented by a set of 8 [bitboards](https://en.wikipedia.org/wiki/Bitboard),
 one for each piece type and color. Compared to an array-based representation, bitboards use less memory and typically allow for faster board manipulation and analysis via bitwise operations. Since Javascript doesn't support bitwise operations for 64-bit integers, each [bitboard object](./js/bitboard/bitboard.js) consists of high 32 bits and low 32 bits.
 
-Here's the BitBoard class with some of its functionality:
+Here are some key parts of the BitBoard class:
 
 ```javascript
 //56 57 58 59 60 61 62 63
@@ -94,7 +94,7 @@ class BitBoard {
 Todo: [Magic Bitboards](https://www.chessprogramming.org/Magic_Bitboards)
 
 #### Move Generation
-Using bitboards, pawn move destinations can be generated on the set of all existing pawns with just one bitwise operation. Other pieces make use of precomputed arrays that map their position to a bitboard of possible destinations. We then make minor adjustments to these destination bitboards based on other pieces on the board. As an example, below is the code for sliding move generation:
+Using bitboards, pawn move destinations can be generated on the set of all existing pawns with just one bitwise operation. Other pieces make use of precomputed arrays that map their position to a bitboard of possible destinations. We then make minor adjustments to these destination bitboards based on other pieces on the board. As an example, below is the code for generating sliding move destination bitboards:
 
 ```javascript
 // Note: SLIDE_MOVES is a precomputed array of objects,
@@ -133,6 +133,7 @@ function findUnblocked(pos, occupied, dir) {
     return dirBB;
   } else {
     blockingPos = isPosRay[dir] ? blocking.bitScanForward() : blocking.bitScanReverse();
+    // exclude any destinations beyond the blocking position in the specified direction:
     return dirBB.xor(SLIDE_MOVES[blockingPos][dir]);
   }
 }
@@ -190,6 +191,9 @@ makeMove(move) {
 // if the move is legal, sends a boolean for the legality
 // to the callback and undoes the piece movements if the callback
 // returns true
+// Note: this function is also used to collect fully legal moves, in which case we only want
+// to test that a move is legal and always undo the piece movements. for this reason, we make the
+// piece movement reversal dependent on a callback
 testMove(moveData, cb) {
   if (moveData.captPieceType) {
     this.clearPieceAt(moveData.to, this.opp, moveData.captPieceType);
@@ -218,12 +222,29 @@ testMove(moveData, cb) {
 
 ### Move Search
 
-The move search implements the [negamax algorithm](https://www.chessprogramming.org/Negamax) with [Alpha-Beta pruning](https://www.chessprogramming.org/Alpha-Beta). In order to mitigate the [horizon effect](https://www.chessprogramming.org/Horizon_Effect), the main search is followed by a [quiescence search](https://www.chessprogramming.org/Quiescence_Search) that exhausts all sequences of captures and check evasions so that only quiet positions are evaluated. A [transposition table](https://www.chessprogramming.org/Transposition_Table) is used to store the results of previously explored positions, which are uniquely identified by a signed 32-bit [zobrist hash](https://www.chessprogramming.org/Zobrist_Hashing). The search is time-limited through an [iterative deepening](https://www.chessprogramming.org/Iterative_Deepening) process that increments the max search depth for each iteration. In addition to the obvious benefits of adjusting the search for UI preferences and complexity of the current position, iterative deepening delivers the large advantage of better [move ordering](https://www.chessprogramming.org/Move_Ordering) for higher and more costly max depths.
+#### Main Search
+The move search implements the [negamax algorithm](https://en.wikipedia.org/wiki/Negamax), which is a more concise version of the [minimax algorithm](https://en.wikipedia.org/wiki/Minimax) relying on an evaluation function such that `maximizingPlayerScore = -minimizingPlayerScore`.  It uses [Alpha-Beta pruning](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning) to drastically reduce the number of nodes evaluated, and includes several optimizations to make this pruning mechanism more effective.
 
-Todo: [Killer Heuristic](https://www.chessprogramming.org/Killer_Heuristic), [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
+#### Quiescence Search
+If the search were terminated at a fixed depth, we'd run the risk of assigning a positive value to a leaf node position that would clearly prove to be detrimental over the following sequence of moves. For example, if our search concluded with a queen capturing a pawn, all else being equal, a positive value would be assigned to the move. The queen might be captured on the very next move, but this wouldn't be taken into account. In order to mitigate this [horizon effect](https://en.wikipedia.org/wiki/Horizon_effect), the main search is followed by a [quiescence search](https://en.wikipedia.org/wiki/Quiescence_search) that exhausts all sequences of captures and check evasions so that only quiet positions are evaluated.
 
-### Move Evaluation
+#### Memoization
+A [transposition table](https://en.wikipedia.org/wiki/Transposition_table) is used to store the results of previously explored positions, which are uniquely identified by a signed 32-bit [zobrist hash](https://en.wikipedia.org/wiki/Zobrist_hashing).
 
+#### Iterative Deepening
+The search is time-limited through an [iterative deepening](https://www.chessprogramming.org/Iterative_Deepening) process that increments the max search depth for each iteration. In addition to the obvious benefits of adjusting the search for UI preferences and complexity of the current position, iterative deepening delivers the large advantage of better move ordering for higher and more costly max depths.
+
+#### Move Ordering
+Alpha-Beta pruning is most effective when the best moves are considered first. If we were able to determine the best moves a priori there'd be no need for a search at all, so we make guesses based on available information, including (in order of priority):
+
+1. Transposition table move: if a best move were found for the current position, it's a very strong candidate even if it was evaluated for a lower depth
+2. Captures: captures are ranked based on `capturedPieceValue / capturingPieceValue`
+3. Killer Moves: a killer move is a move that produced a pruning cutoff in a sibling node. If it produced a cutoff in a sibling node, it will likely produce a cutoff in the current node
+4. Other heuristics: piece type and move type. Pieces with higher value and move types like promotions, castling, etc take precedence
+
+Todo: [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
+
+#### Move Evaluation
 Leaf node positions are evaluated with a relatively simple heuristic that accounts for material and piece location. The material score is a sum of existing pieces weighted by type, and piece location is scored based on static [piece-square tables](https://www.chessprogramming.org/Simplified_Evaluation_Function#Piece-Square_Tables).
 
 Todo: [Pawn Structure](https://www.chessprogramming.org/Pawn_Structure), [Mobility](https://www.chessprogramming.org/Mobility), different heuristics for each [game phase](https://www.chessprogramming.org/Game_Phases)
