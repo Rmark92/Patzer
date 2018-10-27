@@ -176,7 +176,7 @@ makeMove(move) {
   this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
   this.setNewEpState();
 
-  // handles special move types, like castling and en passant
+  // handles special move types, like castling and promotions
   this.execMoveType(moveData.from, moveData.to, moveData.type);
 
   this.prevMoves.push(move);
