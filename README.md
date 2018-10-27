@@ -52,9 +52,7 @@ class BitBoard {
     return new BitBoard(~this.low, ~this.high);
   }
 
-  equals(other) {
-    return (this.low === other.low && this.high === other.high);
-  }
+  ...
 
   shiftRight(numBits) {
     let newLowBits, newHighBits;
@@ -74,6 +72,8 @@ class BitBoard {
     return new BitBoard(newLowBits, newHighBits);
   }
 
+  ...
+
   // iteration that sends the position (0-63) to the callback
   pop1Bits(cb) {
     while (this.low) {
@@ -86,6 +86,9 @@ class BitBoard {
       this.high = Utils.clearLeastSigBit32(this.high);
     }
   }
+
+  ...
+}  
 ```
 
 Todo: [Magic Bitboards](https://www.chessprogramming.org/Magic_Bitboards)
