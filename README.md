@@ -1,6 +1,6 @@
 # Patzer
 
-Patzer is a chess engine built with JavasScript.  It adheres to most standard chess rules, including promotions, castling, en passant, and draw by threefold repetition.
+Patzer is a chess engine built in JavasScript.  It adheres to most standard chess rules, including promotions, castling, en passant, and draw by threefold repetition.
 
 Play the live version [here](http://ryan-mark.xyz/Patzer/)
 
@@ -16,7 +16,7 @@ Todo: mobile compatibility
 
 #### Board Representation
 The board is represented by a set of 8 [bitboards](https://en.wikipedia.org/wiki/Bitboard),
-one for each piece type and color. Compared to an array-based representation, bitboards use less memory and typically allow for faster board manipulation and analysis via bitwise operations. Since Javascript doesn't support bitwise operations for 64-bit integers, each [bitboard object](./js/bitboard/bitboard.js) consists of high 32 bits and low 32 bits.
+one for each piece type and color. Compared to an array-based representation, bitboards use less memory and typically allow for faster board manipulation and analysis via bitwise operations. Since JavasScript doesn't support bitwise operations for 64-bit integers, each [bitboard object](./js/bitboard/bitboard.js) consists of high 32 bits and low 32 bits.
 
 Here are some key parts of the BitBoard class:
 
@@ -124,7 +124,6 @@ const isPosRay = {
 };
 
 function findUnblocked(pos, occupied, dir) {
-  const posBB = new BitBoard();
   const dirBB = SLIDE_MOVES[pos][dir];
   const blocking = dirBB.and(occupied);
   let blockingPos;
