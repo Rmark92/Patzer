@@ -25,7 +25,7 @@ Using bitboards, pawn move destinations can be generated on the set of all exist
 
 ```javascript
 // Note: SLIDE_MOVES is a precomputed array of objects, with the array index corresponding to the board position. The objects contain keys for each direction, and the values are bitboards identifying sliding destinations in that direction.
-// For example, this would be the bitboard for northeast from position 27
+// For example, this would be the bitboard for northeast from position 27:
 
 // 00000001
 // 00000010
@@ -81,6 +81,66 @@ The move making function takes a pseudolegal move object and tests it for full l
 
 Move execution updates the board and all other state information associated with a position. In order to save memory, all moves in the game and AI search are made on the same [position object](./js/position/index.js), so we also have a function to unmake a move and restore the previous state.
 
+Here's the code for making and testing a move:
+```javascript
+// makes a specified move if it's legal, updating the current position
+// returns true if the move is made, false otherwise
+makeMove(move) {
+  const moveData = move.getData();
+
+  let isLegal;
+  this.testMove(moveData, (testsLegal) => {
+    isLegal = testsLegal;
+    return !isLegal;
+  });
+
+  if (!isLegal) { return false; }
+  this.addPrevState();
+
+  this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
+  const epPos = this.epBB.bitScanForward();
+  if (epPos !== null) { this.stateHash ^= epPosHashKeys[epPos]; }
+  this.epBB = new BitBoard();
+
+  // handles special move types like castling, promotions, etc.
+  this.execMoveType(moveData.from, moveData.to, moveData.type);
+
+  this.prevMoves.push(move);
+  this.swapTurn();
+  this.addPositionCount();
+
+  return true;
+}
+
+// makes the piece movements needed to determine
+// if the move is legal, sends a boolean for the legality
+// to the callback and undoes the piece movements if the callback
+// returns true
+testMove(moveData, cb) {
+  if (moveData.captPieceType) {
+    this.clearPieceAt(moveData.to, this.opp, moveData.captPieceType);
+  }
+
+  if (moveData.isPromo) {
+    this.clearPieceAt(moveData.from, this.turn, PTypes.PAWNS);
+  } else {
+    this.movePiece(moveData.from, moveData.to, this.turn, moveData.pieceType);
+  }
+
+  const undo = cb(this.testsLegal(moveData));
+  if (!undo) { return; }
+
+  if (moveData.isPromo) {
+    this.setPieceAt(moveData.from, this.turn, PTypes.PAWNS);
+  } else {
+    this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+  }
+
+  if (moveData.captPieceType) {
+    this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
+  }
+}
+```
 
 ### Move Search
 
