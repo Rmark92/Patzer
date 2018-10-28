@@ -337,6 +337,7 @@ negaMax(depth, alpha, beta) {
   // evaluate the node's children...
   ...
 }
+```
 
 #### Iterative Deepening
 The search is time-limited through an [iterative deepening](https://www.chessprogramming.org/Iterative_Deepening) process that increments the max search depth for each iteration. In addition to the obvious benefits of being able to adjust the search depth for UI preferences and complexity of the current position, iterative deepening delivers the large advantage of better move ordering for higher and more costly max depths.
