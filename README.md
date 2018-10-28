@@ -91,8 +91,6 @@ class BitBoard {
 }  
 ```
 
-Todo: [Magic Bitboards](https://www.chessprogramming.org/Magic_Bitboards)
-
 #### Move Generation
 Using bitboards, pawn move destinations can be generated on the set of all existing pawns with just one bitwise operation. Other pieces make use of precomputed arrays that map their position to a bitboard of possible destinations. We then make minor adjustments to these destination bitboards based on other pieces on the board. As an example, below is the code for generating sliding move destination bitboards:
 
@@ -151,6 +149,8 @@ function diag(pos, occupied, notOwnPieces) {
 ```
 
 Once we have our destination bitboards, we iterate over them to create [move objects](./js/move/index.js), which are added to an array of possible moves. Move objects store move information in 32bit integers, including details such as piece type, captured piece type, whether the move is a castle or promotion, etc. The primary move generation function generates moves without consideration for whether they put the king in check (pseudolegal).
+
+Todo: [Magic Bitboards](https://www.chessprogramming.org/Magic_Bitboards)
 
 #### Move Execution
 The move making function takes a pseudolegal move object and tests it for full legality before actually executing it. The reasoning behind putting off the legality check until execution is that our ai move search generates all moves for a position and then attempts each move individually. If a move produces a pruning cutoff, its sibling moves won't be tried, so it's more efficient to only check for full legality of moves that we actually attempt.
