@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 10);
+/******/ 	return __webpack_require__(__webpack_require__.s = 11);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -71,7 +71,7 @@
 
 
 var BitBoard = __webpack_require__(6);
-var Masks = __webpack_require__(14);
+var Masks = __webpack_require__(15);
 
 module.exports = {
   BitBoard: BitBoard,
@@ -91,14 +91,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
 // const { WhitePawns, BlackPawns } = require('./pawns.js');
 var Constants = __webpack_require__(2);
-var Pawns = __webpack_require__(16);
-var Knight = __webpack_require__(17);
-var Bishop = __webpack_require__(18);
-var Rook = __webpack_require__(19);
-var Queen = __webpack_require__(20);
-var King = __webpack_require__(21);
-var PieceConv = __webpack_require__(22);
-var eachPieceType = __webpack_require__(23);
+var Pawns = __webpack_require__(17);
+var Knight = __webpack_require__(18);
+var Bishop = __webpack_require__(19);
+var Rook = __webpack_require__(20);
+var Queen = __webpack_require__(21);
+var King = __webpack_require__(22);
+var PieceConv = __webpack_require__(23);
+var eachPieceType = __webpack_require__(24);
 var Dirs = __webpack_require__(3);
 
 var PUtils = (_PUtils = {}, _defineProperty(_PUtils, Constants.Types.PAWNS, Pawns), _defineProperty(_PUtils, Constants.Types.KNIGHTS, Knight), _defineProperty(_PUtils, Constants.Types.BISHOPS, Bishop), _defineProperty(_PUtils, Constants.Types.ROOKS, Rook), _defineProperty(_PUtils, Constants.Types.QUEENS, Queen), _defineProperty(_PUtils, Constants.Types.KINGS, King), _PUtils);
@@ -315,7 +315,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Utils = __webpack_require__(13);
+var Utils = __webpack_require__(14);
 // A standard 8x8 chess board can be represented by a 64bit integer (bitboard),
 // in which a 1 means the position is occupied, a 0 means it's empty
 
@@ -633,7 +633,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var _require = __webpack_require__(15),
+var _require = __webpack_require__(16),
     Types = _require.Types;
 
 var Move = function () {
@@ -740,7 +740,8 @@ function stepMove(initial, noSo, eaWe) {
 module.exports = stepMove;
 
 /***/ }),
-/* 9 */
+/* 9 */,
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -784,13 +785,13 @@ var Selectors = {
 module.exports = { ColsFiles: ColsFiles, FilesCols: FilesCols, RowsRanks: RowsRanks, RanksRows: RanksRows, Selectors: Selectors, GameStatus: GameStatus };
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var UI = __webpack_require__(11);
+var UI = __webpack_require__(12);
 
 $(document).ready(function () {
   var ui = new UI();
@@ -798,7 +799,7 @@ $(document).ready(function () {
 });
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -810,8 +811,8 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Position = __webpack_require__(12);
-var AI = __webpack_require__(26);
+var Position = __webpack_require__(13);
+var AI = __webpack_require__(27);
 
 var _require = __webpack_require__(1),
     PTypes = _require.PTypes,
@@ -821,9 +822,9 @@ var _require = __webpack_require__(1),
 var _require2 = __webpack_require__(7),
     MoveTypes = _require2.MoveTypes;
 
-var Util = __webpack_require__(30);
+var Util = __webpack_require__(32);
 
-var _require3 = __webpack_require__(9),
+var _require3 = __webpack_require__(10),
     ColsFiles = _require3.ColsFiles,
     FilesCols = _require3.FilesCols,
     RowsRanks = _require3.RowsRanks,
@@ -1096,12 +1097,14 @@ var UI = function () {
         return;
       }
 
+      $('main').addClass('waiting');
       setTimeout(function () {
         var aiMoveData = _this4.ai.chooseMove(_this4.position, _this4.currMoves);
         _this4.animateMove(aiMoveData.move, function () {
+          $('main').removeClass('waiting');
           _this4.makeMove(aiMoveData.move, aiMoveData.performance);
         });
-      }, 0);
+      }, 100);
     }
   }, {
     key: 'animateMove',
@@ -1302,7 +1305,7 @@ var UI = function () {
 module.exports = UI;
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1326,13 +1329,13 @@ var _require3 = __webpack_require__(1),
     Colors = _require3.Colors,
     Dirs = _require3.Dirs;
 
-var _require4 = __webpack_require__(24),
+var _require4 = __webpack_require__(25),
     piecePosHashKeys = _require4.piecePosHashKeys,
     epPosHashKeys = _require4.epPosHashKeys,
     castleHashKeys = _require4.castleHashKeys,
     turnHashKeys = _require4.turnHashKeys;
 
-var _require5 = __webpack_require__(25),
+var _require5 = __webpack_require__(26),
     pieceSetsToArray = _require5.pieceSetsToArray,
     pieceSetsFromArray = _require5.pieceSetsFromArray;
 
@@ -2141,7 +2144,7 @@ var Position = function () {
 module.exports = Position;
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2196,7 +2199,7 @@ module.exports = {
 };
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2337,7 +2340,7 @@ module.exports = {
 };
 
 /***/ }),
-/* 15 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2356,7 +2359,7 @@ var Types = typesArr.reduce(function (res, type, idx) {
 module.exports = { Types: Types };
 
 /***/ }),
-/* 16 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2401,7 +2404,7 @@ var Pawns = {
 module.exports = Pawns;
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2421,7 +2424,7 @@ var Knight = {
 module.exports = Knight;
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2441,7 +2444,7 @@ var Bishop = {
 module.exports = Bishop;
 
 /***/ }),
-/* 19 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2461,7 +2464,7 @@ var Rook = {
 module.exports = Rook;
 
 /***/ }),
-/* 20 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2482,7 +2485,7 @@ var Queen = {
 module.exports = Queen;
 
 /***/ }),
-/* 21 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2526,7 +2529,7 @@ var King = {
 module.exports = King;
 
 /***/ }),
-/* 22 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2569,7 +2572,7 @@ function letterToType(letter) {
 module.exports = { pieceToLetter: pieceToLetter, letterToColor: letterToColor, letterToType: letterToType };
 
 /***/ }),
-/* 23 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2588,7 +2591,7 @@ function eachPieceType(cb) {
 module.exports = eachPieceType;
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2670,7 +2673,7 @@ var turnHashKeys = function () {
 module.exports = { piecePosHashKeys: piecePosHashKeys, epPosHashKeys: epPosHashKeys, castleHashKeys: castleHashKeys, turnHashKeys: turnHashKeys };
 
 /***/ }),
-/* 25 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2762,7 +2765,7 @@ function pieceSetsFromArray() {
 module.exports = { pieceSetsToArray: pieceSetsToArray, pieceSetsFromArray: pieceSetsFromArray };
 
 /***/ }),
-/* 26 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2772,7 +2775,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var MoveSearch = __webpack_require__(27);
+var MoveSearch = __webpack_require__(28);
 
 var AI = function () {
   function AI() {
@@ -2804,7 +2807,7 @@ var AI = function () {
 module.exports = AI;
 
 /***/ }),
-/* 27 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2821,12 +2824,12 @@ var _require = __webpack_require__(1),
     Dirs = _require.Dirs,
     eachPieceType = _require.eachPieceType;
 
-var _require2 = __webpack_require__(28),
+var _require2 = __webpack_require__(29),
     TransposTable = _require2.TransposTable,
     TABLE_SCORE_TYPES = _require2.TABLE_SCORE_TYPES;
 
-var KillerMoveList = __webpack_require__(31);
-var PerfMonitor = __webpack_require__(29);
+var KillerMoveList = __webpack_require__(30);
+var PerfMonitor = __webpack_require__(31);
 
 var EARLY_EXIT = 'early exit';
 
@@ -3080,7 +3083,7 @@ var MoveSearch = function () {
 module.exports = MoveSearch;
 
 /***/ }),
-/* 28 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3138,7 +3141,58 @@ var TransposTable = function () {
 module.exports = { TransposTable: TransposTable, TABLE_SCORE_TYPES: SCORE_TYPES };
 
 /***/ }),
-/* 29 */
+/* 30 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var KillerMoveList = function () {
+  function KillerMoveList() {
+    _classCallCheck(this, KillerMoveList);
+
+    this.list = [];
+    this.maxPerLevel = 2;
+  }
+
+  _createClass(KillerMoveList, [{
+    key: "addSlot",
+    value: function addSlot() {
+      this.list.push(new Array(this.maxPerLevel));
+    }
+  }, {
+    key: "addMove",
+    value: function addMove(distFromRoot, move) {
+      var siblingKillerMoves = this.list[distFromRoot];
+      if (siblingKillerMoves.includes(move.val)) {
+        return;
+      }
+
+      var idx = void 0;
+      for (idx = siblingKillerMoves.length - 2; idx >= 0; idx--) {
+        siblingKillerMoves[idx + 1] = siblingKillerMoves[idx];
+      }
+
+      siblingKillerMoves[0] = move.val;
+    }
+  }, {
+    key: "getSiblingMoves",
+    value: function getSiblingMoves(distFromRoot) {
+      return this.list[distFromRoot];
+    }
+  }]);
+
+  return KillerMoveList;
+}();
+
+module.exports = KillerMoveList;
+
+/***/ }),
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3224,7 +3278,7 @@ var PerfMonitor = function () {
 module.exports = PerfMonitor;
 
 /***/ }),
-/* 30 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3236,7 +3290,7 @@ var _require = __webpack_require__(1),
     PieceConv = _require.PieceConv,
     Colors = _require.Colors;
 
-var _require2 = __webpack_require__(9),
+var _require2 = __webpack_require__(10),
     ColsFiles = _require2.ColsFiles,
     FilesCols = _require2.FilesCols,
     RowsRanks = _require2.RowsRanks,
@@ -3300,57 +3354,6 @@ module.exports = {
   parseMoveStats: parseMoveStats,
   formatTime: formatTime
 };
-
-/***/ }),
-/* 31 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var KillerMoveList = function () {
-  function KillerMoveList() {
-    _classCallCheck(this, KillerMoveList);
-
-    this.list = [];
-    this.maxPerLevel = 2;
-  }
-
-  _createClass(KillerMoveList, [{
-    key: "addSlot",
-    value: function addSlot() {
-      this.list.push(new Array(this.maxPerLevel));
-    }
-  }, {
-    key: "addMove",
-    value: function addMove(distFromRoot, move) {
-      var siblingKillerMoves = this.list[distFromRoot];
-      if (siblingKillerMoves.includes(move.val)) {
-        return;
-      }
-
-      var idx = void 0;
-      for (idx = siblingKillerMoves.length - 2; idx >= 0; idx--) {
-        siblingKillerMoves[idx + 1] = siblingKillerMoves[idx];
-      }
-
-      siblingKillerMoves[0] = move.val;
-    }
-  }, {
-    key: "getSiblingMoves",
-    value: function getSiblingMoves(distFromRoot) {
-      return this.list[distFromRoot];
-    }
-  }]);
-
-  return KillerMoveList;
-}();
-
-module.exports = KillerMoveList;
 
 /***/ })
 /******/ ]);

@@ -18,6 +18,10 @@ main {
   align-items: center;
 }
 
+main.waiting:hover {
+  cursor: wait;
+}
+
 th {
   padding: 10px;
 }

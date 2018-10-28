@@ -238,12 +238,14 @@ class UI {
     this.resetStatus();
     if (this.isGameOver()) { return; }
 
+    $('main').addClass('waiting');
     setTimeout(() => {
       const aiMoveData = this.ai.chooseMove(this.position, this.currMoves);
       this.animateMove(aiMoveData.move, () => {
+        $('main').removeClass('waiting');
         this.makeMove(aiMoveData.move, aiMoveData.performance);
       });
-    }, 0);
+    }, 100);
   }
 
   animateMove(move, cb) {
