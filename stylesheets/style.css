@@ -54,6 +54,10 @@ tr {
   display: inline-block;
 }
 
+.piece:hover {
+  cursor: no-drop;
+}
+
 .piece.white {
   color: white;
 }
