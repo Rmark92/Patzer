@@ -222,7 +222,7 @@ testMove(moveData, cb) {
 ### Move Search
 
 #### Main Search
-The move search implements the [negamax algorithm](https://en.wikipedia.org/wiki/Negamax), which is a more concise version of the [minimax algorithm](https://en.wikipedia.org/wiki/Minimax) relying on an evaluation function such that `maximizingPlayerScore = -minimizingPlayerScore`.  It uses [Alpha-Beta pruning](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning) to drastically reduce the number of nodes evaluated, and includes several optimizations to make this pruning mechanism more effective.
+The move search implements the [negamax algorithm](https://en.wikipedia.org/wiki/Negamax), which is a more concise version of the [minimax algorithm](https://en.wikipedia.org/wiki/Minimax) relying on an evaluation function such that `turnPlayerScore = -opponentPlayerScore`.  It uses [Alpha-Beta pruning](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning) to drastically reduce the number of nodes evaluated, and includes several optimizations to make this pruning mechanism more effective.
 
 ```javascript
 negaMax(depth, alpha, beta) {
@@ -241,7 +241,7 @@ negaMax(depth, alpha, beta) {
       result = this.negaMax(depth - 1, -beta, -alpha);
       this.position.unmakePrevMove();
 
-      if (result === 'early exit') {
+      if (result === EARLY_EXIT) {
         return result;
       }
 
@@ -280,10 +280,66 @@ negaMax(depth, alpha, beta) {
 If the search were terminated at a fixed depth, we'd run the risk of assigning a positive value to a leaf node position that would clearly prove to be detrimental over the following sequence of moves. For example, if our search concluded with a queen capturing a pawn, all else being equal, a positive value would be assigned to the move. The queen might be captured on the very next move, but this wouldn't be taken into account. In order to mitigate this [horizon effect](https://en.wikipedia.org/wiki/Horizon_effect), the main search is followed by a [quiescence search](https://en.wikipedia.org/wiki/Quiescence_search) that exhausts all sequences of captures and check evasions so that only quiet positions are evaluated.
 
 #### Memoization
-A [transposition table](https://en.wikipedia.org/wiki/Transposition_table) is used to store the results of previously explored positions, which are uniquely identified by a signed 32-bit [zobrist hash](https://en.wikipedia.org/wiki/Zobrist_hashing).
+A [transposition table](https://en.wikipedia.org/wiki/Transposition_table) is used to store the results of previously explored positions, which are uniquely identified by a signed 32-bit [zobrist hash](https://en.wikipedia.org/wiki/Zobrist_hashing). When the stored score was evaluated within the alpha-beta window during its search (an exact value), we can simply return that value when the position is encountered again. Other times, we can use that score to narrow the alpha-beta window in our current search. Here's how transposition table values are stored:
+
+```javascript
+class TransposTable {
+  ...
+
+  storeEntry(score, bestMove, alpha, beta, depth, key) {
+    this.table[key] = {
+      score,
+      bestMove,
+      type: this.determineScoreType(score, alpha, beta),
+      depth,
+      key
+    };
+  }
+
+  determineScoreType(score, alpha, beta) {
+    if (score <= alpha) {
+      return SCORE_TYPES.UPPERBOUND;
+    } else if (score >= beta) {
+      return SCORE_TYPES.LOWERBOUND;
+    } else {
+      return SCORE_TYPES.EXACT;
+    }
+  }
+
+  ...
+}
+```
+
+And here's how they're retrieved within our negamax function:
+
+```javascript
+negaMax(depth, alpha, beta) {
+  ...
+
+  const prevAlpha = alpha;
+  const currHash = this.position.getHash();
+  const entry = this.transPosTable.getEntry(currHash);
+  if (entry && entry.depth >= depth) {
+    this.perfMonitor.logTableHit();
+    switch (entry.type) {
+      case TABLE_SCORE_TYPES.EXACT:
+        return entry.score;
+      case TABLE_SCORE_TYPES.LOWERBOUND:
+        alpha = Math.max(alpha, entry.score);
+        break;
+      case TABLE_SCORE_TYPES.UPPERBOUND:
+        beta = Math.min(beta, entry.score);
+        break;
+    }
+    if (alpha >= beta) { return entry.score; }
+  }
+
+  // evaluate the node's children...
+  ...
+}
 
 #### Iterative Deepening
-The search is time-limited through an [iterative deepening](https://www.chessprogramming.org/Iterative_Deepening) process that increments the max search depth for each iteration. In addition to the obvious benefits of adjusting the search for UI preferences and complexity of the current position, iterative deepening delivers the large advantage of better move ordering for higher and more costly max depths.
+The search is time-limited through an [iterative deepening](https://www.chessprogramming.org/Iterative_Deepening) process that increments the max search depth for each iteration. In addition to the obvious benefits of being able to adjust the search depth for UI preferences and complexity of the current position, iterative deepening delivers the large advantage of better move ordering for higher and more costly max depths.
 
 ```javascript
 findBest(thinkingTime) {
@@ -303,7 +359,7 @@ findBest(thinkingTime) {
 negaMax(depth, alpha, beta) {
   if (Date.now() > this.endTime) {
     this.perfMonitor.setDepth(this.maxDepth - 1);
-    return 'early exit';
+    return EARLY_EXIT;
   }
 
   ...
@@ -311,13 +367,14 @@ negaMax(depth, alpha, beta) {
 quiescenceSearch(alpha, beta) {
   if (Date.now() > this.endTime) {
     this.perfMonitor.setDepth(this.maxDepth - 1);
-    return 'early exit';
+    return EARLY_EXIT;
   }
 
   ...
 
 }
 ```
+Todo: [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
 
 #### Move Ordering
 Alpha-Beta pruning is most effective when the best moves are considered first. If we were able to determine the best moves a priori there'd be no need for a search at all, so we make guesses based on available information, including (in order of priority):
@@ -340,8 +397,6 @@ function calculateMoveOrderScore(move) {
   return score;
 }
 ```
-
-Todo: [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
 
 #### Move Evaluation
 Leaf node positions are evaluated with a relatively simple heuristic that accounts for material and piece location. The material score is a sum of existing pieces weighted by type, and piece location is scored based on static [piece-square tables](https://www.chessprogramming.org/Simplified_Evaluation_Function#Piece-Square_Tables).

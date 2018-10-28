@@ -1,3 +1,9 @@
+const SCORE_TYPES = {
+  EXACT: 'exact',
+  UPPERBOUND: 'upperbound',
+  LOWERBOUND: 'lowerbound'
+};
+
 class TransposTable {
   constructor() {
     this.table = {};
@@ -19,13 +25,13 @@ class TransposTable {
 
   determineScoreType(score, alpha, beta) {
     if (score <= alpha) {
-      return 'upperbound';
+      return SCORE_TYPES.UPPERBOUND;
     } else if (score >= beta) {
-      return 'lowerbound';
+      return SCORE_TYPES.LOWERBOUND;
     } else {
-      return 'exact';
+      return SCORE_TYPES.EXACT;
     }
   }
 }
 
-module.exports = TransposTable;
+module.exports = { TransposTable, TABLE_SCORE_TYPES: SCORE_TYPES };

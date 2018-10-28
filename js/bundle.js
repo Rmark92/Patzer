@@ -2823,9 +2823,14 @@ var _require = __webpack_require__(1),
     Dirs = _require.Dirs,
     eachPieceType = _require.eachPieceType;
 
-var TransposTable = __webpack_require__(28);
+var _require2 = __webpack_require__(28),
+    TransposTable = _require2.TransposTable,
+    TABLE_SCORE_TYPES = _require2.TABLE_SCORE_TYPES;
+
 var KillerMoveList = __webpack_require__(31);
 var PerfMonitor = __webpack_require__(29);
+
+var EARLY_EXIT = 'early exit';
 
 var MoveSearch = function () {
   function MoveSearch(position, initAvailable) {
@@ -2878,7 +2883,7 @@ var MoveSearch = function () {
     value: function quiescenceSearch(alpha, beta) {
       if (Date.now() > this.endTime) {
         this.perfMonitor.setDepth(this.maxDepth - 1);
-        return 'early exit';
+        return EARLY_EXIT;
       }
       this.perfMonitor.logQuiescentNode();
       var standPatVal = this.evaluate();
@@ -2926,7 +2931,7 @@ var MoveSearch = function () {
     value: function negaMax(depth, alpha, beta) {
       if (Date.now() > this.endTime) {
         this.perfMonitor.setDepth(this.maxDepth - 1);
-        return 'early exit';
+        return EARLY_EXIT;
       }
 
       var prevAlpha = alpha;
@@ -2935,12 +2940,12 @@ var MoveSearch = function () {
       if (entry && entry.depth >= depth) {
         this.perfMonitor.logTableHit();
         switch (entry.type) {
-          case 'exact':
+          case TABLE_SCORE_TYPES.EXACT:
             return entry.score;
-          case 'lowerbound':
+          case TABLE_SCORE_TYPES.LOWERBOUND:
             alpha = Math.max(alpha, entry.score);
             break;
-          case 'upperbound':
+          case TABLE_SCORE_TYPES.UPPERBOUND:
             beta = Math.min(beta, entry.score);
             break;
         }
@@ -2985,7 +2990,7 @@ var MoveSearch = function () {
           result = this.negaMax(depth - 1, -beta, -alpha);
           this.position.unmakePrevMove();
 
-          if (result === 'early exit') {
+          if (result === EARLY_EXIT) {
             return result;
           }
 
@@ -3087,6 +3092,12 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var SCORE_TYPES = {
+  EXACT: 'exact',
+  UPPERBOUND: 'upperbound',
+  LOWERBOUND: 'lowerbound'
+};
+
 var TransposTable = function () {
   function TransposTable() {
     _classCallCheck(this, TransposTable);
@@ -3114,11 +3125,11 @@ var TransposTable = function () {
     key: 'determineScoreType',
     value: function determineScoreType(score, alpha, beta) {
       if (score <= alpha) {
-        return 'upperbound';
+        return SCORE_TYPES.UPPERBOUND;
       } else if (score >= beta) {
-        return 'lowerbound';
+        return SCORE_TYPES.LOWERBOUND;
       } else {
-        return 'exact';
+        return SCORE_TYPES.EXACT;
       }
     }
   }]);
@@ -3126,7 +3137,7 @@ var TransposTable = function () {
   return TransposTable;
 }();
 
-module.exports = TransposTable;
+module.exports = { TransposTable: TransposTable, TABLE_SCORE_TYPES: SCORE_TYPES };
 
 /***/ }),
 /* 29 */

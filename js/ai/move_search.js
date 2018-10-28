@@ -1,9 +1,11 @@
 const { PTypes, PUtils,
         Colors, Dirs,
         eachPieceType } = require('../pieces');
-const TransposTable = require('./transpos_table.js');
+const { TransposTable, TABLE_SCORE_TYPES } = require('./transpos_table.js');
 const KillerMoveList = require('./killer_move_list.js');
 const PerfMonitor = require('./perf_monitor.js');
+
+const EARLY_EXIT = 'early exit';
 
 class MoveSearch {
   constructor(position, initAvailable) {
@@ -48,7 +50,7 @@ class MoveSearch {
   quiescenceSearch(alpha, beta) {
     if (Date.now() > this.endTime) {
       this.perfMonitor.setDepth(this.maxDepth - 1);
-      return 'early exit';
+      return EARLY_EXIT;
     }
     this.perfMonitor.logQuiescentNode();
     const standPatVal = this.evaluate();
@@ -91,7 +93,7 @@ class MoveSearch {
   negaMax(depth, alpha, beta) {
     if (Date.now() > this.endTime) {
       this.perfMonitor.setDepth(this.maxDepth - 1);
-      return 'early exit';
+      return EARLY_EXIT;
     }
 
     const prevAlpha = alpha;
@@ -100,12 +102,12 @@ class MoveSearch {
     if (entry && entry.depth >= depth) {
       this.perfMonitor.logTableHit();
       switch (entry.type) {
-        case 'exact':
+        case TABLE_SCORE_TYPES.EXACT:
           return entry.score;
-        case 'lowerbound':
+        case TABLE_SCORE_TYPES.LOWERBOUND:
           alpha = Math.max(alpha, entry.score);
           break;
-        case 'upperbound':
+        case TABLE_SCORE_TYPES.UPPERBOUND:
           beta = Math.min(beta, entry.score);
           break;
       }
@@ -148,7 +150,7 @@ class MoveSearch {
         result = this.negaMax(depth - 1, -beta, -alpha);
         this.position.unmakePrevMove();
 
-        if (result === 'early exit') {
+        if (result === EARLY_EXIT) {
           return result;
         }
 
