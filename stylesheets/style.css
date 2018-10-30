@@ -278,3 +278,9 @@ tr {
   margin-top: 5px;
   margin-bottom: 5px;
 }
+
+.links {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+}
