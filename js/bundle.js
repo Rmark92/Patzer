@@ -1405,7 +1405,7 @@ var Position = function () {
     value: function createPiecesPosHash() {
       var _this = this;
 
-      var val = new BitBoard();
+      var val = 0;
 
       var pType = void 0;
       var whitesPos = this.pieces[Colors.WHITE];
@@ -1425,7 +1425,7 @@ var Position = function () {
   }, {
     key: 'createStateHash',
     value: function createStateHash() {
-      var val = new BitBoard();
+      var val = 0;
       this.epBB.dup().pop1Bits(function (pos) {
         val ^= epPosHashKeys[pos];
       });

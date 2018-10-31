@@ -70,7 +70,7 @@ class Position {
   }
 
   createPiecesPosHash() {
-    let val = new BitBoard();
+    let val = 0;
 
     let pType;
     const whitesPos = this.pieces[Colors.WHITE];
@@ -89,7 +89,7 @@ class Position {
   }
 
   createStateHash() {
-    let val = new BitBoard();
+    let val = 0;
     this.epBB.dup().pop1Bits((pos) => {
       val ^= epPosHashKeys[pos];
     });
