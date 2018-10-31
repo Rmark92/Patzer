@@ -766,7 +766,7 @@ var RanksRows = function () {
 
 var GameStatus = {
   ThreeFoldRep: 'Draw - Threefold Repetition',
-  // MoveLimitExc: 'Draw - Move Limit Exceeded (100)',
+  MoveLimitExc: 'Draw - Move Limit Exceeded (50)',
   Checkmate: 'Checkmate',
   Stalemate: 'Stalemate',
   PlayerTurn: 'Player Turn',
@@ -917,8 +917,8 @@ var UI = function () {
       if (this.currMoves.length === 0) {
         if (this.position.isThreefoldRepetition()) {
           this.status = GameStatus.ThreeFoldRep;
-          // } else if (this.position.isMoveLimitExceeded()) {
-          //   this.status = GameStatus.MoveLimitExc;
+        } else if (this.position.isMoveLimitExceeded()) {
+          this.status = GameStatus.MoveLimitExc;
         } else if (this.position.inCheck(this.position.turn)) {
           this.status = GameStatus.Checkmate;
         } else {
@@ -1051,7 +1051,6 @@ var UI = function () {
     key: 'updatePieces',
     value: function updatePieces() {
       $('.piece').remove();
-      // $('.square').removeClass('ui-droppable ui-draggable can-move-to');
       var pieceTypes = Object.values(PTypes);
       var pieces = this.position.pieces;
       var fileRank = void 0;
@@ -1353,7 +1352,10 @@ var defaultInitVals = {
   // holds previous state info (castling rights, en passant)
   // for move reversal purposes
   prevStates: [],
-  positionCounts: {}
+  positionCounts: {},
+  //number of moves since the last capture or pawn movement
+  halfMoveClock: 0,
+  fullMoveClock: 1
 };
 
 var Position = function () {
@@ -1373,6 +1375,9 @@ var Position = function () {
     this.epBB = initVals.epBB.dup();
 
     this.prevStates = initVals.prevStates.slice();
+
+    this.halfMoveClock = initVals.halfMoveClock;
+    this.fullMoveClock = initVals.fullMoveClock;
 
     this.pTypesLocations = this.createPTypesLocations();
 
@@ -1463,18 +1468,15 @@ var Position = function () {
 
     // generates all pseudo legal moves, ie moves that may put the king
     // in check but are otherwise legal
-    // why do this: our ai move search generates all moves for a position
-    // and then considers each move individually. some of those moves
-    // will not be considered due to pruning cutoffs, so it's more efficient
-    // to only check for full legality of moves that we actually consider
 
   }, {
     key: 'generatePseudoMoves',
     value: function generatePseudoMoves() {
       var includeQuiet = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
+      var checkNSDraw = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
 
       var moves = [];
-      if (this.isNonStalemateDraw()) {
+      if (checkNSDraw && this.isNonStalemateDraw()) {
         return moves;
       }
       this.addPawnMoves(moves, includeQuiet);
@@ -1754,11 +1756,7 @@ var Position = function () {
       if (!isLegal) {
         return false;
       }
-      this.addPrevState();
-
-      this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
-      this.setNewEpState();
-
+      this.setNewState(moveData);
       this.execMoveType(moveData.from, moveData.to, moveData.type);
 
       this.prevMoves.push(move);
@@ -1860,40 +1858,30 @@ var Position = function () {
       var queenBB = this.getColorPieceSet(oppColor, PTypes.QUEENS);
       return !PUtils[PTypes.PAWNS].attacksLeft(oppColor, pawns, posBB).isZero() || !PUtils[PTypes.PAWNS].attacksRight(oppColor, pawns, posBB).isZero() || !PUtils[PTypes.KNIGHTS].moves(pos, this.getColorPieceSet(oppColor, PTypes.KNIGHTS)).isZero() || !PUtils[PTypes.BISHOPS].moves(pos, occupied, this.getColorPieceSet(oppColor, PTypes.BISHOPS).or(queenBB)).isZero() || !PUtils[PTypes.ROOKS].moves(pos, occupied, this.getColorPieceSet(oppColor, PTypes.ROOKS).or(queenBB)).isZero() || !PUtils[PTypes.KINGS].moves(pos, this.getColorPieceSet(oppColor, PTypes.KINGS)).isZero();
     }
+  }, {
+    key: 'setNewState',
+    value: function setNewState(moveData) {
+      this.addPrevState();
 
-    // unmakes the previous move, updating the current position
+      this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
+      this.setNewEpState();
+      this.updateClock(moveData);
+      this.execMoveType(moveData.from, moveData.to, moveData.type);
+    }
+
+    // adds the current state values to the prevStates array
+    // used for move unmaking purposes
 
   }, {
-    key: 'unmakePrevMove',
-    value: function unmakePrevMove() {
-      var prevMove = this.prevMoves.pop();
-      if (!prevMove) {
-        return false;
-      }
-
-      this.subtractPositionCount();
-      this.swapTurn();
-
-      var moveData = prevMove.getData();
-
-      this.reverseMoveType(moveData.from, moveData.to, moveData.type);
-
-      var prevState = this.prevStates.pop();
-      this.epBB = prevState.epBB;
-      this.castleRights = prevState.castleRights;
-      this.stateHash = prevState.stateHash;
-
-      if (moveData.isPromo) {
-        this.setPieceAt(moveData.from, this.turn, PTypes.PAWNS);
-      } else {
-        this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
-      }
-
-      if (moveData.captPieceType) {
-        this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
-      }
-
-      return true;
+    key: 'addPrevState',
+    value: function addPrevState() {
+      var state = { epBB: this.epBB,
+        castleRights: this.castleRights,
+        stateHash: this.stateHash,
+        halfMoveClock: this.halfMoveClock,
+        fullMoveClock: this.fullMoveClock
+      };
+      this.prevStates.push(state);
     }
   }, {
     key: 'clearCastleRights',
@@ -1943,36 +1931,17 @@ var Position = function () {
       }
       this.epBB = new BitBoard();
     }
-
-    // adds the current state values to the prevStates array
-    // used for move unmaking purposes
-
   }, {
-    key: 'addPrevState',
-    value: function addPrevState() {
-      var state = { epBB: this.epBB,
-        castleRights: this.castleRights,
-        stateHash: this.stateHash
-      };
-      this.prevStates.push(state);
-    }
-  }, {
-    key: 'addPositionCount',
-    value: function addPositionCount() {
-      var currHash = this.getHash();
-      if (!this.positionCounts[currHash]) {
-        this.positionCounts[currHash] = 1;
-      } else {
-        this.positionCounts[currHash] += 1;
+    key: 'updateClock',
+    value: function updateClock(moveData) {
+      if (this.turn === Colors.BLACK) {
+        this.fullMoveClock++;
       }
-    }
-  }, {
-    key: 'subtractPositionCount',
-    value: function subtractPositionCount() {
-      var currHash = this.getHash();
-      this.positionCounts[currHash] -= 1;
-      if (this.positionCounts[currHash] <= 0) {
-        delete this.positionCounts[currHash];
+
+      if (moveData.captPieceType || moveData.pieceType === PTypes.PAWNS) {
+        this.halfMoveClock = 0;
+      } else {
+        this.halfMoveClock++;
       }
     }
 
@@ -2011,6 +1980,66 @@ var Position = function () {
         case MoveTypes.QPROMO:
           this.setPieceAt(to, this.turn, PTypes.QUEENS);
           break;
+      }
+    }
+  }, {
+    key: 'addPositionCount',
+    value: function addPositionCount() {
+      var currHash = this.getHash();
+      if (!this.positionCounts[currHash]) {
+        this.positionCounts[currHash] = 1;
+      } else {
+        this.positionCounts[currHash] += 1;
+      }
+    }
+
+    // unmakes the previous move, updating the current position
+
+  }, {
+    key: 'unmakePrevMove',
+    value: function unmakePrevMove() {
+      var prevMove = this.prevMoves.pop();
+      if (!prevMove) {
+        return false;
+      }
+
+      this.subtractPositionCount();
+      this.swapTurn();
+
+      var moveData = prevMove.getData();
+
+      this.reverseMoveType(moveData.from, moveData.to, moveData.type);
+      this.restorePrevState();
+
+      if (moveData.isPromo) {
+        this.setPieceAt(moveData.from, this.turn, PTypes.PAWNS);
+      } else {
+        this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+      }
+
+      if (moveData.captPieceType) {
+        this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
+      }
+
+      return true;
+    }
+  }, {
+    key: 'restorePrevState',
+    value: function restorePrevState() {
+      var prevState = this.prevStates.pop();
+      this.epBB = prevState.epBB;
+      this.castleRights = prevState.castleRights;
+      this.stateHash = prevState.stateHash;
+      this.halfMoveClock = prevState.halfMoveClock;
+      this.fullMoveClock = prevState.fullMoveClock;
+    }
+  }, {
+    key: 'subtractPositionCount',
+    value: function subtractPositionCount() {
+      var currHash = this.getHash();
+      this.positionCounts[currHash] -= 1;
+      if (this.positionCounts[currHash] <= 0) {
+        delete this.positionCounts[currHash];
       }
     }
 
@@ -2081,8 +2110,8 @@ var Position = function () {
   }, {
     key: 'isNonStalemateDraw',
     value: function isNonStalemateDraw() {
-      return this.isThreefoldRepetition();
-      // return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
+      // return this.isThreefoldRepetition();
+      return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
     }
   }, {
     key: 'isThreefoldRepetition',
@@ -2095,7 +2124,7 @@ var Position = function () {
   }, {
     key: 'isMoveLimitExceeded',
     value: function isMoveLimitExceeded() {
-      return this.prevMoves.length >= 100;
+      return this.halfMoveClock >= 50;
     }
 
     // renders BBs for all piece sets
@@ -2110,6 +2139,15 @@ var Position = function () {
         _this6.pieces[boardType].render();
       });
     }
+    //
+    // toFen() {
+    //
+    // }
+    //
+    // parseFen() {
+    //
+    // }
+
   }, {
     key: 'getBoardArr',
     value: function getBoardArr() {

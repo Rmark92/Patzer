@@ -29,7 +29,10 @@ const defaultInitVals = {
   // holds previous state info (castling rights, en passant)
   // for move reversal purposes
   prevStates: [],
-  positionCounts: {}
+  positionCounts: {},
+  //number of moves since the last capture or pawn movement
+  halfMoveClock: 0,
+  fullMoveClock: 1
 };
 
 class Position {
@@ -43,6 +46,9 @@ class Position {
     this.epBB = initVals.epBB.dup();
 
     this.prevStates = initVals.prevStates.slice();
+
+    this.halfMoveClock = initVals.halfMoveClock;
+    this.fullMoveClock = initVals.fullMoveClock;
 
     this.pTypesLocations = this.createPTypesLocations();
 
@@ -123,13 +129,9 @@ class Position {
 
   // generates all pseudo legal moves, ie moves that may put the king
   // in check but are otherwise legal
-  // why do this: our ai move search generates all moves for a position
-  // and then considers each move individually. some of those moves
-  // will not be considered due to pruning cutoffs, so it's more efficient
-  // to only check for full legality of moves that we actually consider
-  generatePseudoMoves(includeQuiet = true) {
+  generatePseudoMoves(includeQuiet = true, checkNSDraw = true) {
     const moves = [];
-    if (this.isNonStalemateDraw()) { return moves; }
+    if (checkNSDraw && this.isNonStalemateDraw()) { return moves; }
     this.addPawnMoves(moves, includeQuiet);
     this.addNormalMoves(moves, includeQuiet);
     this.addKingMoves(moves, includeQuiet);
@@ -352,11 +354,7 @@ class Position {
     });
 
     if (!isLegal) { return false; }
-    this.addPrevState();
-
-    this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
-    this.setNewEpState();
-
+    this.setNewState(moveData);
     this.execMoveType(moveData.from, moveData.to, moveData.type);
 
     this.prevMoves.push(move);
@@ -446,35 +444,26 @@ class Position {
             !PUtils[PTypes.KINGS].moves(pos, this.getColorPieceSet(oppColor, PTypes.KINGS)).isZero());
   }
 
-  // unmakes the previous move, updating the current position
-  unmakePrevMove() {
-    const prevMove = this.prevMoves.pop();
-    if (!prevMove) { return false; }
 
-    this.subtractPositionCount();
-    this.swapTurn();
+  setNewState(moveData) {
+    this.addPrevState();
 
-    const moveData = prevMove.getData();
+    this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
+    this.setNewEpState();
+    this.updateClock(moveData);
+    this.execMoveType(moveData.from, moveData.to, moveData.type);
+  }
 
-    this.reverseMoveType(moveData.from, moveData.to, moveData.type);
-
-    const prevState = this.prevStates.pop();
-    this.epBB = prevState.epBB;
-    this.castleRights = prevState.castleRights;
-    this.stateHash = prevState.stateHash;
-
-    if (moveData.isPromo) {
-      this.setPieceAt(moveData.from, this.turn, PTypes.PAWNS);
-    } else {
-      this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
-    }
-
-
-    if (moveData.captPieceType) {
-      this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
-    }
-
-    return true;
+  // adds the current state values to the prevStates array
+  // used for move unmaking purposes
+  addPrevState() {
+    const state = { epBB: this.epBB,
+                    castleRights: this.castleRights,
+                    stateHash: this.stateHash,
+                    halfMoveClock: this.halfMoveClock,
+                    fullMoveClock: this.fullMoveClock
+                  };
+    this.prevStates.push(state);
   }
 
   clearCastleRights(color, dir) {
@@ -514,30 +503,15 @@ class Position {
     this.epBB = new BitBoard();
   }
 
-  // adds the current state values to the prevStates array
-  // used for move unmaking purposes
-  addPrevState() {
-    const state = { epBB: this.epBB,
-                    castleRights: this.castleRights,
-                    stateHash: this.stateHash
-                  };
-    this.prevStates.push(state);
-  }
-
-  addPositionCount() {
-    const currHash = this.getHash();
-    if (!this.positionCounts[currHash]) {
-      this.positionCounts[currHash] = 1;
-    } else {
-      this.positionCounts[currHash] += 1;
+  updateClock(moveData) {
+    if (this.turn === Colors.BLACK) {
+      this.fullMoveClock++;
     }
-  }
 
-  subtractPositionCount() {
-    const currHash = this.getHash();
-    this.positionCounts[currHash] -= 1;
-    if (this.positionCounts[currHash] <= 0) {
-      delete this.positionCounts[currHash];
+    if (moveData.captPieceType || moveData.pieceType === PTypes.PAWNS) {
+      this.halfMoveClock = 0;
+    } else {
+      this.halfMoveClock++;
     }
   }
 
@@ -573,6 +547,59 @@ class Position {
       case MoveTypes.QPROMO:
         this.setPieceAt(to, this.turn, PTypes.QUEENS);
         break;
+    }
+  }
+
+  addPositionCount() {
+    const currHash = this.getHash();
+    if (!this.positionCounts[currHash]) {
+      this.positionCounts[currHash] = 1;
+    } else {
+      this.positionCounts[currHash] += 1;
+    }
+  }
+
+  // unmakes the previous move, updating the current position
+  unmakePrevMove() {
+    const prevMove = this.prevMoves.pop();
+    if (!prevMove) { return false; }
+
+    this.subtractPositionCount();
+    this.swapTurn();
+
+    const moveData = prevMove.getData();
+
+    this.reverseMoveType(moveData.from, moveData.to, moveData.type);
+    this.restorePrevState();
+
+    if (moveData.isPromo) {
+      this.setPieceAt(moveData.from, this.turn, PTypes.PAWNS);
+    } else {
+      this.movePiece(moveData.to, moveData.from, this.turn, moveData.pieceType);
+    }
+
+
+    if (moveData.captPieceType) {
+      this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
+    }
+
+    return true;
+  }
+
+  restorePrevState() {
+    const prevState = this.prevStates.pop();
+    this.epBB = prevState.epBB;
+    this.castleRights = prevState.castleRights;
+    this.stateHash = prevState.stateHash;
+    this.halfMoveClock = prevState.halfMoveClock;
+    this.fullMoveClock = prevState.fullMoveClock;
+  }
+
+  subtractPositionCount() {
+    const currHash = this.getHash();
+    this.positionCounts[currHash] -= 1;
+    if (this.positionCounts[currHash] <= 0) {
+      delete this.positionCounts[currHash];
     }
   }
 
@@ -630,8 +657,8 @@ class Position {
   }
 
   isNonStalemateDraw() {
-    return this.isThreefoldRepetition();
-    // return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
+    // return this.isThreefoldRepetition();
+    return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
   }
 
   isThreefoldRepetition() {
@@ -640,7 +667,7 @@ class Position {
 
   // need to refactor this to start count after pawn movement...
   isMoveLimitExceeded() {
-    return this.prevMoves.length >= 100;
+    return this.halfMoveClock >= 50;
   }
 
   // renders BBs for all piece sets
@@ -650,6 +677,14 @@ class Position {
       this.pieces[boardType].render();
     });
   }
+  //
+  // toFen() {
+  //
+  // }
+  //
+  // parseFen() {
+  //
+  // }
 
   getBoardArr() {
     return pieceSetsToArray(this.pieces);

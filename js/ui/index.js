@@ -82,8 +82,8 @@ class UI {
     if (this.currMoves.length === 0) {
       if (this.position.isThreefoldRepetition()) {
         this.status = GameStatus.ThreeFoldRep;
-      // } else if (this.position.isMoveLimitExceeded()) {
-      //   this.status = GameStatus.MoveLimitExc;
+      } else if (this.position.isMoveLimitExceeded()) {
+        this.status = GameStatus.MoveLimitExc;
       } else if (this.position.inCheck(this.position.turn)) {
         this.status = GameStatus.Checkmate;
       } else {
@@ -200,7 +200,6 @@ class UI {
 
   updatePieces() {
     $('.piece').remove();
-    // $('.square').removeClass('ui-droppable ui-draggable can-move-to');
     const pieceTypes = Object.values(PTypes);
     const pieces = this.position.pieces;
     let fileRank;
