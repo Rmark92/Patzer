@@ -1337,6 +1337,11 @@ var _require4 = __webpack_require__(24),
     castleHashKeys = _require4.castleHashKeys,
     turnHashKeys = _require4.turnHashKeys;
 
+// We initialize our position with a FEN string so that it's easy to
+// recreate a particular position. Since just one position object is created during
+// our game, this is mainly helpful for testing/debugging purposes
+// More about FEN here: https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
+
 var defaultFenStr = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 var Position = function () {
@@ -1449,6 +1454,23 @@ var Position = function () {
       return res;
     }
   }, {
+    key: 'getPieceAt',
+    value: function getPieceAt(pos) {
+      var types = Object.values(PTypes);
+
+      var idx = void 0;
+      var type = void 0;
+
+      for (idx = 0; idx < types.length; idx++) {
+        type = types[idx];
+        if (this.pieces[type].hasSetBit(pos)) {
+          return type;
+        }
+      }
+
+      return null;
+    }
+  }, {
     key: 'createPiecesPosHash',
     value: function createPiecesPosHash() {
       var _this = this;
@@ -1529,8 +1551,8 @@ var Position = function () {
       return moves;
     }
 
-    // generates moves with a filter for whether the move puts the king in check
-    // mainly used to determine checkmate or stalemate
+    // generates moves with a filter for whether the move puts the king in check,
+    // used for the UI but not the AI move search
 
   }, {
     key: 'generateLegalMoves',
@@ -1553,9 +1575,21 @@ var Position = function () {
         return isLegal;
       });
     }
-
-    // inserts pawn moves into the moves array
-
+  }, {
+    key: 'isNonStalemateDraw',
+    value: function isNonStalemateDraw() {
+      return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
+    }
+  }, {
+    key: 'isThreefoldRepetition',
+    value: function isThreefoldRepetition() {
+      return this.positionCounts[this.getHash()] === 3;
+    }
+  }, {
+    key: 'isMoveLimitExceeded',
+    value: function isMoveLimitExceeded() {
+      return this.halfMoveClock >= 50;
+    }
   }, {
     key: 'addPawnMoves',
     value: function addPawnMoves(moves, includeQuiet) {
@@ -1579,62 +1613,10 @@ var Position = function () {
       var pawnRightAttacks = PUtils[PTypes.PAWNS].attacksRight(this.turn, pawnsPos, oppPositions);
       this.addPawnMoveSet(pawnRightAttacks, 9 * PUtils[PTypes.PAWNS].DIRS[this.turn], moves, true);
     }
-
-    // takes a new position set for pawns and adds each corresponding move
-    // to the moves array, with special handling for en passants, promotions and double pushes
-
-    // note: unlike other pieces, we map pawn movements from the set of all existing pawns
-    // rather than each pawn individually, so the function takes a shift amount to determine
-    // the location of the individual pawn that moved to a new position
-
-  }, {
-    key: 'addPawnMoveSet',
-    value: function addPawnMoveSet(newPositions, shiftAmt, moves, isCapture, isDblPush) {
-      var _this3 = this;
-
-      var from = void 0;
-      var captured = null;
-
-      newPositions.pop1Bits(function (pos) {
-        from = pos - shiftAmt;
-        if (isDblPush) {
-          moves.push(new Move(from, pos, MoveTypes.DBL_PPUSH, PTypes.PAWNS));
-        } else if (isCapture && _this3.epBB.hasSetBit(pos)) {
-          moves.push(new Move(from, pos, MoveTypes.EP_CAPT, PTypes.PAWNS));
-        } else {
-          if (isCapture) {
-            captured = _this3.pTypesLocations[pos];
-          }
-
-          if (PUtils[PTypes.PAWNS].PROMO_MASKS[_this3.turn].hasSetBit(pos)) {
-            _this3.addPromos(from, pos, moves, captured);
-          } else {
-            moves.push(new Move(from, pos, MoveTypes.NORMAL, PTypes.PAWNS, captured));
-          }
-        }
-      });
-    }
-
-    // adds a move to the moves array for each possible promotion type
-
-    // side note: I was curious about why you'd ever promote to rook or bishop
-    // and the reason is if promoting to a queen results in stalemate
-
-  }, {
-    key: 'addPromos',
-    value: function addPromos(from, to, moves, captured) {
-      [MoveTypes.NPROMO, MoveTypes.BPROMO, MoveTypes.RPROMO, MoveTypes.QPROMO].forEach(function (promoType) {
-        moves.push(new Move(from, to, promoType, PTypes.PAWNS, captured));
-      });
-    }
-
-    // adds moves to the moves array for all pieces that don't
-    // have 'special' moves, ie not pawns or kings
-
   }, {
     key: 'addNormalMoves',
     value: function addNormalMoves(moves, includeQuiet) {
-      var _this4 = this;
+      var _this3 = this;
 
       var occupied = this.getOccupied();
       var notOwnPieces = this.getNotOccupiedBy(this.turn);
@@ -1643,43 +1625,24 @@ var Position = function () {
       var knightMoves = void 0;
       knightsPos.dup().pop1Bits(function (pos) {
         knightMoves = PUtils[PTypes.KNIGHTS].moves(pos, notOwnPieces);
-        _this4.addNormalMoveSet(knightMoves, pos, PTypes.KNIGHTS, moves, includeQuiet);
+        _this3.addNormalMoveSet(knightMoves, pos, PTypes.KNIGHTS, moves, includeQuiet);
       });
 
-      var bishopsPos = this.getColorPieceSet(this.turn, PTypes.BISHOPS);
-      var bishopMoves = void 0;
-      bishopsPos.dup().pop1Bits(function (pos) {
-        bishopMoves = PUtils[PTypes.BISHOPS].moves(pos, occupied, notOwnPieces);
-        _this4.addNormalMoveSet(bishopMoves, pos, PTypes.BISHOPS, moves, includeQuiet);
-      });
-
-      var rooksPos = this.getColorPieceSet(this.turn, PTypes.ROOKS);
-      var rookMoves = void 0;
-      rooksPos.dup().pop1Bits(function (pos) {
-        rookMoves = PUtils[PTypes.ROOKS].moves(pos, occupied, notOwnPieces);
-        _this4.addNormalMoveSet(rookMoves, pos, PTypes.ROOKS, moves, includeQuiet);
-      });
-
-      var queensPos = this.getColorPieceSet(this.turn, PTypes.QUEENS);
-      var queenMoves = void 0;
-      queensPos.dup().pop1Bits(function (pos) {
-        queenMoves = PUtils[PTypes.QUEENS].moves(pos, occupied, notOwnPieces);
-        _this4.addNormalMoveSet(queenMoves, pos, PTypes.QUEENS, moves, includeQuiet);
+      var positions = void 0;
+      var destinations = void 0;
+      [PTypes.BISHOPS, PTypes.ROOKS, PTypes.QUEENS].forEach(function (slidingType) {
+        positions = _this3.getColorPieceSet(_this3.turn, slidingType);
+        positions.dup().pop1Bits(function (pos) {
+          destinations = PUtils[slidingType].moves(pos, occupied, notOwnPieces);
+          _this3.addNormalMoveSet(destinations, pos, slidingType, moves, includeQuiet);
+        });
       });
     }
-
-    // adds available king moves to the moves array
-
   }, {
     key: 'addKingMoves',
     value: function addKingMoves(moves, includeQuiet) {
       var notOwnPieces = this.getNotOccupiedBy(this.turn);
       var kingPos = this.getColorPieceSet(this.turn, PTypes.KINGS).bitScanForward();
-
-      // for testing purposes...
-      if (kingPos === null) {
-        return;
-      }
 
       var normalMoves = PUtils[PTypes.KINGS].moves(kingPos, notOwnPieces);
       this.addNormalMoveSet(normalMoves, kingPos, PTypes.KINGS, moves, includeQuiet);
@@ -1689,9 +1652,44 @@ var Position = function () {
       }
     }
 
-    // takes a BB of possible new positions for a single
-    // piece and adds each corresponding move to the moves array
+    // note: unlike other pieces, we map pawn movements from the set of all existing pawns
+    // rather than each pawn individually, so the function takes a shift amount to determine
+    // the location of the individual pawn that moved to a new position
 
+  }, {
+    key: 'addPawnMoveSet',
+    value: function addPawnMoveSet(newPositions, shiftAmt, moves, isCapture, isDblPush) {
+      var _this4 = this;
+
+      var from = void 0;
+      var captured = null;
+
+      newPositions.pop1Bits(function (pos) {
+        from = pos - shiftAmt;
+        if (isDblPush) {
+          moves.push(new Move(from, pos, MoveTypes.DBL_PPUSH, PTypes.PAWNS));
+        } else if (isCapture && _this4.epBB.hasSetBit(pos)) {
+          moves.push(new Move(from, pos, MoveTypes.EP_CAPT, PTypes.PAWNS));
+        } else {
+          if (isCapture) {
+            captured = _this4.pTypesLocations[pos];
+          }
+
+          if (PUtils[PTypes.PAWNS].PROMO_MASKS[_this4.turn].hasSetBit(pos)) {
+            _this4.addPromos(from, pos, moves, captured);
+          } else {
+            moves.push(new Move(from, pos, MoveTypes.NORMAL, PTypes.PAWNS, captured));
+          }
+        }
+      });
+    }
+  }, {
+    key: 'addPromos',
+    value: function addPromos(from, to, moves, captured) {
+      [MoveTypes.NPROMO, MoveTypes.BPROMO, MoveTypes.RPROMO, MoveTypes.QPROMO].forEach(function (promoType) {
+        moves.push(new Move(from, to, promoType, PTypes.PAWNS, captured));
+      });
+    }
   }, {
     key: 'addNormalMoveSet',
     value: function addNormalMoveSet(newPositions, startPos, pieceType, moves, includeQuiet) {
@@ -1708,9 +1706,6 @@ var Position = function () {
         }
       });
     }
-
-    // adds available castling moves to the moves array
-
   }, {
     key: 'addCastleMoves',
     value: function addCastleMoves(moves) {
@@ -1736,55 +1731,21 @@ var Position = function () {
     value: function getCastleRights(color) {
       return color === Colors.WHITE ? this.castleRights & 3 : this.castleRights >>> 2;
     }
-
-    // returns a BB with occupied positions for a given color and piece type
-
   }, {
     key: 'getColorPieceSet',
     value: function getColorPieceSet(color, pieceType) {
       return this.pieces[color].and(this.pieces[pieceType]);
     }
-
-    // returns a BB of all occupied positions
-
   }, {
     key: 'getOccupied',
     value: function getOccupied() {
       return this.pieces[Colors.WHITE].or(this.pieces[Colors.BLACK]);
     }
-
-    // returns a BB of all positions that this color does not occupy
-
   }, {
     key: 'getNotOccupiedBy',
     value: function getNotOccupiedBy(color) {
       return this.pieces[color].not();
     }
-
-    // returns the piece type that occupies the given position
-    // if no piece is found, returns null
-
-  }, {
-    key: 'getPieceAt',
-    value: function getPieceAt(pos) {
-      var types = Object.values(PTypes);
-
-      var idx = void 0;
-      var type = void 0;
-
-      for (idx = 0; idx < types.length; idx++) {
-        type = types[idx];
-        if (this.pieces[type].hasSetBit(pos)) {
-          return type;
-        }
-      }
-
-      return null;
-    }
-
-    // makes a specified move if it's legal, updating the current position
-    // returns true if the move is made, false otherwise
-
   }, {
     key: 'makeMove',
     value: function makeMove(move) {
@@ -1808,12 +1769,6 @@ var Position = function () {
 
       return true;
     }
-
-    // makes the piece movements needed to determine
-    // if the move is legal, sends a boolean for the legality
-    // to the callback and undoes the piece movements if the callback
-    // returns true
-
   }, {
     key: 'testMove',
     value: function testMove(moveData, cb) {
@@ -1842,10 +1797,6 @@ var Position = function () {
         this.setPieceAt(moveData.to, this.opp, moveData.captPieceType);
       }
     }
-
-    // returns boolean for whether or not move is legal
-    // based on the current position
-
   }, {
     key: 'testsLegal',
     value: function testsLegal(moveData) {
@@ -1855,6 +1806,9 @@ var Position = function () {
         return !this.inCheck(this.turn);
       }
     }
+
+    // to make sure we aren't sliding through check
+
   }, {
     key: 'isLegalCastle',
     value: function isLegalCastle(pos, castleType) {
@@ -1871,18 +1825,12 @@ var Position = function () {
 
       return true;
     }
-
-    // returns boolean for whether the provided color's king is in check
-
   }, {
     key: 'inCheck',
     value: function inCheck(color) {
       var kingPos = this.getColorPieceSet(color, PTypes.KINGS).bitScanForward();
       return this.isAttacked(kingPos, color);
     }
-
-    // returns boolean for whether any opponent color piece is attacking the provided position
-
   }, {
     key: 'isAttacked',
     value: function isAttacked(pos, color) {
@@ -1918,10 +1866,6 @@ var Position = function () {
       };
       this.prevStates.push(state);
     }
-
-    // makes adjustments to the castling rights
-    // if a rook or king is moved
-
   }, {
     key: 'adjustCastleRights',
     value: function adjustCastleRights(moveData) {
@@ -1979,9 +1923,6 @@ var Position = function () {
         this.halfMoveClock++;
       }
     }
-
-    // makes special adjustments to the position based on the move type
-
   }, {
     key: 'execMoveType',
     value: function execMoveType(from, to, type) {
@@ -2027,9 +1968,6 @@ var Position = function () {
         this.positionCounts[currHash] += 1;
       }
     }
-
-    // unmakes the previous move, updating the current position
-
   }, {
     key: 'unmakePrevMove',
     value: function unmakePrevMove() {
@@ -2077,9 +2015,6 @@ var Position = function () {
         delete this.positionCounts[currHash];
       }
     }
-
-    // unmakes special adjustments to the position based on the move type
-
   }, {
     key: 'reverseMoveType',
     value: function reverseMoveType(from, to, type) {
@@ -2111,18 +2046,12 @@ var Position = function () {
           break;
       }
     }
-
-    // moves piece from one position to another
-
   }, {
     key: 'movePiece',
     value: function movePiece(from, to, color, pieceType) {
       this.clearPieceAt(from, color, pieceType);
       this.setPieceAt(to, color, pieceType);
     }
-
-    // marks the given color and pieceType BBs as occupied at the specified position
-
   }, {
     key: 'setPieceAt',
     value: function setPieceAt(pos, color, pieceType) {
@@ -2131,9 +2060,6 @@ var Position = function () {
       this.pTypesLocations[pos] = pieceType;
       this.pPosHash ^= piecePosHashKeys[pos][pieceType][color];
     }
-
-    // marks the given color and pieceType BBs as unoccupied at the specified position
-
   }, {
     key: 'clearPieceAt',
     value: function clearPieceAt(pos, color, pieceType) {
@@ -2141,21 +2067,6 @@ var Position = function () {
       this.pieces[pieceType].clearBit(pos);
       this.pTypesLocations[pos] = null;
       this.pPosHash ^= piecePosHashKeys[pos][pieceType][color];
-    }
-  }, {
-    key: 'isNonStalemateDraw',
-    value: function isNonStalemateDraw() {
-      return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
-    }
-  }, {
-    key: 'isThreefoldRepetition',
-    value: function isThreefoldRepetition() {
-      return this.positionCounts[this.getHash()] === 3;
-    }
-  }, {
-    key: 'isMoveLimitExceeded',
-    value: function isMoveLimitExceeded() {
-      return this.halfMoveClock >= 50;
     }
   }]);
 
