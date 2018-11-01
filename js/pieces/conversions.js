@@ -5,8 +5,6 @@ function pieceToLetter(type, color) {
     return PieceTypeLetters[type];
   } else if (color === Colors.BLACK) {
     return PieceTypeLetters[type].toUpperCase();
-  } else {
-    return '?';
   }
 }
 

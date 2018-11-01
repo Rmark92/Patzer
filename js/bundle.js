@@ -1334,6 +1334,7 @@ var _require4 = __webpack_require__(24),
     turnHashKeys = _require4.turnHashKeys;
 
 var _require5 = __webpack_require__(25),
+    parseFen = _require5.parseFen,
     pieceSetsToArray = _require5.pieceSetsToArray,
     pieceSetsFromArray = _require5.pieceSetsFromArray;
 
@@ -1358,26 +1359,27 @@ var defaultInitVals = {
   fullMoveClock: 1
 };
 
+var defaultFenStr = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 var Position = function () {
   function Position() {
-    var initVals = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultInitVals;
+    var fenStr = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultFenStr;
 
     _classCallCheck(this, Position);
 
-    this.pieces = initVals.pieces.map(function (pieceBB) {
-      return pieceBB.dup();
-    });
+    var initVals = parseFen(fenStr);
 
-    this.prevMoves = initVals.prevMoves.slice();
-
+    this.pieces = initVals.pieces;
     this.castleRights = initVals.castleRights;
-
-    this.epBB = initVals.epBB.dup();
-
-    this.prevStates = initVals.prevStates.slice();
+    console.log(this.castleRights);
+    this.epBB = initVals.epBB;
+    this.epBB.render();
 
     this.halfMoveClock = initVals.halfMoveClock;
     this.fullMoveClock = initVals.fullMoveClock;
+
+    this.prevMoves = [];
+    this.prevStates = [];
 
     this.pTypesLocations = this.createPTypesLocations();
 
@@ -1392,6 +1394,33 @@ var Position = function () {
     this.positionCounts = Object.assign({}, initVals.positionCounts);
     this.addPositionCount();
   }
+  // constructor(initVals = defaultInitVals) {
+  //   this.pieces = initVals.pieces.map((pieceBB) => pieceBB.dup());
+  //
+  //   this.prevMoves = initVals.prevMoves.slice();
+  //
+  //   this.castleRights = initVals.castleRights;
+  //
+  //   this.epBB = initVals.epBB.dup();
+  //
+  //   this.prevStates = initVals.prevStates.slice();
+  //
+  //   this.halfMoveClock = initVals.halfMoveClock;
+  //   this.fullMoveClock = initVals.fullMoveClock;
+  //
+  //   this.pTypesLocations = this.createPTypesLocations();
+  //
+  //   // we separate our hashed values into piece position hashes
+  //   // and state hashes for simpler integration with our move making/unmaking process
+  //   // they are xor'd to represent the complete position
+  //   this.pPosHash = this.createPiecesPosHash();
+  //   this.stateHash = this.createStateHash();
+  //
+  //   this.setTurn(initVals.turn, this.getOtherColor(initVals.turn));
+  //
+  //   this.positionCounts = Object.assign({}, initVals.positionCounts);
+  //   this.addPositionCount();
+  // }
 
   _createClass(Position, [{
     key: 'createPTypesLocations',
@@ -2582,8 +2611,6 @@ function pieceToLetter(type, color) {
     return PieceTypeLetters[type];
   } else if (color === Colors.BLACK) {
     return PieceTypeLetters[type].toUpperCase();
-  } else {
-    return '?';
   }
 }
 
@@ -2716,10 +2743,13 @@ module.exports = { piecePosHashKeys: piecePosHashKeys, epPosHashKeys: epPosHashK
 "use strict";
 
 
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 var _require = __webpack_require__(1),
     PieceConv = _require.PieceConv,
     PTypes = _require.PTypes,
-    Colors = _require.Colors;
+    Colors = _require.Colors,
+    eachPieceType = _require.eachPieceType;
 
 var _require2 = __webpack_require__(0),
     BitBoard = _require2.BitBoard;
@@ -2774,15 +2804,7 @@ function pieceSetsToArray(pieces) {
 function pieceSetsFromArray() {
   var array = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultBoardArr;
 
-  var pieces = [];
-
-  Object.values(PTypes).forEach(function (type) {
-    pieces[type] = new BitBoard();
-  });
-
-  Object.values(Colors).forEach(function (color) {
-    pieces[color] = new BitBoard();
-  });
+  var pieces = createEmptyPiecesBBs();
 
   var pos = void 0;
   var type = void 0;
@@ -2799,7 +2821,80 @@ function pieceSetsFromArray() {
   return pieces;
 }
 
-module.exports = { pieceSetsToArray: pieceSetsToArray, pieceSetsFromArray: pieceSetsFromArray };
+function parseFen(fenStr) {
+  var _fenStr$split = fenStr.split(' '),
+      _fenStr$split2 = _slicedToArray(_fenStr$split, 6),
+      positions = _fenStr$split2[0],
+      turnLetter = _fenStr$split2[1],
+      castleRightsStr = _fenStr$split2[2],
+      epSq = _fenStr$split2[3],
+      halfMoveClock = _fenStr$split2[4],
+      fullMoveClock = _fenStr$split2[5];
+
+  return {
+    pieces: fenPositionsToPieceBBs(positions),
+    turn: turnLetter === 'w' ? Colors.WHITE : Colors.BLACK,
+    castleRights: parseCastlingRightsStr(castleRightsStr),
+    epBB: parseEpStr(epSq),
+    halfMoveClock: parseInt(halfMoveClock),
+    fullMoveClock: parseInt(fullMoveClock)
+  };
+}
+
+function fenPositionsToPieceBBs(positions) {
+  var rowStrs = positions.split('/');
+
+  var pieceBBs = createEmptyPiecesBBs();
+
+  var pos = 0;
+  rowStrs.forEach(function (rowStr) {
+    rowStr.split('').forEach(function (char) {
+      if (/[0-9]/.test(char)) {
+        pos += parseInt(char);
+      } else {
+        pieceBBs[PieceConv.letterToType(char)].setBit(pos);
+        pieceBBs[PieceConv.letterToColor(char)].setBit(pos);
+        pos++;
+      }
+    });
+  });
+
+  return pieceBBs;
+}
+
+function parseCastlingRightsStr(castleRightsStr) {
+  var rightsPos = ['q', 'k', 'Q', 'K'];
+
+  return rightsPos.reduce(function (res, rightsLetter, pos) {
+    if (castleRightsStr.includes(rightsLetter)) {
+      return res ^ 1 << pos;
+    }
+  }, 0);
+}
+
+function parseEpStr(epStr) {
+  if (/\d+/.test(epStr)) {
+    return BitBoard.fromPos(parseInt(epStr));
+  } else {
+    return new BitBoard();
+  }
+}
+
+function createEmptyPiecesBBs() {
+  var pieces = [];
+
+  eachPieceType(function (type) {
+    pieces[type] = new BitBoard();
+  });
+
+  Object.values(Colors).forEach(function (color) {
+    pieces[color] = new BitBoard();
+  });
+
+  return pieces;
+}
+
+module.exports = { parseFen: parseFen, pieceSetsToArray: pieceSetsToArray, pieceSetsFromArray: pieceSetsFromArray };
 
 /***/ }),
 /* 26 */

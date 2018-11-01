@@ -10,7 +10,8 @@ const { piecePosHashKeys,
         castleHashKeys,
         turnHashKeys } = require('./zhash_constants.js');
 
-const { pieceSetsToArray,
+const { parseFen,
+        pieceSetsToArray,
         pieceSetsFromArray } = require('./utils/array_conversions.js');
 
 
@@ -35,20 +36,23 @@ const defaultInitVals = {
   fullMoveClock: 1
 };
 
+const defaultFenStr = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 class Position {
-  constructor(initVals = defaultInitVals) {
-    this.pieces = initVals.pieces.map((pieceBB) => pieceBB.dup());
+  constructor(fenStr = defaultFenStr) {
+    const initVals = parseFen(fenStr);
 
-    this.prevMoves = initVals.prevMoves.slice();
-
+    this.pieces = initVals.pieces;
     this.castleRights = initVals.castleRights;
-
-    this.epBB = initVals.epBB.dup();
-
-    this.prevStates = initVals.prevStates.slice();
+    console.log(this.castleRights);
+    this.epBB = initVals.epBB;
+    this.epBB.render();
 
     this.halfMoveClock = initVals.halfMoveClock;
     this.fullMoveClock = initVals.fullMoveClock;
+
+    this.prevMoves = [];
+    this.prevStates = [];
 
     this.pTypesLocations = this.createPTypesLocations();
 
@@ -63,6 +67,33 @@ class Position {
     this.positionCounts = Object.assign({}, initVals.positionCounts);
     this.addPositionCount();
   }
+  // constructor(initVals = defaultInitVals) {
+  //   this.pieces = initVals.pieces.map((pieceBB) => pieceBB.dup());
+  //
+  //   this.prevMoves = initVals.prevMoves.slice();
+  //
+  //   this.castleRights = initVals.castleRights;
+  //
+  //   this.epBB = initVals.epBB.dup();
+  //
+  //   this.prevStates = initVals.prevStates.slice();
+  //
+  //   this.halfMoveClock = initVals.halfMoveClock;
+  //   this.fullMoveClock = initVals.fullMoveClock;
+  //
+  //   this.pTypesLocations = this.createPTypesLocations();
+  //
+  //   // we separate our hashed values into piece position hashes
+  //   // and state hashes for simpler integration with our move making/unmaking process
+  //   // they are xor'd to represent the complete position
+  //   this.pPosHash = this.createPiecesPosHash();
+  //   this.stateHash = this.createStateHash();
+  //
+  //   this.setTurn(initVals.turn, this.getOtherColor(initVals.turn));
+  //
+  //   this.positionCounts = Object.assign({}, initVals.positionCounts);
+  //   this.addPositionCount();
+  // }
 
   createPTypesLocations() {
     let pos;

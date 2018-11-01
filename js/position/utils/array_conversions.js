@@ -1,4 +1,5 @@
-const { PieceConv, PTypes, Colors } = require('../../pieces');
+const { PieceConv, PTypes,
+        Colors, eachPieceType } = require('../../pieces');
 const { BitBoard } = require('../../bitboard');
 
 const xx = "_";
@@ -58,16 +59,7 @@ function pieceSetsToArray(pieces) {
 }
 
 function pieceSetsFromArray(array = defaultBoardArr) {
-  const pieces = [];
-
-  Object.values(PTypes).forEach((type) => {
-    pieces[type] = new BitBoard();
-  });
-
-  Object.values(Colors).forEach((color) => {
-    pieces[color] = new BitBoard();
-  });
-
+  const pieces = createEmptyPiecesBBs();
 
   let pos;
   let type;
@@ -84,4 +76,75 @@ function pieceSetsFromArray(array = defaultBoardArr) {
   return pieces;
 }
 
-module.exports = { pieceSetsToArray, pieceSetsFromArray };
+function parseFen(fenStr) {
+  const [ positions,
+          turnLetter,
+          castleRightsStr,
+          epSq,
+          halfMoveClock,
+          fullMoveClock ] = fenStr.split(' ');
+
+  return {
+    pieces: fenPositionsToPieceBBs(positions),
+    turn: turnLetter === 'w' ? Colors.WHITE : Colors.BLACK,
+    castleRights: parseCastlingRightsStr(castleRightsStr),
+    epBB: parseEpStr(epSq),
+    halfMoveClock: parseInt(halfMoveClock),
+    fullMoveClock: parseInt(fullMoveClock)
+  };
+}
+
+function fenPositionsToPieceBBs(positions) {
+  const rowStrs = positions.split('/');
+
+  const pieceBBs = createEmptyPiecesBBs();
+
+  let pos = 0;
+  rowStrs.forEach((rowStr) => {
+    rowStr.split('').forEach((char) => {
+      if (/[0-9]/.test(char)) {
+        pos += parseInt(char);
+      } else {
+        pieceBBs[PieceConv.letterToType(char)].setBit(pos);
+        pieceBBs[PieceConv.letterToColor(char)].setBit(pos);
+        pos++;
+      }
+    });
+  });
+
+  return pieceBBs;
+}
+
+function parseCastlingRightsStr(castleRightsStr) {
+  const rightsPos = ['q', 'k', 'Q', 'K'];
+
+  return rightsPos.reduce((res, rightsLetter, pos) => {
+    if (castleRightsStr.includes(rightsLetter)) {
+      return (res ^ (1 << pos));
+    }
+  }, 0);
+}
+
+function parseEpStr(epStr) {
+  if (/\d+/.test(epStr)) {
+    return BitBoard.fromPos(parseInt(epStr));
+  } else {
+    return new BitBoard();
+  }
+}
+
+function createEmptyPiecesBBs() {
+  const pieces = [];
+
+  eachPieceType((type) => {
+    pieces[type] = new BitBoard();
+  });
+
+  Object.values(Colors).forEach((color) => {
+    pieces[color] = new BitBoard();
+  });
+
+  return pieces;
+}
+
+module.exports = { parseFen, pieceSetsToArray, pieceSetsFromArray };
