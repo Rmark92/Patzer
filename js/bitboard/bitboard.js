@@ -1,4 +1,4 @@
-const Utils = require('./utils.js');
+const Int32Utils = require('./int32Utils.js');
 // A standard 8x8 chess board can be represented by a 64bit integer (bitboard),
 // in which a 1 means the position is occupied, a 0 means it's empty
 
@@ -95,7 +95,7 @@ class BitBoard {
 
   popCount() {
       return [this.low, this.high].reduce((count, int32) => {
-        return count + Utils.popCount32(int32);
+        return count + Int32Utils.popCount32(int32);
       }, 0);
   }
 
@@ -117,9 +117,9 @@ class BitBoard {
 
   bitScanForward() {
     if (this.low) {
-      return Utils.bitScanForward32(this.low);
+      return Int32Utils.bitScanForward32(this.low);
     } else if (this.high) {
-      return Utils.bitScanForward32(this.high) + 32;
+      return Int32Utils.bitScanForward32(this.high) + 32;
     } else {
       return null;
     }
@@ -135,9 +135,9 @@ class BitBoard {
 
   bitScanReverse() {
     if (this.high) {
-      return Utils.bitScanReverse32(this.high) + 32;
+      return Int32Utils.bitScanReverse32(this.high) + 32;
     } else if (this.low) {
-      return Utils.bitScanReverse32(this.low);
+      return Int32Utils.bitScanReverse32(this.low);
     } else {
       return null;
     }
@@ -145,13 +145,13 @@ class BitBoard {
 
   pop1Bits(cb) {
     while (this.low) {
-      cb(Utils.bitScanForward32(this.low));
-      this.low = Utils.clearLeastSigBit32(this.low);
+      cb(Int32Utils.bitScanForward32(this.low));
+      this.low = Int32Utils.clearLeastSigBit32(this.low);
     }
 
     while (this.high) {
-      cb(Utils.bitScanForward32(this.high) + 32);
-      this.high = Utils.clearLeastSigBit32(this.high);
+      cb(Int32Utils.bitScanForward32(this.high) + 32);
+      this.high = Int32Utils.clearLeastSigBit32(this.high);
     }
   }
 

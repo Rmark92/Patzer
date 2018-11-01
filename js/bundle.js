@@ -315,7 +315,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Utils = __webpack_require__(13);
+var Int32Utils = __webpack_require__(32);
 // A standard 8x8 chess board can be represented by a 64bit integer (bitboard),
 // in which a 1 means the position is occupied, a 0 means it's empty
 
@@ -428,7 +428,7 @@ var BitBoard = function () {
     key: 'popCount',
     value: function popCount() {
       return [this.low, this.high].reduce(function (count, int32) {
-        return count + Utils.popCount32(int32);
+        return count + Int32Utils.popCount32(int32);
       }, 0);
     }
   }, {
@@ -453,9 +453,9 @@ var BitBoard = function () {
     key: 'bitScanForward',
     value: function bitScanForward() {
       if (this.low) {
-        return Utils.bitScanForward32(this.low);
+        return Int32Utils.bitScanForward32(this.low);
       } else if (this.high) {
-        return Utils.bitScanForward32(this.high) + 32;
+        return Int32Utils.bitScanForward32(this.high) + 32;
       } else {
         return null;
       }
@@ -473,9 +473,9 @@ var BitBoard = function () {
     key: 'bitScanReverse',
     value: function bitScanReverse() {
       if (this.high) {
-        return Utils.bitScanReverse32(this.high) + 32;
+        return Int32Utils.bitScanReverse32(this.high) + 32;
       } else if (this.low) {
-        return Utils.bitScanReverse32(this.low);
+        return Int32Utils.bitScanReverse32(this.low);
       } else {
         return null;
       }
@@ -484,13 +484,13 @@ var BitBoard = function () {
     key: 'pop1Bits',
     value: function pop1Bits(cb) {
       while (this.low) {
-        cb(Utils.bitScanForward32(this.low));
-        this.low = Utils.clearLeastSigBit32(this.low);
+        cb(Int32Utils.bitScanForward32(this.low));
+        this.low = Int32Utils.clearLeastSigBit32(this.low);
       }
 
       while (this.high) {
-        cb(Utils.bitScanForward32(this.high) + 32);
-        this.high = Utils.clearLeastSigBit32(this.high);
+        cb(Int32Utils.bitScanForward32(this.high) + 32);
+        this.high = Int32Utils.clearLeastSigBit32(this.high);
       }
     }
   }, {
@@ -1309,6 +1309,8 @@ module.exports = UI;
 "use strict";
 
 
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1325,39 +1327,15 @@ var _require3 = __webpack_require__(1),
     PUtils = _require3.PUtils,
     PTypes = _require3.PTypes,
     Colors = _require3.Colors,
-    Dirs = _require3.Dirs;
+    Dirs = _require3.Dirs,
+    eachPieceType = _require3.eachPieceType,
+    PieceConv = _require3.PieceConv;
 
 var _require4 = __webpack_require__(24),
     piecePosHashKeys = _require4.piecePosHashKeys,
     epPosHashKeys = _require4.epPosHashKeys,
     castleHashKeys = _require4.castleHashKeys,
     turnHashKeys = _require4.turnHashKeys;
-
-var _require5 = __webpack_require__(25),
-    parseFen = _require5.parseFen,
-    pieceSetsToArray = _require5.pieceSetsToArray,
-    pieceSetsFromArray = _require5.pieceSetsFromArray;
-
-var defaultInitVals = {
-  pieces: pieceSetsFromArray(),
-  turn: Colors.WHITE,
-  prevMoves: [],
-  // castling rights represented by 4bit int
-  // in the following order (left bit to right):
-  // bKing bQueen wKing wQueen
-  castleRights: 0xf,
-  // the en passant BB will either be empty
-  // or have one position marked that indicates
-  // the destination of an en passant attack
-  epBB: new BitBoard(),
-  // holds previous state info (castling rights, en passant)
-  // for move reversal purposes
-  prevStates: [],
-  positionCounts: {},
-  //number of moves since the last capture or pawn movement
-  halfMoveClock: 0,
-  fullMoveClock: 1
-};
 
 var defaultFenStr = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -1367,20 +1345,26 @@ var Position = function () {
 
     _classCallCheck(this, Position);
 
-    var initVals = parseFen(fenStr);
+    var _fenStr$split = fenStr.split(' '),
+        _fenStr$split2 = _slicedToArray(_fenStr$split, 6),
+        positions = _fenStr$split2[0],
+        turnLetter = _fenStr$split2[1],
+        castleRightsStr = _fenStr$split2[2],
+        epSq = _fenStr$split2[3],
+        halfMoveClock = _fenStr$split2[4],
+        fullMoveClock = _fenStr$split2[5];
 
-    this.pieces = initVals.pieces;
-    this.castleRights = initVals.castleRights;
-    console.log(this.castleRights);
-    this.epBB = initVals.epBB;
-    this.epBB.render();
-
-    this.halfMoveClock = initVals.halfMoveClock;
-    this.fullMoveClock = initVals.fullMoveClock;
+    this.pieces = this.fenPositionsToPieceBBs(positions);
+    this.castleRights = this.parseCastleRightsStr(castleRightsStr);
+    this.epBB = this.parseEpStr(epSq);
+    this.halfMoveClock = parseInt(halfMoveClock);
+    this.fullMoveClock = parseInt(fullMoveClock);
+    var turn = turnLetter === 'w' ? Colors.WHITE : Colors.BLACK;
 
     this.prevMoves = [];
     this.prevStates = [];
 
+    // cache for quick lookup by board position
     this.pTypesLocations = this.createPTypesLocations();
 
     // we separate our hashed values into piece position hashes
@@ -1389,40 +1373,70 @@ var Position = function () {
     this.pPosHash = this.createPiecesPosHash();
     this.stateHash = this.createStateHash();
 
-    this.setTurn(initVals.turn, this.getOtherColor(initVals.turn));
+    this.setTurn(turn, this.getOtherColor(turn));
 
-    this.positionCounts = Object.assign({}, initVals.positionCounts);
+    this.positionCounts = {};
     this.addPositionCount();
   }
-  // constructor(initVals = defaultInitVals) {
-  //   this.pieces = initVals.pieces.map((pieceBB) => pieceBB.dup());
-  //
-  //   this.prevMoves = initVals.prevMoves.slice();
-  //
-  //   this.castleRights = initVals.castleRights;
-  //
-  //   this.epBB = initVals.epBB.dup();
-  //
-  //   this.prevStates = initVals.prevStates.slice();
-  //
-  //   this.halfMoveClock = initVals.halfMoveClock;
-  //   this.fullMoveClock = initVals.fullMoveClock;
-  //
-  //   this.pTypesLocations = this.createPTypesLocations();
-  //
-  //   // we separate our hashed values into piece position hashes
-  //   // and state hashes for simpler integration with our move making/unmaking process
-  //   // they are xor'd to represent the complete position
-  //   this.pPosHash = this.createPiecesPosHash();
-  //   this.stateHash = this.createStateHash();
-  //
-  //   this.setTurn(initVals.turn, this.getOtherColor(initVals.turn));
-  //
-  //   this.positionCounts = Object.assign({}, initVals.positionCounts);
-  //   this.addPositionCount();
-  // }
 
   _createClass(Position, [{
+    key: 'fenPositionsToPieceBBs',
+    value: function fenPositionsToPieceBBs(positions) {
+      var rowStrs = positions.split('/');
+
+      var pieceBBs = this.createEmptyPiecesBBs();
+
+      var pos = 0;
+      rowStrs.forEach(function (rowStr) {
+        rowStr.split('').forEach(function (char) {
+          if (/[0-9]/.test(char)) {
+            pos += parseInt(char);
+          } else {
+            pieceBBs[PieceConv.letterToType(char)].setBit(pos);
+            pieceBBs[PieceConv.letterToColor(char)].setBit(pos);
+            pos++;
+          }
+        });
+      });
+
+      return pieceBBs;
+    }
+  }, {
+    key: 'createEmptyPiecesBBs',
+    value: function createEmptyPiecesBBs() {
+      var pieces = [];
+
+      eachPieceType(function (type) {
+        pieces[type] = new BitBoard();
+      });
+
+      Object.values(Colors).forEach(function (color) {
+        pieces[color] = new BitBoard();
+      });
+
+      return pieces;
+    }
+  }, {
+    key: 'parseCastleRightsStr',
+    value: function parseCastleRightsStr(castleRightsStr) {
+      var rightsPos = ['q', 'k', 'Q', 'K'];
+
+      return rightsPos.reduce(function (res, rightsLetter, pos) {
+        if (castleRightsStr.includes(rightsLetter)) {
+          return res ^ 1 << pos;
+        }
+      }, 0);
+    }
+  }, {
+    key: 'parseEpStr',
+    value: function parseEpStr(epStr) {
+      if (/\d+/.test(epStr)) {
+        return BitBoard.fromPos(parseInt(epStr));
+      } else {
+        return new BitBoard();
+      }
+    }
+  }, {
     key: 'createPTypesLocations',
     value: function createPTypesLocations() {
       var pos = void 0;
@@ -1864,13 +1878,6 @@ var Position = function () {
     key: 'inCheck',
     value: function inCheck(color) {
       var kingPos = this.getColorPieceSet(color, PTypes.KINGS).bitScanForward();
-      // for testing purposes...
-      if (kingPos === null) {
-        console.log('NO KING');
-        console.log(this.prevMoves.map(function (move) {
-          return move.val;
-        }));
-      }
       return this.isAttacked(kingPos, color);
     }
 
@@ -1892,10 +1899,9 @@ var Position = function () {
     value: function setNewState(moveData) {
       this.addPrevState();
 
-      this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
+      this.adjustCastleRights(moveData);
       this.setNewEpState();
       this.updateClock(moveData);
-      this.execMoveType(moveData.from, moveData.to, moveData.type);
     }
 
     // adds the current state values to the prevStates array
@@ -1912,6 +1918,28 @@ var Position = function () {
       };
       this.prevStates.push(state);
     }
+
+    // makes adjustments to the castling rights
+    // if a rook or king is moved
+
+  }, {
+    key: 'adjustCastleRights',
+    value: function adjustCastleRights(moveData) {
+      var turnCastleRights = this.getCastleRights(this.turn);
+      var dir = void 0;
+      if (moveData.pieceType === PTypes.KINGS && turnCastleRights) {
+        this.clearCastleRights(this.turn, Dirs.EAST);
+        this.clearCastleRights(this.turn, Dirs.WEST);
+      } else if (moveData.pieceType === PTypes.ROOKS && turnCastleRights) {
+        dir = moveData.from > PUtils[PTypes.KINGS].INIT_POS[this.turn] ? Dirs.EAST : Dirs.WEST;
+        this.clearCastleRights(this.turn, dir);
+      }
+
+      if (moveData.captPieceType === PTypes.ROOKS && this.getCastleRights(this.opp)) {
+        dir = moveData.to > PUtils[PTypes.KINGS].INIT_POS[this.opp] ? Dirs.EAST : Dirs.WEST;
+        this.clearCastleRights(this.opp, dir);
+      }
+    }
   }, {
     key: 'clearCastleRights',
     value: function clearCastleRights(color, dir) {
@@ -1927,28 +1955,6 @@ var Position = function () {
       if (clearRightsMask & this.castleRights) {
         this.castleRights = (this.castleRights & ~clearRightsMask) >>> 0;
         this.stateHash ^= castleHashKeys[clearRightsPos];
-      }
-    }
-
-    // makes adjustments to the castling rights
-    // if a rook or king is moved
-
-  }, {
-    key: 'adjustCastleRights',
-    value: function adjustCastleRights(pieceType, from, captPieceType, to) {
-      var turnCastleRights = this.getCastleRights(this.turn);
-      var dir = void 0;
-      if (pieceType === PTypes.KINGS && turnCastleRights) {
-        this.clearCastleRights(this.turn, Dirs.EAST);
-        this.clearCastleRights(this.turn, Dirs.WEST);
-      } else if (pieceType === PTypes.ROOKS && turnCastleRights) {
-        dir = from > PUtils[PTypes.KINGS].INIT_POS[this.turn] ? Dirs.EAST : Dirs.WEST;
-        this.clearCastleRights(this.turn, dir);
-      }
-
-      if (captPieceType === PTypes.ROOKS && this.getCastleRights(this.opp)) {
-        dir = to > PUtils[PTypes.KINGS].INIT_POS[this.opp] ? Dirs.EAST : Dirs.WEST;
-        this.clearCastleRights(this.opp, dir);
       }
     }
   }, {
@@ -2139,7 +2145,6 @@ var Position = function () {
   }, {
     key: 'isNonStalemateDraw',
     value: function isNonStalemateDraw() {
-      // return this.isThreefoldRepetition();
       return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
     }
   }, {
@@ -2147,60 +2152,10 @@ var Position = function () {
     value: function isThreefoldRepetition() {
       return this.positionCounts[this.getHash()] === 3;
     }
-
-    // need to refactor this to start count after pawn movement...
-
   }, {
     key: 'isMoveLimitExceeded',
     value: function isMoveLimitExceeded() {
       return this.halfMoveClock >= 50;
-    }
-
-    // renders BBs for all piece sets
-
-  }, {
-    key: 'renderPieceSets',
-    value: function renderPieceSets() {
-      var _this6 = this;
-
-      Object.keys(this.pieces).forEach(function (boardType) {
-        console.log(boardType);
-        _this6.pieces[boardType].render();
-      });
-    }
-    //
-    // toFen() {
-    //
-    // }
-    //
-    // parseFen() {
-    //
-    // }
-
-  }, {
-    key: 'getBoardArr',
-    value: function getBoardArr() {
-      return pieceSetsToArray(this.pieces);
-    }
-
-    // renders the board for the current position
-
-  }, {
-    key: 'renderBoardArr',
-    value: function renderBoardArr() {
-      var boardArr = pieceSetsToArray(this.pieces);
-
-      var pos = void 0;
-      var rowStr = '';
-      console.log("\n");
-      for (pos = 63; pos >= 0; pos--) {
-        rowStr = boardArr[pos] + rowStr;
-        if (pos % 8 === 0) {
-          console.log(rowStr);
-          rowStr = '';
-        }
-      }
-      console.log("\n");
     }
   }]);
 
@@ -2210,61 +2165,7 @@ var Position = function () {
 module.exports = Position;
 
 /***/ }),
-/* 13 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-function popCount32(int) {
-  int -= int >>> 1 & 0x55555555;
-  int = (int & 0x33333333) + (int >>> 2 & 0x33333333);
-  return (int + (int >>> 4) & 0xF0F0F0F) * 0x1010101 >>> 24;
-}
-
-function bitScanForward32(int) {
-  return popCount32((int & -int) - 1);
-}
-
-function generateMSBTable(max) {
-  var res = [];
-  var int = void 0;
-  for (int = 1; int <= max; int++) {
-    res[int] = Math.floor(Math.log2(int));
-  }
-
-  return res;
-}
-
-var mostSigBitTable = generateMSBTable(255);
-
-function bitScanReverse32(int) {
-  var res = 0;
-  if (int > 0xFFFF) {
-    int >>>= 16;
-    res += 16;
-  }
-
-  if (int > 0xFF) {
-    int >>>= 8;
-    res += 8;
-  }
-
-  return res + mostSigBitTable[int];
-}
-
-function clearLeastSigBit32(int) {
-  return int & int - 1;
-}
-
-module.exports = {
-  popCount32: popCount32,
-  bitScanForward32: bitScanForward32,
-  bitScanReverse32: bitScanReverse32,
-  clearLeastSigBit32: clearLeastSigBit32
-};
-
-/***/ }),
+/* 13 */,
 /* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2737,166 +2638,7 @@ var turnHashKeys = function () {
 module.exports = { piecePosHashKeys: piecePosHashKeys, epPosHashKeys: epPosHashKeys, castleHashKeys: castleHashKeys, turnHashKeys: turnHashKeys };
 
 /***/ }),
-/* 25 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
-
-var _require = __webpack_require__(1),
-    PieceConv = _require.PieceConv,
-    PTypes = _require.PTypes,
-    Colors = _require.Colors,
-    eachPieceType = _require.eachPieceType;
-
-var _require2 = __webpack_require__(0),
-    BitBoard = _require2.BitBoard;
-
-var xx = "_";
-
-var WP = PieceConv.pieceToLetter(PTypes.PAWNS, Colors.WHITE);
-var WN = PieceConv.pieceToLetter(PTypes.KNIGHTS, Colors.WHITE);
-var WB = PieceConv.pieceToLetter(PTypes.BISHOPS, Colors.WHITE);
-var WR = PieceConv.pieceToLetter(PTypes.ROOKS, Colors.WHITE);
-var WQ = PieceConv.pieceToLetter(PTypes.QUEENS, Colors.WHITE);
-var WK = PieceConv.pieceToLetter(PTypes.KINGS, Colors.WHITE);
-
-var BP = PieceConv.pieceToLetter(PTypes.PAWNS, Colors.BLACK);
-var BN = PieceConv.pieceToLetter(PTypes.KNIGHTS, Colors.BLACK);
-var BB = PieceConv.pieceToLetter(PTypes.BISHOPS, Colors.BLACK);
-var BR = PieceConv.pieceToLetter(PTypes.ROOKS, Colors.BLACK);
-var BQ = PieceConv.pieceToLetter(PTypes.QUEENS, Colors.BLACK);
-var BK = PieceConv.pieceToLetter(PTypes.KINGS, Colors.BLACK);
-
-var defaultBoardArr = [WR, WN, WB, WQ, WK, WB, WN, WR, WP, WP, WP, WP, WP, WP, WP, WP, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, BP, BP, BP, BP, BP, BP, BP, BP, BR, BN, BB, BQ, BK, BB, BN, BR];
-
-function createEmptyBoardArr() {
-  var res = [];
-
-  var count = 0;
-  while (count <= 64) {
-    res.push(xx);
-    count++;
-  }
-
-  return res;
-}
-
-function pieceSetsToArray(pieces) {
-  var res = createEmptyBoardArr();
-
-  var pieceTypes = Object.values(PTypes);
-  pieceTypes.forEach(function (type) {
-    pieces[type].dup().pop1Bits(function (pos) {
-      if (pieces[Colors.WHITE].hasSetBit(pos)) {
-        res[pos] = PieceConv.pieceToLetter(type, Colors.WHITE);
-      } else {
-        res[pos] = PieceConv.pieceToLetter(type, Colors.BLACK);
-      }
-    });
-  });
-
-  return res;
-}
-
-function pieceSetsFromArray() {
-  var array = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultBoardArr;
-
-  var pieces = createEmptyPiecesBBs();
-
-  var pos = void 0;
-  var type = void 0;
-  var color = void 0;
-  for (pos = 0; pos < array.length; pos++) {
-    if (array[pos] !== xx) {
-      type = PieceConv.letterToType(array[pos]);
-      color = PieceConv.letterToColor(array[pos]);
-      pieces[type].setBit(pos);
-      pieces[color].setBit(pos);
-    }
-  }
-
-  return pieces;
-}
-
-function parseFen(fenStr) {
-  var _fenStr$split = fenStr.split(' '),
-      _fenStr$split2 = _slicedToArray(_fenStr$split, 6),
-      positions = _fenStr$split2[0],
-      turnLetter = _fenStr$split2[1],
-      castleRightsStr = _fenStr$split2[2],
-      epSq = _fenStr$split2[3],
-      halfMoveClock = _fenStr$split2[4],
-      fullMoveClock = _fenStr$split2[5];
-
-  return {
-    pieces: fenPositionsToPieceBBs(positions),
-    turn: turnLetter === 'w' ? Colors.WHITE : Colors.BLACK,
-    castleRights: parseCastlingRightsStr(castleRightsStr),
-    epBB: parseEpStr(epSq),
-    halfMoveClock: parseInt(halfMoveClock),
-    fullMoveClock: parseInt(fullMoveClock)
-  };
-}
-
-function fenPositionsToPieceBBs(positions) {
-  var rowStrs = positions.split('/');
-
-  var pieceBBs = createEmptyPiecesBBs();
-
-  var pos = 0;
-  rowStrs.forEach(function (rowStr) {
-    rowStr.split('').forEach(function (char) {
-      if (/[0-9]/.test(char)) {
-        pos += parseInt(char);
-      } else {
-        pieceBBs[PieceConv.letterToType(char)].setBit(pos);
-        pieceBBs[PieceConv.letterToColor(char)].setBit(pos);
-        pos++;
-      }
-    });
-  });
-
-  return pieceBBs;
-}
-
-function parseCastlingRightsStr(castleRightsStr) {
-  var rightsPos = ['q', 'k', 'Q', 'K'];
-
-  return rightsPos.reduce(function (res, rightsLetter, pos) {
-    if (castleRightsStr.includes(rightsLetter)) {
-      return res ^ 1 << pos;
-    }
-  }, 0);
-}
-
-function parseEpStr(epStr) {
-  if (/\d+/.test(epStr)) {
-    return BitBoard.fromPos(parseInt(epStr));
-  } else {
-    return new BitBoard();
-  }
-}
-
-function createEmptyPiecesBBs() {
-  var pieces = [];
-
-  eachPieceType(function (type) {
-    pieces[type] = new BitBoard();
-  });
-
-  Object.values(Colors).forEach(function (color) {
-    pieces[color] = new BitBoard();
-  });
-
-  return pieces;
-}
-
-module.exports = { parseFen: parseFen, pieceSetsToArray: pieceSetsToArray, pieceSetsFromArray: pieceSetsFromArray };
-
-/***/ }),
+/* 25 */,
 /* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -3485,6 +3227,61 @@ module.exports = {
   formatMove: formatMove,
   parseMoveStats: parseMoveStats,
   formatTime: formatTime
+};
+
+/***/ }),
+/* 32 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+function generateMSBTable(max) {
+  var res = [];
+  var int = void 0;
+  for (int = 1; int <= max; int++) {
+    res[int] = Math.floor(Math.log2(int));
+  }
+
+  return res;
+}
+
+var mostSigBitTable = generateMSBTable(255);
+
+function popCount32(int) {
+  int -= int >>> 1 & 0x55555555;
+  int = (int & 0x33333333) + (int >>> 2 & 0x33333333);
+  return (int + (int >>> 4) & 0xF0F0F0F) * 0x1010101 >>> 24;
+}
+
+function bitScanForward32(int) {
+  return popCount32((int & -int) - 1);
+}
+
+function bitScanReverse32(int) {
+  var res = 0;
+  if (int > 0xFFFF) {
+    int >>>= 16;
+    res += 16;
+  }
+
+  if (int > 0xFF) {
+    int >>>= 8;
+    res += 8;
+  }
+
+  return res + mostSigBitTable[int];
+}
+
+function clearLeastSigBit32(int) {
+  return int & int - 1;
+}
+
+module.exports = {
+  popCount32: popCount32,
+  bitScanForward32: bitScanForward32,
+  bitScanReverse32: bitScanReverse32,
+  clearLeastSigBit32: clearLeastSigBit32
 };
 
 /***/ })

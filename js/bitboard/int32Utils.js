@@ -1,13 +1,3 @@
-function popCount32(int) {
-	int -= (int >>> 1) & 0x55555555;
-	int = (int & 0x33333333) + ((int >>> 2) & 0x33333333);
-	return ((int + (int >>> 4) & 0xF0F0F0F) * 0x1010101) >>> 24;
-}
-
-function bitScanForward32(int) {
-  return popCount32((int & -int) - 1);
-}
-
 function generateMSBTable(max) {
   let res = [];
   let int;
@@ -19,6 +9,16 @@ function generateMSBTable(max) {
 }
 
 const mostSigBitTable = generateMSBTable(255);
+
+function popCount32(int) {
+	int -= (int >>> 1) & 0x55555555;
+	int = (int & 0x33333333) + ((int >>> 2) & 0x33333333);
+	return ((int + (int >>> 4) & 0xF0F0F0F) * 0x1010101) >>> 24;
+}
+
+function bitScanForward32(int) {
+  return popCount32((int & -int) - 1);
+}
 
 function bitScanReverse32(int) {
   let res = 0;

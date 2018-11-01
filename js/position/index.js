@@ -3,57 +3,36 @@ const { BitBoard, BBMasks } = require('../bitboard');
 const { Move, MoveTypes } = require('../move');
 
 const { PUtils, PTypes,
-        Colors, Dirs } = require('../pieces');
+        Colors, Dirs,
+        eachPieceType, PieceConv } = require('../pieces');
 
 const { piecePosHashKeys,
         epPosHashKeys,
         castleHashKeys,
         turnHashKeys } = require('./zhash_constants.js');
 
-const { parseFen,
-        pieceSetsToArray,
-        pieceSetsFromArray } = require('./utils/array_conversions.js');
-
-
-const defaultInitVals = {
-  pieces: pieceSetsFromArray(),
-  turn: Colors.WHITE,
-  prevMoves: [],
-  // castling rights represented by 4bit int
-  // in the following order (left bit to right):
-  // bKing bQueen wKing wQueen
-  castleRights: 0xf,
-  // the en passant BB will either be empty
-  // or have one position marked that indicates
-  // the destination of an en passant attack
-  epBB: new BitBoard(),
-  // holds previous state info (castling rights, en passant)
-  // for move reversal purposes
-  prevStates: [],
-  positionCounts: {},
-  //number of moves since the last capture or pawn movement
-  halfMoveClock: 0,
-  fullMoveClock: 1
-};
-
 const defaultFenStr = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 class Position {
   constructor(fenStr = defaultFenStr) {
-    const initVals = parseFen(fenStr);
+    const [ positions,
+            turnLetter,
+            castleRightsStr,
+            epSq,
+            halfMoveClock,
+            fullMoveClock ] = fenStr.split(' ');
 
-    this.pieces = initVals.pieces;
-    this.castleRights = initVals.castleRights;
-    console.log(this.castleRights);
-    this.epBB = initVals.epBB;
-    this.epBB.render();
-
-    this.halfMoveClock = initVals.halfMoveClock;
-    this.fullMoveClock = initVals.fullMoveClock;
+    this.pieces = this.fenPositionsToPieceBBs(positions);
+    this.castleRights = this.parseCastleRightsStr(castleRightsStr);
+    this.epBB = this.parseEpStr(epSq);
+    this.halfMoveClock = parseInt(halfMoveClock);
+    this.fullMoveClock = parseInt(fullMoveClock);
+    const turn = turnLetter === 'w' ? Colors.WHITE : Colors.BLACK;
 
     this.prevMoves = [];
     this.prevStates = [];
 
+    // cache for quick lookup by board position
     this.pTypesLocations = this.createPTypesLocations();
 
     // we separate our hashed values into piece position hashes
@@ -62,38 +41,64 @@ class Position {
     this.pPosHash = this.createPiecesPosHash();
     this.stateHash = this.createStateHash();
 
-    this.setTurn(initVals.turn, this.getOtherColor(initVals.turn));
+    this.setTurn(turn, this.getOtherColor(turn));
 
-    this.positionCounts = Object.assign({}, initVals.positionCounts);
+    this.positionCounts = {};
     this.addPositionCount();
   }
-  // constructor(initVals = defaultInitVals) {
-  //   this.pieces = initVals.pieces.map((pieceBB) => pieceBB.dup());
-  //
-  //   this.prevMoves = initVals.prevMoves.slice();
-  //
-  //   this.castleRights = initVals.castleRights;
-  //
-  //   this.epBB = initVals.epBB.dup();
-  //
-  //   this.prevStates = initVals.prevStates.slice();
-  //
-  //   this.halfMoveClock = initVals.halfMoveClock;
-  //   this.fullMoveClock = initVals.fullMoveClock;
-  //
-  //   this.pTypesLocations = this.createPTypesLocations();
-  //
-  //   // we separate our hashed values into piece position hashes
-  //   // and state hashes for simpler integration with our move making/unmaking process
-  //   // they are xor'd to represent the complete position
-  //   this.pPosHash = this.createPiecesPosHash();
-  //   this.stateHash = this.createStateHash();
-  //
-  //   this.setTurn(initVals.turn, this.getOtherColor(initVals.turn));
-  //
-  //   this.positionCounts = Object.assign({}, initVals.positionCounts);
-  //   this.addPositionCount();
-  // }
+
+  fenPositionsToPieceBBs(positions) {
+    const rowStrs = positions.split('/');
+
+    const pieceBBs = this.createEmptyPiecesBBs();
+
+    let pos = 0;
+    rowStrs.forEach((rowStr) => {
+      rowStr.split('').forEach((char) => {
+        if (/[0-9]/.test(char)) {
+          pos += parseInt(char);
+        } else {
+          pieceBBs[PieceConv.letterToType(char)].setBit(pos);
+          pieceBBs[PieceConv.letterToColor(char)].setBit(pos);
+          pos++;
+        }
+      });
+    });
+
+    return pieceBBs;
+  }
+
+  createEmptyPiecesBBs() {
+    const pieces = [];
+
+    eachPieceType((type) => {
+      pieces[type] = new BitBoard();
+    });
+
+    Object.values(Colors).forEach((color) => {
+      pieces[color] = new BitBoard();
+    });
+
+    return pieces;
+  }
+
+  parseCastleRightsStr(castleRightsStr) {
+    const rightsPos = ['q', 'k', 'Q', 'K'];
+
+    return rightsPos.reduce((res, rightsLetter, pos) => {
+      if (castleRightsStr.includes(rightsLetter)) {
+        return (res ^ (1 << pos));
+      }
+    }, 0);
+  }
+
+  parseEpStr(epStr) {
+    if (/\d+/.test(epStr)) {
+      return BitBoard.fromPos(parseInt(epStr));
+    } else {
+      return new BitBoard();
+    }
+  }
 
   createPTypesLocations() {
     let pos;
@@ -450,11 +455,6 @@ class Position {
   // returns boolean for whether the provided color's king is in check
   inCheck(color) {
     const kingPos = this.getColorPieceSet(color, PTypes.KINGS).bitScanForward();
-    // for testing purposes...
-    if (kingPos === null) {
-      console.log('NO KING');
-      console.log(this.prevMoves.map((move) => move.val));
-    }
     return this.isAttacked(kingPos, color);
   }
 
@@ -475,14 +475,12 @@ class Position {
             !PUtils[PTypes.KINGS].moves(pos, this.getColorPieceSet(oppColor, PTypes.KINGS)).isZero());
   }
 
-
   setNewState(moveData) {
     this.addPrevState();
 
-    this.adjustCastleRights(moveData.pieceType, moveData.from, moveData.captPieceType, moveData.to);
+    this.adjustCastleRights(moveData);
     this.setNewEpState();
     this.updateClock(moveData);
-    this.execMoveType(moveData.from, moveData.to, moveData.type);
   }
 
   // adds the current state values to the prevStates array
@@ -497,6 +495,25 @@ class Position {
     this.prevStates.push(state);
   }
 
+  // makes adjustments to the castling rights
+  // if a rook or king is moved
+  adjustCastleRights(moveData) {
+    const turnCastleRights = this.getCastleRights(this.turn);
+    let dir;
+    if (moveData.pieceType === PTypes.KINGS && turnCastleRights) {
+      this.clearCastleRights(this.turn, Dirs.EAST);
+      this.clearCastleRights(this.turn, Dirs.WEST);
+    } else if (moveData.pieceType === PTypes.ROOKS && turnCastleRights) {
+      dir = moveData.from > PUtils[PTypes.KINGS].INIT_POS[this.turn] ? Dirs.EAST : Dirs.WEST;
+      this.clearCastleRights(this.turn, dir);
+    }
+
+    if (moveData.captPieceType === PTypes.ROOKS && this.getCastleRights(this.opp)) {
+      dir = moveData.to > PUtils[PTypes.KINGS].INIT_POS[this.opp] ? Dirs.EAST : Dirs.WEST;
+      this.clearCastleRights(this.opp, dir);
+    }
+  }
+
   clearCastleRights(color, dir) {
     let clearRightsPos = 0;
     if (color === Colors.BLACK) { clearRightsPos += 2; }
@@ -506,25 +523,6 @@ class Position {
     if (clearRightsMask & this.castleRights) {
       this.castleRights = (this.castleRights & (~clearRightsMask)) >>> 0;
       this.stateHash ^= castleHashKeys[clearRightsPos];
-    }
-  }
-
-  // makes adjustments to the castling rights
-  // if a rook or king is moved
-  adjustCastleRights(pieceType, from, captPieceType, to) {
-    const turnCastleRights = this.getCastleRights(this.turn);
-    let dir;
-    if (pieceType === PTypes.KINGS && turnCastleRights) {
-      this.clearCastleRights(this.turn, Dirs.EAST);
-      this.clearCastleRights(this.turn, Dirs.WEST);
-    } else if (pieceType === PTypes.ROOKS && turnCastleRights) {
-      dir = from > PUtils[PTypes.KINGS].INIT_POS[this.turn] ? Dirs.EAST : Dirs.WEST;
-      this.clearCastleRights(this.turn, dir);
-    }
-
-    if (captPieceType === PTypes.ROOKS && this.getCastleRights(this.opp)) {
-      dir = to > PUtils[PTypes.KINGS].INIT_POS[this.opp] ? Dirs.EAST : Dirs.WEST;
-      this.clearCastleRights(this.opp, dir);
     }
   }
 
@@ -688,7 +686,6 @@ class Position {
   }
 
   isNonStalemateDraw() {
-    // return this.isThreefoldRepetition();
     return this.isMoveLimitExceeded() || this.isThreefoldRepetition();
   }
 
@@ -696,47 +693,8 @@ class Position {
     return this.positionCounts[this.getHash()] === 3;
   }
 
-  // need to refactor this to start count after pawn movement...
   isMoveLimitExceeded() {
     return this.halfMoveClock >= 50;
-  }
-
-  // renders BBs for all piece sets
-  renderPieceSets() {
-    Object.keys(this.pieces).forEach((boardType) => {
-      console.log(boardType);
-      this.pieces[boardType].render();
-    });
-  }
-  //
-  // toFen() {
-  //
-  // }
-  //
-  // parseFen() {
-  //
-  // }
-
-  getBoardArr() {
-    return pieceSetsToArray(this.pieces);
-  }
-
-
-  // renders the board for the current position
-  renderBoardArr() {
-    const boardArr = pieceSetsToArray(this.pieces);
-
-    let pos;
-    let rowStr = '';
-    console.log("\n");
-    for (pos = 63; pos >= 0; pos--) {
-      rowStr = boardArr[pos] + rowStr;
-      if (pos % 8 === 0) {
-        console.log(rowStr);
-        rowStr = '';
-      }
-    }
-    console.log("\n");
   }
 }
 
