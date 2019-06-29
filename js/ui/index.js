@@ -207,11 +207,11 @@ class UI {
 
     pieceTypes.forEach((pieceType) => {
       pieces[pieceType].dup().pop1Bits((pos) => {
-        newPiece = $(`<div class="piece">${PieceTypeHTML[pieceType]}<div>`);
+        newPiece = $(`<div class="piece"><div>`);
         if (pieces[Colors.WHITE].hasSetBit(pos)) {
-          newPiece.addClass('white');
+          newPiece.html(PieceTypeHTML[Colors.WHITE][pieceType]);
         } else {
-          newPiece.addClass('black');
+          newPiece.html(PieceTypeHTML[Colors.BLACK][pieceType]);
         }
         fileRank = Util.fileRankFromPos(pos);
         $(`#${fileRank}`).append(newPiece);
