@@ -210,8 +210,10 @@ class UI {
         newPiece = $(`<div class="piece"><div>`);
         if (pieces[Colors.WHITE].hasSetBit(pos)) {
           newPiece.html(PieceTypeHTML[Colors.WHITE][pieceType]);
+          newPiece.addClass('white');
         } else {
           newPiece.html(PieceTypeHTML[Colors.BLACK][pieceType]);
+          newPiece.addClass('black');
         }
         fileRank = Util.fileRankFromPos(pos);
         $(`#${fileRank}`).append(newPiece);
